@@ -1,0 +1,655 @@
+#+TITLE: Kyonax's Doom Emacs Config
+#+AUTHOR: Kyonax - Cristian Moreno
+#+PROPERTY: header-args :tangle config.el
+#+auto_tangle: t
+#+DESCRIPTION: Kyonax's personal Doom Emacs Config.
+#+STARTUP: showeverything
+#+VERSION: v0.1
+
+* Table of Contents :toc:
+- [[#about-this-config][About This Config]]
+- [[#doom-default-configuration][DOOM Default Configuration]]
+  - [[#username--e-mail-set-up][Username & e-mail (set-up)]]
+  - [[#file-coding-system][File Coding System]]
+  - [[#org-config-set-up][ORG Config (set-up)]]
+  - [[#bookmarks][Bookmarks]]
+- [[#doom-customization][DOOM Customization]]
+  - [[#doom-theme][DOOM Theme]]
+  - [[#style-line-numbers][Style Line Numbers]]
+  - [[#fonts-distribution][Fonts distribution]]
+- [[#org-roam-set-up][ORG ROAM (set-up)]]
+  - [[#main-config][Main Config]]
+  - [[#org-roam-keymaps-config-and-templates][Org-roam Keymaps, Config, and Templates]]
+- [[#plugins--tools-set-up][Plugins & Tools (set-up)]]
+  - [[#melpa][MELPA]]
+  - [[#powerline-config][Powerline Config]]
+  - [[#beacon-plugin][Beacon Plugin]]
+  - [[#lsp-plugin--add-ons][lsp Plugin & add-ons]]
+  - [[#clippy-plugin][Clippy Plugin]]
+  - [[#modeline][Modeline]]
+  - [[#neotree-set-up][NEOTREE (set-up)]]
+  - [[#treemacs][TREEMACS]]
+  - [[#line-settings][Line Settings]]
+- [[#ivy][Ivy]]
+  - [[#ivy-posframe][IVY-POSFRAME]]
+  - [[#ivy-keybindings][IVY KEYBINDINGS]]
+  - [[#rainbow-mode][RAINBOW MODE]]
+  - [[#latex-config][LateX Config]]
+  - [[#pdf-view-configuration][PDF View Configuration]]
+- [[#start-page][START PAGE]]
+  - [[#custom-faces-dashboard][CUSTOM FACES DASHBOARD]]
+- [[#tramp-windows][TRAMP WINDOWS]]
+
+* About This Config
+Doom Configuration for Development and Organization v0.1 - Windows Version.
+
+-----
+* DOOM Default Configuration
+** Username & e-mail (set-up)
+Some functionality uses this to identify you, e.g. GPG configuration, email, clients, file templates and snippets.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(setq user-full-name "Kyonax - Cristian Moreno"
+      user-mail-address "kyonax25@gmail.com")
+
+#+END_SRC
+
+** File Coding System
+=Unix Coding System= for Windows Doom Emacs Version.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(set-buffer-file-coding-system 'unix)
+#+END_SRC
+
+** ORG Config (set-up)
+*** ORG Mode
+ORG Mode main configuration - inspired by DT
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(after! org
+  (require 'org-bullets)
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
+  (setq org-directory "~/.brain.d/org-mode"
+        org-ellipsis " ▼ "
+        org-superstar-headline-bullets-list '("◉" "●" "○" "◆" "●" "○" "◆")
+        org-superstar-itembullet-alist '((?+ . ?➤) (?- . ?✦)) ; changes +/- symbols in item lists
+        org-hide-emphasis-markers t
+        org-todo-keywords        ; This overwrites the default Doom org-todo-keywords
+          '((sequence
+             "TODO(t)"           ; A task that is ready to be tackled
+             "CONTENT(n)"        ; Content to accomplish
+             "STREAM(s)"         ; Stream planned
+             "WEB(e)"            ; Website Tasks
+             "CODE(m)"           ; Coding Tasks
+             "STORY(y)"          ; Storytelling TODO
+             "BLOG(b)"           ; Blog writing assignments
+             "GYM(g)"            ; Things to accomplish at the gym
+             "PROJ(p)"           ; A project that contains other tasks
+             "VIDEO(v)"          ; Video assignments
+             "WAIT(w)"           ; Something is holding up this task
+             "|"                 ; The pipe necessary to separate "active" states and "inactive" states
+             "DONE(d)"           ; Task has been completed
+             "CANCELLED(c)" )))) ; Task has been cancelled                        )
+#+END_SRC
+
+*** Org-auto-tangle
+=org-auto-tangle= allows you to add the option =#+auto_tangle: t= in your Org file so that it automatically tangles when you save the document. I have made adding this to your file even easier by creating a function 'dt/insert-auto-tangle-tag' and setting it to a keybinding 'SPC i a' - ib: DT
+
+#+begin_src emacs-lisp :tangle yes
+(use-package! org-auto-tangle
+  :defer t
+  :hook (org-mode . org-auto-tangle-mode)
+  :config
+  (setq org-auto-tangle-default t))
+
+(defun dt/insert-auto-tangle-tag ()
+  "Insert auto-tangle tag in a literate config."
+  (interactive)
+  (evil-org-open-below 1)
+  (insert "#+auto_tangle: t ")
+  (evil-force-normal-state))
+
+(map! :leader
+      :desc "Insert auto_tangle tag" "i a" #'dt/insert-auto-tangle-tag)
+#+end_src
+
+*** Org-agenda
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(after! org
+  (setq org-agenda-files '("~/.brain.d/agenda/agenda.org")))
+
+(setq
+   ;; org-fancy-priorities-list '("[A]" "[B]" "[C]")
+   org-fancy-priorities-list '("🐲" "🐉" "🀄")
+   ;; org-fancy-priorities-list '("🟥" "🟧" "🟨")
+   org-agenda-block-separator 175)
+
+(setq org-agenda-custom-commands
+      '(("v" "A better agenda view"
+         ((tags "PRIORITY=\"A\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "High-priority Unfinished Tasks:")))
+          (tags "PRIORITY=\"B\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Medium-priority Unfinished Tasks:")))
+          (tags "PRIORITY=\"C\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Low-priority Unfinished Tasks:")))
+          (tags "home"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Home Tasks:")))
+          (tags "kyonax"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Tasks for Kyonax:")))
+          (tags "content_creation"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Tasks for Content Creation:")))
+          (tags "develop"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Develop Tasks:")))
+          (tags "work"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Work Tasks:")))
+
+          (agenda "")
+          (alltodo "")))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(use-package org-fancy-priorities
+  :ensure t
+  :hook
+  (org-mode . org-fancy-priorities-mode)
+  :config
+  (setq org-fancy-priorities-list '("🐲" "🐉" "🀄")
+   org-priority-faces
+   '((?A :foreground "#ff6c6b" :weight regular)
+     (?B :foreground "#98be65" :weight regular)
+     (?C :foreground "#c678dd" :weight regular))))
+#+END_SRC
+
+*** Org ob-typescript
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(org-babel-do-load-languages
+ 'org-babel-load-languages
+ '((typescript . t)
+   ))
+
+(setq org-babel-command:typescript "npx -p typescript -- tsc")
+#+END_SRC
+
+** Bookmarks
+*** Bookmarks
+Bookmarks are somewhat like registers in that they record positions you can jump to.  Unlike registers, they have long names, and they persist automatically from one Emacs session to the next. The prototypical use of bookmarks is to record where you were reading in various files.
+
+| COMMAND         | DESCRIPTION                            | KEYBINDING |
+|-----------------+----------------------------------------+------------|
+| list-bookmarks  | /List bookmarks/                         | SPC b L    |
+| bookmark-set    | /Set bookmark/                           | SPC b m    |
+| bookmark-delete | /Delete bookmark/                        | SPC b M    |
+| bookmark-save   | /Save current bookmark to bookmark file/ | SPC b w    |
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(setq bookmark-default-file "~/.brain.d/bookmarks/bookmarks")
+
+(map! :leader
+      (:prefix ("b". "buffer")
+       :desc "List bookmarks"                          "L" #'list-bookmarks
+       :desc "Set bookmark"                            "m" #'bookmark-set
+       :desc "Delete bookmark"                         "M" #'bookmark-set
+       :desc "Save current bookmarks to bookmark file" "w" #'bookmark-save))
+#+END_SRC
+
+* DOOM Customization
+** DOOM Theme
+There are two ways to load a theme. Both assume the theme is installed and available. You can either set `doom-theme' or manually load a theme with the `load-theme' function. This is the default:
+
+(setq doom-theme 'doom-monokai-pro)
+(setq doom-theme 'doom-challenger-deep)
+(setq doom-theme 'doom-dracula)
+(setq doom-theme 'doom-feather-dark)
+(setq doom-theme 'doom-horizon)
+(setq doom-theme 'doom-material)
+(setq doom-theme 'doom-material-dark)
+(setq doom-theme 'doom-molokai)
+(setq doom-theme 'doom-xcode)
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(setq doom-theme 'doom-horizon)
+(map! :leader
+      :desc "Load new theme" "h t" #'counsel-load-theme)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(load-theme 'catppuccin :no-confirm)
+(setq catppuccin-flavor 'mocha) ;; or 'latte, 'macchiato, or 'mocha
+(catppuccin-reload)
+#+END_SRC
+
+** Style Line Numbers
+This determines the style of line numbers in effect. If set to `nil', line numbers are disabled. For relative line numbers, set this to `relative'.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(setq display-line-numbers-type 'relative)
+(setq display-line-numbers-mode t)
+(setq line-number-mode t)
+#+END_SRC
+
+** Fonts distribution
+Settings related to fonts within Doom Emacs:
++ 'doom-font' -- standart monospace font that is used for most things in Emacs.
++ 'doom-variable-pitch-font' -- variable font which is useful in some Emacs plugins.
++ 'doom-big-font' -- used in doom-big-font-mode; useful for presentations.
++ 'font-lock-comment-face' -- for comments.
++ 'font-lock-keyword-face' -- for keywords with special significance, like 'for' and 'if' in C.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(setq doom-font (font-spec :family "JetBrainsMono NF" :size 11)
+      doom-variable-pitch-font (font-spec :family "JetBrainsMono NF" :size 14)
+      doom-big-font (font-spec :family "JetBrainsMono NF" :size 24))
+(after! doom-themes
+  (setq doom-themes-enable-bold t
+        doom-themes-enable-italic t))
+(custom-set-faces!
+  '(font-lock-comment-face :slant italic)
+  '(font-lock-keyword-face :slant italic))
+#+END_SRC
+
+* ORG ROAM (set-up)
+** Main Config
+Init Configuration and initialization of Org-roam
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(use-package! websocket
+    :after org-roam)
+(use-package! org-roam-ui
+    :after org
+    :hook (after-init . org-roam-ui-mode)
+    :config
+    (setq org-roam-ui-sync-theme t
+          org-roam-ui-follow t
+          org-roam-ui-update-on-save t
+          org-roam-ui-open-on-start t))
+#+END_SRC
+
+** Org-roam Keymaps, Config, and Templates
+More configs for ORG-roam
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(after! org-roam
+  :ensure t
+  :init
+  (setq org-roam-v2-ack t)
+  :custom
+  (setq org-roam-directory "~/.brain.d/roam-nodes")
+  (setq org-roam-dailies-directory "~/.brain.d/agenda")
+  (setq org-roam-completion-everywhere t)
+  (setq org-roam-capture-templates
+        '(
+          ("d" "default" plain "%?"
+            :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+                               "#+title: ${title}\n") :unnarrowed t)
+          ("s" "Not Time Stamp File" plain "%?"
+            :if-new (file+head "${slug}.org"
+                               "#+title: ${title}\n") :unnarrowed t)
+          ("n" "new org document" plain
+           (file "~/.brain.d/roam-nodes/templates/NEWNodeTemplate.org")
+           :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+                              "#+title: ${title}\n#+subtitle: %^{Subtitle}\n#+description: %^{Desctiption}\n#+filetags: %^{File Tags}\n#+author: %^{Author}\n#+date: %U\n")
+           :unnarrowed t)
+          ("p" "new org project" plain
+           (file "~/.brain.d/roam-nodes/templates/NEWNodeProject.org")
+           :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+                              "#+title: ${title}\n#+subtitle: %^{Subtitle}\n#+description: %^{Description}\n#+filetags: %^{File Tags}\n#+author: %^{Author}\n#+date: %U\n")
+           :unnarrowed t))))
+#+END_SRC
+
+
+| COMMAND                            | DESCRIPTION                                 | KEYBINDING |
+|------------------------------------+---------------------------------------------+------------|
+| org-roam-dailies-capture-yesterday | /Create a daily roam node for Yesterday/      | SPC n D Y  |
+| org-roam-dailies-capture-yesterday | /Create a daily roam node for Today/          | SPC n D H  |
+| org-roam-dailies-capture-tomorrow  | /Create a daily roam node for Tomorrow/       | SPC n D T  |
+| org-roam-dailies-capture-date      | /Create a daily roam node using Calendar/     | SPC n D C  |
+| org-roam-dailies-goto-date         | /Find a daily roam node from a specific Date/ | SPC n e d  |
+
+#+begin_src emacs-lisp :tangle yes
+(map! :leader
+      (:prefix ("n D" . "Create Roam Nodes")
+       :desc "Daily Nodes - Yesterday" "Y" #'org-roam-dailies-capture-yesterday
+       :desc "Daily Nodes - Today" "H" #'org-roam-dailies-capture-today
+       :desc "Daily Nodes - Calendar" "C" #'org-roam-dailies-capture-date
+       :desc "Daily Nodes - Tomorrow" "T" #'org-roam-dailies-capture-tomorrow))
+#+end_src
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(map! :leader
+      (:prefix ("n e" . "Find Roam Nodes")
+       :desc "Daily Nodes - Date" "d" #'org-roam-dailies-goto-date
+       :desc "Daily Nodes - Yesterday" "Y" #'org-roam-dailies-goto-yesterday
+       :desc "Daily Nodes - Today" "H" #'org-roam-dailies-goto-today
+       :desc "Daily Nodes - Tomorrow" "T" #'org-roam-dailies-goto-tomorrow))
+#+END_SRC
+
+* Plugins & Tools (set-up)
+** MELPA
+#+BEGIN_SRC emacs-lisp :tangle yes
+(require 'package)
+(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+;; Comment/uncomment this line to enable MELPA Stable if desired.  See `package-archive-priorities`
+;; and `package-pinned-packages`. Most users will not need or want to do this.
+;;(add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+(package-initialize)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(add-to-list 'package-archives
+             '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+#+END_SRC
+** Powerline Config
+Necessary for Windows usage
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(require 'powerline)
+(powerline-default-theme)
+#+END_SRC
+
+** Beacon Plugin
+Never lose your cursor.  When you scroll, your cursor will shine!  This is a global minor-mode. Turn it on everywhere with:
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(beacon-mode 1)
+#+END_SRC
+
+** lsp Plugin & add-ons
+Initialization of lsp.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(after! ccls
+  (setq ccls-executable "/path/to/shell/wrapper")
+  (set-lsp-priority! 'ccls 0))
+
+(after! lsp-tailwindcss
+  (setq lsp-tailwindcss-major-modes '(typescript-tsx-mode rjsx-mode web-mode html-mode css-mode svelte-mode)))
+
+(use-package lsp-tailwindcss
+  :init
+  (setq lsp-tailwindcss-add-on-mode t))
+
+(with-eval-after-load 'ox-latex
+(add-to-list 'org-latex-classes
+             '("org-plain-latex"
+               "\\documentclass{article}
+           [NO-DEFAULT-PACKAGES]
+           [PACKAGES]
+           [EXTRA]"
+               ("\\section{%s}" . "\\section*{%s}")
+               ("\\subsection{%s}" . "\\subsection*{%s}")
+               ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+               ("\\paragraph{%s}" . "\\paragraph*{%s}")
+               ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
+#+END_SRC
+
+** Clippy Plugin
+Gives us a popup box with "Clippy, the paper clip". You can make him say various things by calling 'clippy-say' function.  But the more useful functions of clippy are the two describe functions provided: 'clippy-describe-function' and 'clippy-describe-variable'.  Hit the appropriate keybinding while the point is over a function/variable to call it.  A popup with helpful clippy will appear, telling you about the function/variable (using describe-function and describe-variable respectively).
+
+| COMMAND                  | DESCRIPTION                           | KEYBINDING |
+|--------------------------+---------------------------------------+------------|
+| clippy-describe-function | /Clippy describes function under point/ | SPC c h f  |
+| clippy-describe-variable | /Clippy describes variable under point/ | SPC c h v  |
+
+#+begin_src emacs-lisp :tangle yes
+(map! :leader
+      (:prefix ("c h" . "Help info from Clippy")
+       :desc "Clippy describes function under point" "f" #'clippy-describe-function
+       :desc "Clippy describes variable under point" "v" #'clippy-describe-variable))
+
+#+end_src
+
+** Modeline
+The modeline is the bottom status bar that appears in Emacs windows.  For more information on what is available to configure in the Doom modeline, check out:
+https://github.com/seagle0128/doom-modeline
+
+- Config Modeline
+#+BEGIN_SRC emacs-lisp :tangle yes
+(set-face-attribute 'mode-line nil :font "MesloLGL Nerd Font")
+(setq doom-modeline-support-imenu t ;;
+      doom-modeline-buffer-state-icon t ;;
+      doom-modeline-icon t ;;
+      doom-modeline-height 30     ;; sets modeline height
+      doom-modeline-bar-width 5   ;; sets right bar width
+      doom-modeline-persp-name t  ;; adds perspective name to modeline
+      doom-modeline-persp-icon t) ;; adds folder icon next to persp name
+#+END_SRC
+
+** NEOTREE (set-up)
+
+Neotree is a file tree viewer.  When you open neotree, it jumps to the current file thanks to neo-smart-open.  The neo-window-fixed-size setting makes the neotree width be adjustable.  Doom Emacs had no keybindings set for neotree.  Since Doom Emacs uses 'SPC t' for 'toggle' keybindings, I used 'SPC t n' for toggle-neotree.
+
+| COMMAND        | DESCRIPTION               | KEYBINDING |
+|----------------+---------------------------+------------|
+| neotree-toggle | /Toggle neotree/            | SPC t n    |
+| neotree- dir   | /Open directory in neotree/ | SPC d n    |
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(after! neotree
+  (setq neo-smart-open t
+        neo-show-hidden-files t
+        neo-window-width 35
+        neo-window-fixed-size nil
+        inhibit-compacting-font-caches t
+        projectile-switch-project-action 'neotree-projectile-action)
+        (add-hook 'neo-after-create-hook
+                  #'(lambda (_)
+                      (with-current-buffer (get-buffer neo-buffer-name)
+                        (setq truncate-lines t)
+                        (setq word-wrap nil)
+                        (make-local-variable 'auto-hscroll-mode)
+                        (setq auto-hscroll-mode nil)))))
+(after! doom-themes
+  (setq doom-neotree-enable-variable-pitch t))
+(map! :leader
+      :desc "Toggle neotree file viewer" "t n" #'neotree-toggle
+      :desc "Open directory in neotree"  "d n" #'neotree-dir)
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(use-package neotree
+  :config
+        (setq neo-theme (if (display-graphic-p) 'icons)))
+#+END_SRC
+
+** TREEMACS
+TREEMACS PERSONALIZATION
+#+BEGIN_SRC emacs-lisp :tangle yes
+(after! treemacs
+  (setq evil-treemacs-state-cursor t
+        treemacs-show-cursor t
+        treemacs-width 40))
+#+END_SRC
+
+** Line Settings
+I have toggled display-line-numbers-type so I have line numbers displayed. Doom Emacs uses 'SPC t' for "toggle" commands, so I choose 'SPC t t' for toggle-truncate-lines.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(map! :leader
+      :desc "Toggle truncate lines"
+      "t t" #'toggle-truncate-lines)
+#+END_SRC
+
+* Ivy
+Ivy is a generic completion mechanism for Emacs.
+
+** IVY-POSFRAME
+Ivy-posframe is an ivy extension, which lets ivy use posframe to show its candidate menu.  Some of the settings below involve:
++ ivy-posframe-display-functions-alist -- sets the display position for specific programs
++ ivy-posframe-height-alist -- sets the height of the list displayed for specific programs
+
+Available functions (positions) for 'ivy-posframe-display-functions-alist'
++ ivy-posframe-display-at-frame-center
++ ivy-posframe-display-at-window-center
++ ivy-posframe-display-at-frame-bottom-left
++ ivy-posframe-display-at-window-bottom-left
++ ivy-posframe-display-at-frame-bottom-window-center
++ ivy-posframe-display-at-point
++ ivy-posframe-display-at-frame-top-center
+
+=NOTE:= If the setting for 'ivy-posframe-display' is set to 'nil' (false), anything that is set to 'ivy-display-function-fallback' will just default to their normal position in Doom Emacs (usually a bottom split).  However, if this is set to 't' (true), then the fallback position will be centered in the window.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(setq ivy-posframe-display-functions-alist
+      '((swiper                     . ivy-posframe-display-at-window-center)
+        (complete-symbol            . ivy-posframe-display-at-point)
+        (counsel-M-x                . ivy-posframe-display-at-window-center)
+        (counsel-esh-history        . ivy-posframe-display-at-window-center)
+        (counsel-describe-function  . ivy-display-function-fallback)
+        (counsel-describe-variable  . ivy-display-function-fallback)
+        (counsel-find-file          . ivy-posframe-display-at-window-center)
+        (counsel-recentf            . ivy-posframe-display-at-window-center)
+        (counsel-register           . ivy-posframe-display-at-frame-bottom-window-center)
+        (dmenu                      . ivy-posframe-display-at-window-center)
+        (t                          . ivy-posframe-display))
+      ivy-posframe-height-alist
+      '((swiper . 20)
+        (dmenu . 20)
+        (t . 10)))
+(ivy-posframe-mode 1) ; 1 enables posframe-mode, 0 disables it.
+#+END_SRC
+
+** IVY KEYBINDINGS
+By default, Doom Emacs does not use 'SPC v', so the format I use for these bindings is 'SPC v' plus 'key'.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(map! :leader
+      (:prefix ("v" . "Ivy")
+       :desc "Ivy push view" "v p" #'ivy-push-view
+       :desc "Search in Current Directory" "s d" #'+ivy/project-search-from-cwd
+       :desc "Search in Project" "s p" #'+ivy/project-search
+       :desc "Ivy switch view" "v s" #'ivy-switch-view))
+#+END_SRC
+
+** RAINBOW MODE
+Rainbox mode displays the actual color for any hex value color.  It's such a nice feature that I wanted it turned on all the time, regardless of what mode I am in.  The following creates a global minor mode for rainbow-mode and enables it (exception: org-agenda-mode since rainbow-mode destroys all highlighting in org-agenda).
+
+#+begin_src emacs-lisp :tangle yes
+(define-globalized-minor-mode global-rainbow-mode rainbow-mode
+  (lambda ()
+    (when (not (memq major-mode
+                (list 'org-agenda-mode)))
+     (rainbow-mode 1))))
+(global-rainbow-mode 1 )
+#+end_src
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(add-hook! 'rainbow-mode-hook
+  (hl-line-mode (if rainbow-mode -1 +1)))
+#+END_SRC
+
+** LateX Config
+The Latex Configuration to export high quality PDF's
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(with-eval-after-load 'ox-latex
+(add-to-list 'org-latex-classes
+             '("org-plain-latex"
+               "\\documentclass{article}
+           [NO-DEFAULT-PACKAGES]
+           [PACKAGES]
+           [EXTRA]"
+               ("\\section{%s}" . "\\section*{%s}")
+               ("\\subsection{%s}" . "\\subsection*{%s}")
+               ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+               ("\\paragraph{%s}" . "\\paragraph*{%s}")
+               ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
+#+END_SRC
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(setq org-highlight-latex-and-related '(native))
+
+(require 'org-src)
+(add-to-list 'org-src-block-faces '("latex" (:inherit default :extend t)))
+#+END_SRC
+
+** PDF View Configuration
+PDF Viewer
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(use-package pdf-view
+  :hook (pdf-tools-enabled . pdf-view-midnight-minor-mode)
+  :hook (pdf-tools-enabled . hide-mode-line-mode)
+  :config
+  (setq pdf-view-midnight-colors '("#ABB2BF" . "#282C35")))
+#+END_SRC
+#+RESULTS:
+| latex | (:inherit default :extend t) |
+
+* START PAGE
+What appears at the beginning!
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(remove-hook '+doom-dashboard-functions #'doom-dashboard-widget-shortmenu)
+
+(add-hook! '+doom-dashboard-functions :append
+  (insert "\n" (+doom-dashboard--center +doom-dashboard--width "kyonax_on_tech - is.kyonax")))
+
+                (defun my-weebery-is-always-greater ()
+  (let* ((banner '(
+"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣧⡀⣿⣤⣀⣾⣅⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠠⣤⣤⠲⠶⣦⡿⣿⣿⣿⣿⣿⣿⣿⣴⣴⠖⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+"⠀⠀⠀⠀⠀⠀⠀⠀⢲⣦⣿⣟⠛⡓⣀⠐⠋⢽⠟⡿⢿⣿⣿⢛⢷⣤⣤⠄⠀⠀⠀⠀⠀⠀⠀"
+"⠀⠀⠀⠀⠀⠀⠠⢤⣦⣤⡦⠆⢈⢋⣡⡔⠁⢀⡠⠐⢻⡿⢃⡄⠀⣿⣧⣤⣀⠀⠀⠀⠀⠀⠀"
+"⠀⠀⠀⠀⠀⠀⣀⣴⣾⡿⠗⡪⢛⣿⣿⣷⢾⡟⠀⣊⣴⣷⣿⢧⣦⣿⣿⢿⣁⣀⠀⠀⠀⠀⠀"
+"⠀⠀⠀⠀⠀⢈⡬⠟⠂⠀⠖⠀⠞⠉⡽⠃⢈⠡⢋⠏⡰⠀⡿⠈⠛⣿⡇⠸⢢⡀⠀⠀⠀⠀⠀"
+"⠀⠀⠀⠀⠀⠀⠀⠊⠄⠁⠀⠐⣀⣪⢀⣔⡤⠂⣠⢀⡴⠀⣡⡀⠁⠈⠃⡢⠡⣄⠀⠀⠀⠀⠀"
+"⠀⠀⠀⠀⠀⠀⠀⠀⠄⠀⢤⣜⣉⡛⠻⢿⣷⣿⣿⣾⣷⡾⠿⠷⠆⢁⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+"⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⣾⠧⣬⣍⣑⠢⣽⣿⣿⣋⡤⠴⠒⢛⣳⣧⠀⠈⠀⢤⡄⠀⠀⠀⠀"
+"⠀⠀⠀⠀⠀⠀⣤⣧⠀⡄⢿⣧⡙⠛⠻⣤⣿⣿⣿⣿⣠⣿⡿⠟⣹⡧⠐⠠⠠⣿⡧⠀⠀⠀⠀"
+"⠀⠀⠀⠀⣠⣾⣿⣿⣧⡀⠸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣾⡿⠁⢋⡄⠐⣿⣿⠀⠀⠀⠀"
+"⠀⠀⢀⣼⣿⣿⣿⣿⣟⠀⠀⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠃⠀⣿⡧⠀⣿⣿⡀⣧⠀⠀"
+"⠀⠀⣿⣿⣿⣿⣿⠛⢿⣷⡄⢢⠘⢿⣿⣿⣿⣿⣿⣿⣿⣿⠟⢁⠀⠀⢛⣩⣴⣿⡿⢃⡌⠀⠀"
+"⠀⠀⠙⣿⣿⣿⣿⣿⣶⣌⠻⢦⡁⠀⠻⣿⣿⣿⣿⠿⠋⠀⣘⣡⣶⣿⡿⠟⣛⣡⠶⢋⠄⠀⠀"
+"⠀⠀⠀⠈⠻⠿⡿⡿⣿⣿⣿⣦⣙⠢⠀⠀⠈⠈⣀⣤⣶⣿⣟⢛⡩⠔⣒⣩⣥⣤⣶⣿⠂⠀⠀"
+"⠀⠀⠀⠀⠀⠰⣶⣦⣦⣦⡙⢿⡿⠓⣀⣠⣴⣿⣿⣿⡿⢛⣩⣴⣾⣿⡿⠿⠛⠋⠉⠁⠀⠀⠀"
+"⠀⠀⠀⠀⠀⠀⠈⠙⠻⢿⣿⣦⣅⠘⠿⠋⠁⢈⠟⣫⣿⣿⠿⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠃⠐⡄⠀⠁⡺⠛⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+))
+         (longest-line (apply #'max (mapcar #'length banner))))
+    (put-text-property
+     (point)
+     (dolist (line banner (point))
+       (insert (+doom-dashboard--center
+                +doom-dashboard--width
+                (concat line (make-string (max 0 (- longest-line (length line))) 32)))
+               "\n"))
+     'face 'doom-dashboard-banner)))
+
+(setq +doom-dashboard-ascii-banner-fn #'my-weebery-is-always-greater)
+#+END_SRC
+
+** CUSTOM FACES DASHBOARD
+ Custom Colors for the Dashboard Config.
+
+#+BEGIN_SRC emacs-lisp :tangle yes
+(custom-set-faces!
+  '(doom-dashboard-banner :foreground "#9FE573" :background "#000000" :weight bold)
+  '(doom-dashboard-loaded :foreground "#9FE573" :background "#000000" :weight bold))
+#+END_SRC
+
+* TRAMP WINDOWS
+PuTTY Installation and plink ENV/Variable for Host Connections.
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(setq password-cache-expiry nil)
+
+(when (eq window-system 'w32)
+  (setq tramp-default-method "plink")
+  (when (and (not (string-match putty-directory (getenv "PATH")))
+	     (file-directory-p putty-directory))
+    (setenv "PATH" (concat putty-directory ";" (getenv "PATH")))
+    (add-to-list 'exec-path putty-directory)))
+#+END_SRC
