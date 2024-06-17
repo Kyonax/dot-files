@@ -5,7 +5,6 @@
         { "name": "Doom Emacs Init File", "path": "~/.doom.d/init.el", "dotFile": "./applications/.doom.d/init.el" },
         { "name": "Doom Emacs Packages File", "path": "~/.doom.d/packages.el", "dotFile": "./applications/.doom.d/packages.el" },
         { "name": "Doom Emacs Tailwind Straight File", "path": "~/.doom.d/straight.el", "dotFile": "./applications/.doom.d/straight.el" },
-        { "name": "Emacs Daemon on Startup", "path": "~/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/emacs-daemon.exe", "dotFile": "./os-system/windows/emacs-daemon/emacs-daemon.exe" },
         { "name": "Alacritty Config File", "path": "~/AppData/Roaming/alacritty/alacritty.toml", "dotFile": "./applications/alacritty/alacritty.toml" },
         { "name": "Alacritty Style Catpuccin Mocha", "path": "~/AppData/Roaming/alacritty/mocha.toml", "dotFile": "./applications/alacritty/mocha.toml" },
         { "name": "Bug.n Config File", "path": "~/AppData/Roaming/bug.n/Config.ini", "dotFile": "./applications/bug.n/Config.ini" },

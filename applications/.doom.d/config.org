@@ -77,6 +77,12 @@ ORG Mode main configuration - inspired by DT
         org-todo-keywords        ; This overwrites the default Doom org-todo-keywords
           '((sequence
              "TODO(t)"           ; A task that is ready to be tackled
+             "DAILY(a)"          ; A Daily Task
+             "MONDAY(1)"         ; The Tasks of the Monday
+             "ODDT(3)"           ; The Wednesday and Friday Tasks
+             "WEEKLY(k)"         ; A Weekly Task
+             "CITA(4)"         ; A Weekly Task
+             "EVENTO(5)"         ; A Weekly Task
              "CONTENT(n)"        ; Content to accomplish
              "STREAM(s)"         ; Stream planned
              "WEB(e)"            ; Website Tasks
@@ -120,14 +126,36 @@ ORG Mode main configuration - inspired by DT
   (setq org-agenda-files '("~/.brain.d/agenda/agenda.org")))
 
 (setq
-   ;; org-fancy-priorities-list '("[A]" "[B]" "[C]")
-   org-fancy-priorities-list '("🐲" "🐉" "🀄")
+   org-fancy-priorities-list '("[A]" "[B]" "[C]")
+   ;; org-fancy-priorities-list '("🐲" "🐉" "🀄")
    ;; org-fancy-priorities-list '("🟥" "🟧" "🟨")
    org-agenda-block-separator 175)
 
 (setq org-agenda-custom-commands
       '(("v" "A better agenda view"
-         ((tags "PRIORITY=\"A\""
+         (
+          (tags "homea"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "[#A] Home Daily Tasks:")))
+          (tags "homeb"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "[#B] Home Wed-Fri Day Tasks:")))
+          (tags "homec"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "[#C] Home Weekly Tasks:")))
+          (tags "salud"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Family Health:")))
+          (tags "work"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Work Tasks:")))
+          (tags "kyo"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Kyonax's Projects:")))
+          (tags "event"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Important Events:")))
+          (tags "PRIORITY=\"A\""
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
                  (org-agenda-overriding-header "High-priority Unfinished Tasks:")))
           (tags "PRIORITY=\"B\""
@@ -136,21 +164,6 @@ ORG Mode main configuration - inspired by DT
           (tags "PRIORITY=\"C\""
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
                  (org-agenda-overriding-header "Low-priority Unfinished Tasks:")))
-          (tags "home"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Home Tasks:")))
-          (tags "kyonax"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Tasks for Kyonax:")))
-          (tags "content_creation"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Tasks for Content Creation:")))
-          (tags "develop"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Develop Tasks:")))
-          (tags "work"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Work Tasks:")))
 
           (agenda "")
           (alltodo "")))))
