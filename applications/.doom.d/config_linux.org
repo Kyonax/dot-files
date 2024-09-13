@@ -8,9 +8,13 @@
 
 * Table of Contents :toc:
 - [[#about-this-config][About This Config]]
+- [[#dired][DIRED]]
+  - [[#keybindings-to-open-dired][Keybindings To Open Dired]]
+  - [[#keybindings-within-dired][Keybindings Within Dired]]
+  - [[#keybindings-within-dired-with-peep-dired-mode-enabled][Keybindings Within Dired With Peep-Dired-Mode Enabled]]
+  - [[#making-deleted-files-go-to-trash-can][Making deleted files go to trash can]]
 - [[#doom-default-configuration][DOOM Default Configuration]]
   - [[#username--e-mail-set-up][Username & e-mail (set-up)]]
-  - [[#file-coding-system][File Coding System]]
   - [[#org-config-set-up][ORG Config (set-up)]]
   - [[#bookmarks][Bookmarks]]
 - [[#doom-customization][DOOM Customization]]
@@ -22,7 +26,6 @@
   - [[#org-roam-keymaps-config-and-templates][Org-roam Keymaps, Config, and Templates]]
 - [[#plugins--tools-set-up][Plugins & Tools (set-up)]]
   - [[#melpa][MELPA]]
-  - [[#powerline-config][Powerline Config]]
   - [[#beacon-plugin][Beacon Plugin]]
   - [[#lsp-plugin--add-ons][lsp Plugin & add-ons]]
   - [[#clippy-plugin][Clippy Plugin]]
@@ -38,12 +41,133 @@
   - [[#pdf-view-configuration][PDF View Configuration]]
 - [[#start-page][START PAGE]]
   - [[#custom-faces-dashboard][CUSTOM FACES DASHBOARD]]
-- [[#tramp-windows][TRAMP WINDOWS]]
 
 * About This Config
-Doom Configuration for Development and Organization v0.1 - Windows Version.
+Doom Configuration for Development and Organization v0.1 - Linux Version.
 
 -----
+* DIRED
+Dired is the file manager within Emacs.  Below, I setup keybindings for image previews (peep-dired).  Doom Emacs does not use 'SPC d' for any of its keybindings, so I've chosen the format of 'SPC d' plus 'key'.
+
+** Keybindings To Open Dired
+
+| COMMAND    | DESCRIPTION                        | KEYBINDING |
+|------------+------------------------------------+------------|
+| dired      | /Open dired file manager/            | SPC d d    |
+| dired-jump | /Jump to current directory in dired/ | SPC d j    |
+
+** Keybindings Within Dired
+*** Basic dired commands
+
+| COMMAND                | DESCRIPTION                                 | KEYBINDING |
+|------------------------+---------------------------------------------+------------|
+| dired-view-file        | /View file in dired/                          | SPC d v    |
+| dired-up-directory     | /Go up in directory tree/                     | h          |
+| dired-find-file        | /Go down in directory tree (or open if file)/ | l          |
+| dired-next-line        | /Move down to next line/                      | j          |
+| dired-previous-line    | /Move up to previous line/                    | k          |
+| dired-mark             | /Mark file at point/                          | m          |
+| dired-unmark           | /Unmark file at point/                        | u          |
+| dired-do-copy          | /Copy current file or marked files/           | C          |
+| dired-do-rename        | /Rename current file or marked files/         | R          |
+| dired-hide-details     | /Toggle detailed listings on/off/             | (          |
+| dired-git-info-mode    | /Toggle git information on/off/               | )          |
+| dired-create-directory | /Create new empty directory/                  | +          |
+| dired-diff             | /Compare file at point with another/          | =          |
+| dired-subtree-toggle   | /Toggle viewing subtree at point/             | TAB        |
+
+*** Dired commands using regex
+
+| COMMAND                 | DESCRIPTION                | KEYBINDING |
+|-------------------------+----------------------------+------------|
+| dired-mark-files-regexp | /Mark files using regex/     | % m        |
+| dired-do-copy-regexp    | /Copy files using regex/     | % C        |
+| dired-do-rename-regexp  | /Rename files using regex/   | % R        |
+| dired-mark-files-regexp | /Mark all files using regex/ | * %        |
+
+*** File permissions and ownership
+
+| COMMAND         | DESCRIPTION                      | KEYBINDING |
+|-----------------+----------------------------------+------------|
+| dired-do-chgrp  | /Change the group of marked files/ | g G        |
+| dired-do-chmod  | /Change the mode of marked files/  | M          |
+| dired-do-chown  | /Change the owner of marked files/ | O          |
+| dired-do-rename | /Rename file or all marked files/  | R          |
+
+#+begin_src emacs-lisp
+(map! :leader
+      (:prefix ("d" . "dired")
+       :desc "Open dired" "d" #'dired
+       :desc "Dired jump to current" "j" #'dired-jump)
+      (:after dired
+              (:map dired-mode-map
+               :desc "Peep-dired image previews" "d p" #'peep-dired
+               :desc "Dired view file"           "d v" #'dired-view-file)))
+
+(evil-define-key 'normal dired-mode-map
+  (kbd "M-RET") 'dired-display-file
+  (kbd "h") 'dired-up-directory
+  (kbd "l") 'dired-open-file ; use dired-find-file instead of dired-open.
+  (kbd "m") 'dired-mark
+  (kbd "t") 'dired-toggle-marks
+  (kbd "u") 'dired-unmark
+  (kbd "C") 'dired-do-copy
+  (kbd "D") 'dired-do-delete
+  (kbd "J") 'dired-goto-file
+  (kbd "M") 'dired-do-chmod
+  (kbd "O") 'dired-do-chown
+  (kbd "P") 'dired-do-print
+  (kbd "R") 'dired-do-rename
+  (kbd "T") 'dired-do-touch
+  (kbd "Y") 'dired-copy-filenamecopy-filename-as-kill ; copies filename to kill ring.
+  (kbd "Z") 'dired-do-compress
+  (kbd "+") 'dired-create-directory
+  (kbd "-") 'dired-do-kill-lines
+  (kbd "% l") 'dired-downcase
+  (kbd "% m") 'dired-mark-files-regexp
+  (kbd "% u") 'dired-upcase
+  (kbd "* %") 'dired-mark-files-regexp
+  (kbd "* .") 'dired-mark-extension
+  (kbd "* /") 'dired-mark-directories
+  (kbd "; d") 'epa-dired-do-decrypt
+  (kbd "; e") 'epa-dired-do-encrypt)
+;; With dired-open plugin, you can launch external programs for certain extensions
+;; For example, I set all .png files to open in 'sxiv' and all .mp4 files to open in 'mpv'
+(setq dired-open-extensions '(("gif" . "sxiv")
+                              ("jpg" . "sxiv")
+                              ("png" . "sxiv")
+                              ("mkv" . "mpv")
+                              ("mp4" . "mpv")))
+#+end_src
+
+** Keybindings Within Dired With Peep-Dired-Mode Enabled
+If peep-dired is enabled, you will get image previews as you go up/down with 'j' and 'k'
+
+| COMMAND              | DESCRIPTION                              | KEYBINDING |
+|----------------------+------------------------------------------+------------|
+| peep-dired           | /Toggle previews within dired/             | SPC d p    |
+| peep-dired-next-file | /Move to next file in peep-dired-mode/     | j          |
+| peep-dired-prev-file | /Move to previous file in peep-dired-mode/ | k          |
+
+#+BEGIN_SRC emacs-lisp
+(evil-define-key 'normal peep-dired-mode-map
+  (kbd "j") 'peep-dired-next-file
+  (kbd "k") 'peep-dired-prev-file)
+(add-hook 'peep-dired-hook 'evil-normalize-keymaps)
+#+END_SRC
+
+** Making deleted files go to trash can
+#+begin_src emacs-lisp
+(setq delete-by-moving-to-trash t
+      trash-directory "~/.local/share/Trash/files/")
+#+end_src
+
+=NOTE=: For convenience, you may want to create a symlink to 'local/share/Trash' in your home directory:
+#+begin_example
+cd ~/
+ln -s ~/.local/share/Trash .
+#+end_example
+
 * DOOM Default Configuration
 ** Username & e-mail (set-up)
 Some functionality uses this to identify you, e.g. GPG configuration, email, clients, file templates and snippets.
@@ -53,14 +177,6 @@ Some functionality uses this to identify you, e.g. GPG configuration, email, cli
       user-mail-address "kyonax25@gmail.com")
 
 #+END_SRC
-
-** File Coding System
-=Unix Coding System= for Windows Doom Emacs Version.
-
-#+BEGIN_SRC emacs-lisp :tangle yes
-(set-buffer-file-coding-system 'unix)
-#+END_SRC
-
 ** ORG Config (set-up)
 *** ORG Mode
 ORG Mode main configuration - inspired by DT
@@ -75,27 +191,27 @@ ORG Mode main configuration - inspired by DT
         org-superstar-itembullet-alist '((?+ . ?➤) (?- . ?✦)) ; changes +/- symbols in item lists
         org-hide-emphasis-markers t
         org-todo-keywords        ; This overwrites the default Doom org-todo-keywords
-          '((sequence
-             "TODO(t)"           ; A task that is ready to be tackled
-             "DAILY(a)"          ; A Daily Task
-             "MONDAY(1)"         ; The Tasks of the Monday
-             "ODDT(3)"           ; The Wednesday and Friday Tasks
-             "WEEKLY(k)"         ; A Weekly Task
-             "CITA(4)"         ; A Weekly Task
-             "EVENTO(5)"         ; A Weekly Task
-             "CONTENT(n)"        ; Content to accomplish
-             "STREAM(s)"         ; Stream planned
-             "WEB(e)"            ; Website Tasks
-             "CODE(m)"           ; Coding Tasks
-             "STORY(y)"          ; Storytelling TODO
-             "BLOG(b)"           ; Blog writing assignments
-             "GYM(g)"            ; Things to accomplish at the gym
-             "PROJ(p)"           ; A project that contains other tasks
-             "VIDEO(v)"          ; Video assignments
-             "WAIT(w)"           ; Something is holding up this task
-             "|"                 ; The pipe necessary to separate "active" states and "inactive" states
-             "DONE(d)"           ; Task has been completed
-             "CANCELLED(c)" )))) ; Task has been cancelled                        )
+        '((sequence
+           "TODO(t)"           ; A task that is ready to be tackled
+           "DAILY(a)"          ; A Daily Task
+           "MONDAY(1)"         ; The Tasks of the Monday
+           "ODDT(3)"           ; The Wednesday and Friday Tasks
+           "WEEKLY(k)"         ; A Weekly Task
+           "DATE(4)"         ; A Weekly Task
+           "EVENT(5)"         ; A Weekly Task
+           "CONTENT(n)"        ; Content to accomplish
+           "STREAM(s)"         ; Stream planned
+           "WEB(e)"            ; Website Tasks
+           "CODE(m)"           ; Coding Tasks
+           "STORY(y)"          ; Storytelling TODO
+           "BLOG(b)"           ; Blog writing assignments
+           "GYM(g)"            ; Things to accomplish at the gym
+           "PROYECT(p)"           ; A project that contains other tasks
+           "VIDEO(v)"          ; Video assignments
+           "WAIT(w)"           ; Something is holding up this task
+           "|"                 ; The pipe necessary to separate "active" states and "inactive" states
+           "DONE(d)"           ; Task has been completed
+           "CANCELLED(c)" )))) ; Task has been cancelled                        )
 #+END_SRC
 
 *** Org-auto-tangle
@@ -123,13 +239,13 @@ ORG Mode main configuration - inspired by DT
 
 #+BEGIN_SRC emacs-lisp :tangle yes
 (after! org
-  (setq org-agenda-files '("~/.brain.d/agenda/agenda.org")))
+  (setq org-agenda-files '("~/.brain.d/roam-nodes/20240912084617-agenda.org")))
 
 (setq
-   org-fancy-priorities-list '("[A]" "[B]" "[C]")
-   ;; org-fancy-priorities-list '("🐲" "🐉" "🀄")
-   ;; org-fancy-priorities-list '("🟥" "🟧" "🟨")
-   org-agenda-block-separator 175)
+ ;; org-fancy-priorities-list '("[A]" "[B]" "[C]")
+ ;; org-fancy-priorities-list '("🐲" "🐉" "🀄")
+ ;; org-fancy-priorities-list '("🟥" "🟧" "🟨")
+ org-agenda-block-separator 175)
 
 (setq org-agenda-custom-commands
       '(("v" "A better agenda view"
@@ -143,7 +259,7 @@ ORG Mode main configuration - inspired by DT
           (tags "homec"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
                  (org-agenda-overriding-header "[#C] Home Weekly Tasks:")))
-          (tags "salud"
+          (tags "health"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
                  (org-agenda-overriding-header "Family Health:")))
           (tags "work"
@@ -175,11 +291,11 @@ ORG Mode main configuration - inspired by DT
   :hook
   (org-mode . org-fancy-priorities-mode)
   :config
-  (setq org-fancy-priorities-list '("🐲" "🐉" "🀄")
-   org-priority-faces
-   '((?A :foreground "#ff6c6b" :weight regular)
-     (?B :foreground "#98be65" :weight regular)
-     (?C :foreground "#c678dd" :weight regular))))
+  (setq org-fancy-priorities-list '("" "󱡞" "")
+        org-priority-faces
+        '((?A :foreground "#ff6c6b" :weight regular)
+          (?B :foreground "#98be65" :weight regular)
+          (?C :foreground "#c678dd" :weight regular))))
 #+END_SRC
 
 *** Org ob-typescript
@@ -276,15 +392,15 @@ Init Configuration and initialization of Org-roam
 
 #+BEGIN_SRC emacs-lisp :tangle yes
 (use-package! websocket
-    :after org-roam)
+  :after org-roam)
 (use-package! org-roam-ui
-    :after org
-    :hook (after-init . org-roam-ui-mode)
-    :config
-    (setq org-roam-ui-sync-theme t
-          org-roam-ui-follow t
-          org-roam-ui-update-on-save t
-          org-roam-ui-open-on-start t))
+  :after org
+  :hook (after-init . org-roam-ui-mode)
+  :config
+  (setq org-roam-ui-sync-theme t
+        org-roam-ui-follow t
+        org-roam-ui-update-on-save t
+        org-roam-ui-open-on-start t))
 #+END_SRC
 
 ** Org-roam Keymaps, Config, and Templates
@@ -302,11 +418,11 @@ More configs for ORG-roam
   (setq org-roam-capture-templates
         '(
           ("d" "default" plain "%?"
-            :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
-                               "#+title: ${title}\n") :unnarrowed t)
+           :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+                              "#+title: ${title}\n") :unnarrowed t)
           ("s" "Not Time Stamp File" plain "%?"
-            :if-new (file+head "${slug}.org"
-                               "#+title: ${title}\n") :unnarrowed t)
+           :if-new (file+head "${slug}.org"
+                              "#+title: ${title}\n") :unnarrowed t)
           ("n" "new org document" plain
            (file "~/.brain.d/roam-nodes/templates/NEWNodeTemplate.org")
            :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
@@ -361,13 +477,6 @@ More configs for ORG-roam
 (add-to-list 'package-archives
              '("melpa-stable" . "https://stable.melpa.org/packages/") t)
 #+END_SRC
-** Powerline Config
-Necessary for Windows usage
-
-#+BEGIN_SRC emacs-lisp :tangle yes
-(require 'powerline)
-(powerline-default-theme)
-#+END_SRC
 
 ** Beacon Plugin
 Never lose your cursor.  When you scroll, your cursor will shine!  This is a global minor-mode. Turn it on everywhere with:
@@ -381,7 +490,7 @@ Initialization of lsp.
 
 #+BEGIN_SRC emacs-lisp :tangle yes
 (after! ccls
-  (setq ccls-executable "/path/to/shell/wrapper")
+  (setq ccls-executable "/usr/bin/ccls")
   (set-lsp-priority! 'ccls 0))
 
 (after! lsp-tailwindcss
@@ -390,19 +499,6 @@ Initialization of lsp.
 (use-package lsp-tailwindcss
   :init
   (setq lsp-tailwindcss-add-on-mode t))
-
-(with-eval-after-load 'ox-latex
-(add-to-list 'org-latex-classes
-             '("org-plain-latex"
-               "\\documentclass{article}
-           [NO-DEFAULT-PACKAGES]
-           [PACKAGES]
-           [EXTRA]"
-               ("\\section{%s}" . "\\section*{%s}")
-               ("\\subsection{%s}" . "\\subsection*{%s}")
-               ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-               ("\\paragraph{%s}" . "\\paragraph*{%s}")
-               ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
 #+END_SRC
 
 ** Clippy Plugin
@@ -427,7 +523,7 @@ https://github.com/seagle0128/doom-modeline
 
 - Config Modeline
 #+BEGIN_SRC emacs-lisp :tangle yes
-(set-face-attribute 'mode-line nil :font "MesloLGL Nerd Font")
+(set-face-attribute 'mode-line nil :font "SpaceMono Nerd Font Mono")
 (setq doom-modeline-support-imenu t ;;
       doom-modeline-buffer-state-icon t ;;
       doom-modeline-icon t ;;
@@ -454,13 +550,13 @@ Neotree is a file tree viewer.  When you open neotree, it jumps to the current f
         neo-window-fixed-size nil
         inhibit-compacting-font-caches t
         projectile-switch-project-action 'neotree-projectile-action)
-        (add-hook 'neo-after-create-hook
-                  #'(lambda (_)
-                      (with-current-buffer (get-buffer neo-buffer-name)
-                        (setq truncate-lines t)
-                        (setq word-wrap nil)
-                        (make-local-variable 'auto-hscroll-mode)
-                        (setq auto-hscroll-mode nil)))))
+  (add-hook 'neo-after-create-hook
+            #'(lambda (_)
+                (with-current-buffer (get-buffer neo-buffer-name)
+                  (setq truncate-lines t)
+                  (setq word-wrap nil)
+                  (make-local-variable 'auto-hscroll-mode)
+                  (setq auto-hscroll-mode nil)))))
 (after! doom-themes
   (setq doom-neotree-enable-variable-pitch t))
 (map! :leader
@@ -471,7 +567,7 @@ Neotree is a file tree viewer.  When you open neotree, it jumps to the current f
 #+BEGIN_SRC emacs-lisp :tangle no
 (use-package neotree
   :config
-        (setq neo-theme (if (display-graphic-p) 'icons)))
+  (setq neo-theme (if (display-graphic-p) 'icons)))
 #+END_SRC
 
 ** TREEMACS
@@ -492,16 +588,6 @@ I have toggled display-line-numbers-type so I have line numbers displayed. Doom 
       "t t" #'toggle-truncate-lines)
 #+END_SRC
 
-#+begin_src emacs-lisp :tangle yes
-(defun xah-toggle-line-spacing ()
-  "Toggle line spacing between no extra space to extra half line height."
-  (interactive)
-  (if (eq line-spacing nil)
-      (setq line-spacing 0.2) ; add 0.5 height between lines
-    (setq line-spacing nil)   ; no extra heigh between lines
-    )
-  (redraw-frame (selected-frame)))
-#+end_src
 * Ivy
 Ivy is a generic completion mechanism for Emacs.
 
@@ -560,8 +646,8 @@ Rainbox mode displays the actual color for any hex value color.  It's such a nic
 (define-globalized-minor-mode global-rainbow-mode rainbow-mode
   (lambda ()
     (when (not (memq major-mode
-                (list 'org-agenda-mode)))
-     (rainbow-mode 1))))
+                     (list 'org-agenda-mode)))
+      (rainbow-mode 1))))
 (global-rainbow-mode 1 )
 #+end_src
 
@@ -573,22 +659,22 @@ Rainbox mode displays the actual color for any hex value color.  It's such a nic
 ** LateX Config
 The Latex Configuration to export high quality PDF's
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp :tangle yes
 (with-eval-after-load 'ox-latex
-(add-to-list 'org-latex-classes
-             '("org-plain-latex"
-               "\\documentclass{article}
+  (add-to-list 'org-latex-classes
+               '("org-plain-latex"
+                 "\\documentclass{article}
            [NO-DEFAULT-PACKAGES]
            [PACKAGES]
            [EXTRA]"
-               ("\\section{%s}" . "\\section*{%s}")
-               ("\\subsection{%s}" . "\\subsection*{%s}")
-               ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-               ("\\paragraph{%s}" . "\\paragraph*{%s}")
-               ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp :tangle yes
 (setq org-highlight-latex-and-related '(native))
 
 (require 'org-src)
@@ -598,15 +684,13 @@ The Latex Configuration to export high quality PDF's
 ** PDF View Configuration
 PDF Viewer
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp :tangle yes
 (use-package pdf-view
   :hook (pdf-tools-enabled . pdf-view-midnight-minor-mode)
   :hook (pdf-tools-enabled . hide-mode-line-mode)
   :config
   (setq pdf-view-midnight-colors '("#ABB2BF" . "#282C35")))
 #+END_SRC
-#+RESULTS:
-| latex | (:inherit default :extend t) |
 
 * START PAGE
 What appears at the beginning!
@@ -617,30 +701,30 @@ What appears at the beginning!
 (add-hook! '+doom-dashboard-functions :append
   (insert "\n" (+doom-dashboard--center +doom-dashboard--width "kyonax_on_tech - is.kyonax")))
 
-                (defun my-weebery-is-always-greater ()
+(defun my-weebery-is-always-greater ()
   (let* ((banner '(
-"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣧⡀⣿⣤⣀⣾⣅⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠠⣤⣤⠲⠶⣦⡿⣿⣿⣿⣿⣿⣿⣿⣴⣴⠖⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⢲⣦⣿⣟⠛⡓⣀⠐⠋⢽⠟⡿⢿⣿⣿⢛⢷⣤⣤⠄⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠠⢤⣦⣤⡦⠆⢈⢋⣡⡔⠁⢀⡠⠐⢻⡿⢃⡄⠀⣿⣧⣤⣀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⣀⣴⣾⡿⠗⡪⢛⣿⣿⣷⢾⡟⠀⣊⣴⣷⣿⢧⣦⣿⣿⢿⣁⣀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⢈⡬⠟⠂⠀⠖⠀⠞⠉⡽⠃⢈⠡⢋⠏⡰⠀⡿⠈⠛⣿⡇⠸⢢⡀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠊⠄⠁⠀⠐⣀⣪⢀⣔⡤⠂⣠⢀⡴⠀⣡⡀⠁⠈⠃⡢⠡⣄⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠄⠀⢤⣜⣉⡛⠻⢿⣷⣿⣿⣾⣷⡾⠿⠷⠆⢁⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⣾⠧⣬⣍⣑⠢⣽⣿⣿⣋⡤⠴⠒⢛⣳⣧⠀⠈⠀⢤⡄⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⣤⣧⠀⡄⢿⣧⡙⠛⠻⣤⣿⣿⣿⣿⣠⣿⡿⠟⣹⡧⠐⠠⠠⣿⡧⠀⠀⠀⠀"
-"⠀⠀⠀⠀⣠⣾⣿⣿⣧⡀⠸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣾⡿⠁⢋⡄⠐⣿⣿⠀⠀⠀⠀"
-"⠀⠀⢀⣼⣿⣿⣿⣿⣟⠀⠀⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠃⠀⣿⡧⠀⣿⣿⡀⣧⠀⠀"
-"⠀⠀⣿⣿⣿⣿⣿⠛⢿⣷⡄⢢⠘⢿⣿⣿⣿⣿⣿⣿⣿⣿⠟⢁⠀⠀⢛⣩⣴⣿⡿⢃⡌⠀⠀"
-"⠀⠀⠙⣿⣿⣿⣿⣿⣶⣌⠻⢦⡁⠀⠻⣿⣿⣿⣿⠿⠋⠀⣘⣡⣶⣿⡿⠟⣛⣡⠶⢋⠄⠀⠀"
-"⠀⠀⠀⠈⠻⠿⡿⡿⣿⣿⣿⣦⣙⠢⠀⠀⠈⠈⣀⣤⣶⣿⣟⢛⡩⠔⣒⣩⣥⣤⣶⣿⠂⠀⠀"
-"⠀⠀⠀⠀⠀⠰⣶⣦⣦⣦⡙⢿⡿⠓⣀⣠⣴⣿⣿⣿⡿⢛⣩⣴⣾⣿⡿⠿⠛⠋⠉⠁⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠈⠙⠻⢿⣿⣦⣅⠘⠿⠋⠁⢈⠟⣫⣿⣿⠿⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠃⠐⡄⠀⠁⡺⠛⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-))
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣧⡀⣿⣤⣀⣾⣅⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠠⣤⣤⠲⠶⣦⡿⣿⣿⣿⣿⣿⣿⣿⣴⣴⠖⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⢲⣦⣿⣟⠛⡓⣀⠐⠋⢽⠟⡿⢿⣿⣿⢛⢷⣤⣤⠄⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠠⢤⣦⣤⡦⠆⢈⢋⣡⡔⠁⢀⡠⠐⢻⡿⢃⡄⠀⣿⣧⣤⣀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⣀⣴⣾⡿⠗⡪⢛⣿⣿⣷⢾⡟⠀⣊⣴⣷⣿⢧⣦⣿⣿⢿⣁⣀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⢈⡬⠟⠂⠀⠖⠀⠞⠉⡽⠃⢈⠡⢋⠏⡰⠀⡿⠈⠛⣿⡇⠸⢢⡀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠊⠄⠁⠀⠐⣀⣪⢀⣔⡤⠂⣠⢀⡴⠀⣡⡀⠁⠈⠃⡢⠡⣄⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠄⠀⢤⣜⣉⡛⠻⢿⣷⣿⣿⣾⣷⡾⠿⠷⠆⢁⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⣾⠧⣬⣍⣑⠢⣽⣿⣿⣋⡤⠴⠒⢛⣳⣧⠀⠈⠀⢤⡄⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⣤⣧⠀⡄⢿⣧⡙⠛⠻⣤⣿⣿⣿⣿⣠⣿⡿⠟⣹⡧⠐⠠⠠⣿⡧⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⣠⣾⣿⣿⣧⡀⠸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣾⡿⠁⢋⡄⠐⣿⣿⠀⠀⠀⠀"
+                   "⠀⠀⢀⣼⣿⣿⣿⣿⣟⠀⠀⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠃⠀⣿⡧⠀⣿⣿⡀⣧⠀⠀"
+                   "⠀⠀⣿⣿⣿⣿⣿⠛⢿⣷⡄⢢⠘⢿⣿⣿⣿⣿⣿⣿⣿⣿⠟⢁⠀⠀⢛⣩⣴⣿⡿⢃⡌⠀⠀"
+                   "⠀⠀⠙⣿⣿⣿⣿⣿⣶⣌⠻⢦⡁⠀⠻⣿⣿⣿⣿⠿⠋⠀⣘⣡⣶⣿⡿⠟⣛⣡⠶⢋⠄⠀⠀"
+                   "⠀⠀⠀⠈⠻⠿⡿⡿⣿⣿⣿⣦⣙⠢⠀⠀⠈⠈⣀⣤⣶⣿⣟⢛⡩⠔⣒⣩⣥⣤⣶⣿⠂⠀⠀"
+                   "⠀⠀⠀⠀⠀⠰⣶⣦⣦⣦⡙⢿⡿⠓⣀⣠⣴⣿⣿⣿⡿⢛⣩⣴⣾⣿⡿⠿⠛⠋⠉⠁⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠈⠙⠻⢿⣿⣦⣅⠘⠿⠋⠁⢈⠟⣫⣿⣿⠿⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠃⠐⡄⠀⠁⡺⠛⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   ))
          (longest-line (apply #'max (mapcar #'length banner))))
     (put-text-property
      (point)
@@ -655,24 +739,10 @@ What appears at the beginning!
 #+END_SRC
 
 ** CUSTOM FACES DASHBOARD
- Custom Colors for the Dashboard Config.
+Custom Colors for the Dashboard Config.
 
 #+BEGIN_SRC emacs-lisp :tangle yes
 (custom-set-faces!
   '(doom-dashboard-banner :foreground "#9FE573" :background "#000000" :weight bold)
   '(doom-dashboard-loaded :foreground "#9FE573" :background "#000000" :weight bold))
-#+END_SRC
-
-* TRAMP WINDOWS
-PuTTY Installation and plink ENV/Variable for Host Connections.
-
-#+BEGIN_SRC emacs-lisp :tangle no
-(setq password-cache-expiry nil)
-
-(when (eq window-system 'w32)
-  (setq tramp-default-method "plink")
-  (when (and (not (string-match putty-directory (getenv "PATH")))
-	     (file-directory-p putty-directory))
-    (setenv "PATH" (concat putty-directory ";" (getenv "PATH")))
-    (add-to-list 'exec-path putty-directory)))
 #+END_SRC
