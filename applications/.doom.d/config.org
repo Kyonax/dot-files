@@ -8,6 +8,11 @@
 
 * Table of Contents :toc:
 - [[#about-this-config][About This Config]]
+- [[#dired][DIRED]]
+  - [[#keybindings-to-open-dired][Keybindings To Open Dired]]
+  - [[#keybindings-within-dired][Keybindings Within Dired]]
+  - [[#keybindings-within-dired-with-peep-dired-mode-enabled][Keybindings Within Dired With Peep-Dired-Mode Enabled]]
+  - [[#making-deleted-files-go-to-trash-can][Making deleted files go to trash can]]
 - [[#doom-default-configuration][DOOM Default Configuration]]
   - [[#username--e-mail-set-up][Username & e-mail (set-up)]]
   - [[#file-coding-system][File Coding System]]
@@ -30,7 +35,7 @@
   - [[#neotree-set-up][NEOTREE (set-up)]]
   - [[#treemacs][TREEMACS]]
   - [[#line-settings][Line Settings]]
-- [[#ivy][Ivy]]
+  - [[#ivy][Ivy]]
   - [[#ivy-posframe][IVY-POSFRAME]]
   - [[#ivy-keybindings][IVY KEYBINDINGS]]
   - [[#rainbow-mode][RAINBOW MODE]]
@@ -39,23 +44,149 @@
 - [[#start-page][START PAGE]]
   - [[#custom-faces-dashboard][CUSTOM FACES DASHBOARD]]
 - [[#tramp-windows][TRAMP WINDOWS]]
+- [[#open-directory][OPEN DIRECTORY]]
+  - [[#work][WORK]]
+- [[#gptel][GPTEl]]
+  - [[#ollama-v021][Ollama v0.2.1]]
+- [[#html-export-config][HTML Export Config]]
+- [[#server-socket---server-file][SERVER SOCKET - SERVER FILE]]
 
 * About This Config
-Doom Configuration for Development and Organization v0.1 - Windows Version.
+This Config was writed by *Kyonax*, with the mission to create the best *Config.org* file for Doom Emacs. This Config.org was created inspired by DT
 
 -----
+* DIRED
+Dired is the file manager within Emacs.  Below, I setup keybindings for image previews (peep-dired).  Doom Emacs does not use 'SPC d' for any of its keybindings, so I've chosen the format of 'SPC d' plus 'key'.
+
+** Keybindings To Open Dired
+
+| COMMAND    | DESCRIPTION                        | KEYBINDING |
+|------------+------------------------------------+------------|
+| dired      | /Open dired file manager/            | SPC d d    |
+| dired-jump | /Jump to current directory in dired/ | SPC d j    |
+
+** Keybindings Within Dired
+*** Basic dired commands
+
+| COMMAND                | DESCRIPTION                                 | KEYBINDING |
+|------------------------+---------------------------------------------+------------|
+| dired-view-file        | /View file in dired/                          | SPC d v    |
+| dired-up-directory     | /Go up in directory tree/                     | h          |
+| dired-find-file        | /Go down in directory tree (or open if file)/ | l          |
+| dired-next-line        | /Move down to next line/                      | j          |
+| dired-previous-line    | /Move up to previous line/                    | k          |
+| dired-mark             | /Mark file at point/                          | m          |
+| dired-unmark           | /Unmark file at point/                        | u          |
+| dired-do-copy          | /Copy current file or marked files/           | C          |
+| dired-do-rename        | /Rename current file or marked files/         | R          |
+| dired-hide-details     | /Toggle detailed listings on/off/             | (          |
+| dired-git-info-mode    | /Toggle git information on/off/               | )          |
+| dired-create-directory | /Create new empty directory/                  | +          |
+| dired-diff             | /Compare file at point with another/          | =          |
+| dired-subtree-toggle   | /Toggle viewing subtree at point/             | TAB        |
+
+*** Dired commands using regex
+
+| COMMAND                 | DESCRIPTION                | KEYBINDING |
+|-------------------------+----------------------------+------------|
+| dired-mark-files-regexp | /Mark files using regex/     | % m        |
+| dired-do-copy-regexp    | /Copy files using regex/     | % C        |
+| dired-do-rename-regexp  | /Rename files using regex/   | % R        |
+| dired-mark-files-regexp | /Mark all files using regex/ | * %        |
+
+*** File permissions and ownership
+
+| COMMAND         | DESCRIPTION                      | KEYBINDING |
+|-----------------+----------------------------------+------------|
+| dired-do-chgrp  | /Change the group of marked files/ | g G        |
+| dired-do-chmod  | /Change the mode of marked files/  | M          |
+| dired-do-chown  | /Change the owner of marked files/ | O          |
+| dired-do-rename | /Rename file or all marked files/  | R          |
+
+#+begin_src emacs-lisp
+(map! :leader
+      (:prefix ("d" . "dired")
+       :desc "Open dired" "d" #'dired
+       :desc "Dired jump to current" "j" #'dired-jump)
+      (:after dired
+              (:map dired-mode-map
+               :desc "Peep-dired image previews" "d p" #'peep-dired
+               :desc "Dired view file"           "d v" #'dired-view-file)))
+
+(evil-define-key 'normal dired-mode-map
+  (kbd "M-RET") 'dired-display-file
+  (kbd "h") 'dired-up-directory
+  (kbd "l") 'dired-open-file ; use dired-find-file instead of dired-open.
+  (kbd "m") 'dired-mark
+  (kbd "t") 'dired-toggle-marks
+  (kbd "u") 'dired-unmark
+  (kbd "C") 'dired-do-copy
+  (kbd "D") 'dired-do-delete
+  (kbd "J") 'dired-goto-file
+  (kbd "M") 'dired-do-chmod
+  (kbd "O") 'dired-do-chown
+  (kbd "P") 'dired-do-print
+  (kbd "R") 'dired-do-rename
+  (kbd "T") 'dired-do-touch
+  (kbd "Y") 'dired-copy-filenamecopy-filename-as-kill ; copies filename to kill ring.
+  (kbd "Z") 'dired-do-compress
+  (kbd "+") 'dired-create-directory
+  (kbd "-") 'dired-do-kill-lines
+  (kbd "% l") 'dired-downcase
+  (kbd "% m") 'dired-mark-files-regexp
+  (kbd "% u") 'dired-upcase
+  (kbd "* %") 'dired-mark-files-regexp
+  (kbd "* .") 'dired-mark-extension
+  (kbd "* /") 'dired-mark-directories
+  (kbd "; d") 'epa-dired-do-decrypt
+  (kbd "; e") 'epa-dired-do-encrypt)
+;; With dired-open plugin, you can launch external programs for certain extensions
+;; For example, I set all .png files to open in 'sxiv' and all .mp4 files to open in 'mpv'
+(setq dired-open-extensions '(("gif" . "sxiv")
+                              ("jpg" . "sxiv")
+                              ("png" . "sxiv")
+                              ("mkv" . "mpv")
+                              ("mp4" . "mpv")))
+#+end_src
+
+** Keybindings Within Dired With Peep-Dired-Mode Enabled
+If peep-dired is enabled, you will get image previews as you go up/down with 'j' and 'k'
+
+| COMMAND              | DESCRIPTION                              | KEYBINDING |
+|----------------------+------------------------------------------+------------|
+| peep-dired           | /Toggle previews within dired/             | SPC d p    |
+| peep-dired-next-file | /Move to next file in peep-dired-mode/     | j          |
+| peep-dired-prev-file | /Move to previous file in peep-dired-mode/ | k          |
+
+#+BEGIN_SRC emacs-lisp
+(evil-define-key 'normal peep-dired-mode-map
+  (kbd "j") 'peep-dired-next-file
+  (kbd "k") 'peep-dired-prev-file)
+(add-hook 'peep-dired-hook 'evil-normalize-keymaps)
+#+END_SRC
+
+** Making deleted files go to trash can
+#+begin_src emacs-lisp
+(setq delete-by-moving-to-trash t
+      trash-directory "~/.local/share/Trash/files/")
+#+end_src
+
+=NOTE=: For convenience, you may want to create a symlink to 'local/share/Trash' in your home directory:
+#+begin_example
+cd ~/
+ln -s ~/.local/share/Trash .
+#+end_example
 * DOOM Default Configuration
 ** Username & e-mail (set-up)
 Some functionality uses this to identify you, e.g. GPG configuration, email, clients, file templates and snippets.
 
 #+BEGIN_SRC emacs-lisp :tangle yes
 (setq user-full-name "Kyonax - Cristian Moreno"
-      user-mail-address "kyonax25@gmail.com")
+      user-mail-address "cristian@kyo.wtf")
 
 #+END_SRC
 
 ** File Coding System
-=Unix Coding System= for Windows Doom Emacs Version.
 
 #+BEGIN_SRC emacs-lisp :tangle yes
 (set-buffer-file-coding-system 'unix)
@@ -69,37 +200,40 @@ ORG Mode main configuration - inspired by DT
 (after! org
   (require 'org-bullets)
   (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
-  (setq org-directory "~/.brain.d/org-mode"
+  (setq org-directory "~/org"
         org-ellipsis " ▼ "
-        org-superstar-headline-bullets-list '("◉" "●" "○" "◆" "●" "○" "◆")
+        org-superstar-headline-bullets-list '("" "" "" "󰺕" "󰻂" "󰪥" "󰻃")
         org-superstar-itembullet-alist '((?+ . ?➤) (?- . ?✦)) ; changes +/- symbols in item lists
         org-hide-emphasis-markers t
         org-todo-keywords        ; This overwrites the default Doom org-todo-keywords
-          '((sequence
-             "TODO(t)"           ; A task that is ready to be tackled
-             "DAILY(a)"          ; A Daily Task
-             "MONDAY(1)"         ; The Tasks of the Monday
-             "ODDT(3)"           ; The Wednesday and Friday Tasks
-             "WEEKLY(k)"         ; A Weekly Task
-             "CITA(4)"         ; A Weekly Task
-             "EVENTO(5)"         ; A Weekly Task
-             "CONTENT(n)"        ; Content to accomplish
-             "STREAM(s)"         ; Stream planned
-             "WEB(e)"            ; Website Tasks
-             "CODE(m)"           ; Coding Tasks
-             "STORY(y)"          ; Storytelling TODO
-             "BLOG(b)"           ; Blog writing assignments
-             "GYM(g)"            ; Things to accomplish at the gym
-             "PROJ(p)"           ; A project that contains other tasks
-             "VIDEO(v)"          ; Video assignments
-             "WAIT(w)"           ; Something is holding up this task
-             "|"                 ; The pipe necessary to separate "active" states and "inactive" states
-             "DONE(d)"           ; Task has been completed
-             "CANCELLED(c)" )))) ; Task has been cancelled                        )
+        '((sequence
+           "TODO(t)"           ; A task that is ready to be tackled
+           "CONTENT(n)"        ; Content to accomplish
+           "STREAM(s)"         ; Stream planned
+           "WEB(e)"            ; Website Tasks
+           "CODE(m)"           ; Coding Tasks
+           "STORY(y)"          ; Storytelling TODO
+           "TEST(c)"           ; Blog writing assignments
+           "DEVELOP(d)"        ; Things to develop
+           "DAILY(a)"          ; A Daily Task
+           "MONDAY(1)"         ; The Tasks of the Monday
+           "ODDT(3)"           ; The Wednesday and Friday Tasks
+           "WEEKLY(k)"         ; A Weekly Task
+           "DATE(4)"         ; A Weekly Task
+           "EVENT(5)"         ; A Weekly Task
+           "BLOG(b)"           ; Blog writing assignments
+           "GYM(g)"            ; Things to accomplish at the gym
+           "PROYECT(p)"           ; A project that contains other tasks
+           "REVIEW(r)"         ; A project that contains other tasks
+           "VIDEO(v)"          ; Video assignments
+           "WAIT(w)"           ; Something is holding up this task
+           "|"                 ; The pipe necessary to separate "active" states and "inactive" states
+           "DONE(d)"           ; Task has been completed
+           "CANCELLED(c)" )))) ; Task has been cancelled                        )
 #+END_SRC
 
 *** Org-auto-tangle
-=org-auto-tangle= allows you to add the option =#+auto_tangle: t= in your Org file so that it automatically tangles when you save the document. I have made adding this to your file even easier by creating a function 'dt/insert-auto-tangle-tag' and setting it to a keybinding 'SPC i a' - ib: DT
+=org-auto-tangle= allows you to add the option =#+auto_tangle: t= in your Org file so that it automatically tangles when you save the document.  I have made adding this to your file even easier by creating a function 'dt/insert-auto-tangle-tag' and setting it to a keybinding 'SPC i a'.
 
 #+begin_src emacs-lisp :tangle yes
 (use-package! org-auto-tangle
@@ -120,20 +254,36 @@ ORG Mode main configuration - inspired by DT
 #+end_src
 
 *** Org-agenda
-
 #+BEGIN_SRC emacs-lisp :tangle yes
 (after! org
-  (setq org-agenda-files '("~/.brain.d/agenda/agenda.org")))
+  (setq org-agenda-files '("~/.brain.d/roam-nodes/20240912084617-agenda.org")))
 
 (setq
-   org-fancy-priorities-list '("[A]" "[B]" "[C]")
+   ;; org-fancy-priorities-list '("[A]" "[B]" "[C]")
    ;; org-fancy-priorities-list '("🐲" "🐉" "🀄")
    ;; org-fancy-priorities-list '("🟥" "🟧" "🟨")
    org-agenda-block-separator 175)
 
 (setq org-agenda-custom-commands
       '(("v" "A better agenda view"
-         (
+         ((tags "PRIORITY=\"A\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "High-priority unfinished tasks:")))
+          (tags "PRIORITY=\"B\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Medium-priority unfinished tasks:")))
+          (tags "PRIORITY=\"C\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Low-priority unfinished tasks:")))
+          (tags "maritz"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Maritz:")))
+          (tags "softtek"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Softtek:")))
+          (tags "shoptron"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Shoptron:")))
           (tags "homea"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
                  (org-agenda-overriding-header "[#A] Home Daily Tasks:")))
@@ -143,7 +293,7 @@ ORG Mode main configuration - inspired by DT
           (tags "homec"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
                  (org-agenda-overriding-header "[#C] Home Weekly Tasks:")))
-          (tags "salud"
+          (tags "health"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
                  (org-agenda-overriding-header "Family Health:")))
           (tags "work"
@@ -155,16 +305,6 @@ ORG Mode main configuration - inspired by DT
           (tags "event"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
                  (org-agenda-overriding-header "Important Events:")))
-          (tags "PRIORITY=\"A\""
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "High-priority Unfinished Tasks:")))
-          (tags "PRIORITY=\"B\""
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Medium-priority Unfinished Tasks:")))
-          (tags "PRIORITY=\"C\""
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Low-priority Unfinished Tasks:")))
-
           (agenda "")
           (alltodo "")))))
 #+END_SRC
@@ -175,22 +315,28 @@ ORG Mode main configuration - inspired by DT
   :hook
   (org-mode . org-fancy-priorities-mode)
   :config
-  (setq org-fancy-priorities-list '("🐲" "🐉" "🀄")
+  (setq org-fancy-priorities-list '("" "󱡞" "󰝨")
    org-priority-faces
    '((?A :foreground "#ff6c6b" :weight regular)
      (?B :foreground "#98be65" :weight regular)
      (?C :foreground "#c678dd" :weight regular))))
 #+END_SRC
 
-*** Org ob-typescript
-
+*** Org ob-languages
 #+BEGIN_SRC emacs-lisp :tangle yes
 (org-babel-do-load-languages
  'org-babel-load-languages
- '((typescript . t)
+ '(
+   (typescript . t)
+   (javascript . t)
+   (emacs-lisp . t)
+   (js . t)
+   (json . t)
+   (php . t)
    ))
 
 (setq org-babel-command:typescript "npx -p typescript -- tsc")
+(setq org-confirm-babel-evaluate nil)
 #+END_SRC
 
 ** Bookmarks
@@ -230,7 +376,7 @@ There are two ways to load a theme. Both assume the theme is installed and avail
 (setq doom-theme 'doom-xcode)
 
 #+BEGIN_SRC emacs-lisp :tangle yes
-(setq doom-theme 'doom-horizon)
+(setq doom-theme 'doom-molokai)
 (map! :leader
       :desc "Load new theme" "h t" #'counsel-load-theme)
 #+END_SRC
@@ -259,8 +405,8 @@ Settings related to fonts within Doom Emacs:
 + 'font-lock-keyword-face' -- for keywords with special significance, like 'for' and 'if' in C.
 
 #+BEGIN_SRC emacs-lisp :tangle yes
-(setq doom-font (font-spec :family "SpaceMono Nerd Font Mono" :size 12.1)
-      doom-variable-pitch-font (font-spec :family "SpaceMono Nerd Font Mono" :size 12.1)
+(setq doom-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
+      doom-variable-pitch-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
       doom-big-font (font-spec :family "SpaceMono Nerd Font Mono" :size 18))
 (after! doom-themes
   (setq doom-themes-enable-bold t
@@ -269,6 +415,9 @@ Settings related to fonts within Doom Emacs:
   '(font-lock-comment-face :slant italic)
   '(font-lock-keyword-face :slant italic))
 #+END_SRC
+
+#+RESULTS:
+| doom--customize-themes-h-462 | doom--customize-themes-h-465 | doom--customize-themes-h-735 |
 
 * ORG ROAM (set-up)
 ** Main Config
@@ -302,20 +451,25 @@ More configs for ORG-roam
   (setq org-roam-capture-templates
         '(
           ("d" "default" plain "%?"
-            :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
+            :if-new (file+head "%<%Y-%m-%d-$S>-${slug}.org"
                                "#+title: ${title}\n") :unnarrowed t)
           ("s" "Not Time Stamp File" plain "%?"
             :if-new (file+head "${slug}.org"
                                "#+title: ${title}\n") :unnarrowed t)
-          ("n" "new org document" plain
+          ("f" "New Feature Azure DevOps" plain
            (file "~/.brain.d/roam-nodes/templates/NEWNodeTemplate.org")
-           :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
-                              "#+title: ${title}\n#+subtitle: %^{Subtitle}\n#+description: %^{Desctiption}\n#+filetags: %^{File Tags}\n#+author: %^{Author}\n#+date: %U\n")
+           :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                              "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
            :unnarrowed t)
-          ("p" "new org project" plain
+          ("i" "New Sentinel Inspection" plain
+           (file "~/.brain.d/roam-nodes/templates/NEWNodeSentinelInspection.org")
+           :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                              "#+TITLE: Kyonax's Daily Sentinel Inspection ~ %<%d/%m/%Y> \n")
+           :unnarrowed t)
+          ("p" "New PBI Azure DevOps" plain
            (file "~/.brain.d/roam-nodes/templates/NEWNodeProject.org")
-           :if-new (file+head "%<%Y%m%d%H%M%S>-${slug}.org"
-                              "#+title: ${title}\n#+subtitle: %^{Subtitle}\n#+description: %^{Description}\n#+filetags: %^{File Tags}\n#+author: %^{Author}\n#+date: %U\n")
+           :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                              "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
            :unnarrowed t))))
 #+END_SRC
 
@@ -381,7 +535,7 @@ Initialization of lsp.
 
 #+BEGIN_SRC emacs-lisp :tangle yes
 (after! ccls
-  (setq ccls-executable "/path/to/shell/wrapper")
+  (setq ccls-executable "C:/ProgramData/chocolatey/bin/ccls.exe")
   (set-lsp-priority! 'ccls 0))
 
 (after! lsp-tailwindcss
@@ -390,19 +544,6 @@ Initialization of lsp.
 (use-package lsp-tailwindcss
   :init
   (setq lsp-tailwindcss-add-on-mode t))
-
-(with-eval-after-load 'ox-latex
-(add-to-list 'org-latex-classes
-             '("org-plain-latex"
-               "\\documentclass{article}
-           [NO-DEFAULT-PACKAGES]
-           [PACKAGES]
-           [EXTRA]"
-               ("\\section{%s}" . "\\section*{%s}")
-               ("\\subsection{%s}" . "\\subsection*{%s}")
-               ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-               ("\\paragraph{%s}" . "\\paragraph*{%s}")
-               ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
 #+END_SRC
 
 ** Clippy Plugin
@@ -427,7 +568,7 @@ https://github.com/seagle0128/doom-modeline
 
 - Config Modeline
 #+BEGIN_SRC emacs-lisp :tangle yes
-(set-face-attribute 'mode-line nil :font "MesloLGL Nerd Font")
+(set-face-attribute 'mode-line nil :font "SpaceMono Nerd Font Mono")
 (setq doom-modeline-support-imenu t ;;
       doom-modeline-buffer-state-icon t ;;
       doom-modeline-icon t ;;
@@ -492,17 +633,7 @@ I have toggled display-line-numbers-type so I have line numbers displayed. Doom 
       "t t" #'toggle-truncate-lines)
 #+END_SRC
 
-#+begin_src emacs-lisp :tangle yes
-(defun xah-toggle-line-spacing ()
-  "Toggle line spacing between no extra space to extra half line height."
-  (interactive)
-  (if (eq line-spacing nil)
-      (setq line-spacing 0.2) ; add 0.5 height between lines
-    (setq line-spacing nil)   ; no extra heigh between lines
-    )
-  (redraw-frame (selected-frame)))
-#+end_src
-* Ivy
+** Ivy
 Ivy is a generic completion mechanism for Emacs.
 
 ** IVY-POSFRAME
@@ -523,17 +654,17 @@ Available functions (positions) for 'ivy-posframe-display-functions-alist'
 
 #+BEGIN_SRC emacs-lisp :tangle yes
 (setq ivy-posframe-display-functions-alist
-      '((swiper                     . ivy-posframe-display-at-window-center)
+      '((swiper                     . ivy-posframe-display-at-point)
         (complete-symbol            . ivy-posframe-display-at-point)
-        (counsel-M-x                . ivy-posframe-display-at-window-center)
+        (counsel-M-x                . ivy-display-function-fallback)
         (counsel-esh-history        . ivy-posframe-display-at-window-center)
         (counsel-describe-function  . ivy-display-function-fallback)
         (counsel-describe-variable  . ivy-display-function-fallback)
-        (counsel-find-file          . ivy-posframe-display-at-window-center)
-        (counsel-recentf            . ivy-posframe-display-at-window-center)
+        (counsel-find-file          . ivy-display-function-fallback)
+        (counsel-recentf            . ivy-display-function-fallback)
         (counsel-register           . ivy-posframe-display-at-frame-bottom-window-center)
-        (dmenu                      . ivy-posframe-display-at-window-center)
-        (t                          . ivy-posframe-display))
+        (dmenu                      . ivy-posframe-display-at-frame-top-center)
+        (nil                        . ivy-posframe-display))
       ivy-posframe-height-alist
       '((swiper . 20)
         (dmenu . 20)
@@ -548,8 +679,6 @@ By default, Doom Emacs does not use 'SPC v', so the format I use for these bindi
 (map! :leader
       (:prefix ("v" . "Ivy")
        :desc "Ivy push view" "v p" #'ivy-push-view
-       :desc "Search in Current Directory" "s d" #'+ivy/project-search-from-cwd
-       :desc "Search in Project" "s p" #'+ivy/project-search
        :desc "Ivy switch view" "v s" #'ivy-switch-view))
 #+END_SRC
 
@@ -573,26 +702,77 @@ Rainbox mode displays the actual color for any hex value color.  It's such a nic
 ** LateX Config
 The Latex Configuration to export high quality PDF's
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp :tangle yes
 (with-eval-after-load 'ox-latex
-(add-to-list 'org-latex-classes
-             '("org-plain-latex"
-               "\\documentclass{article}
-           [NO-DEFAULT-PACKAGES]
-           [PACKAGES]
-           [EXTRA]"
-               ("\\section{%s}" . "\\section*{%s}")
-               ("\\subsection{%s}" . "\\subsection*{%s}")
-               ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-               ("\\paragraph{%s}" . "\\paragraph*{%s}")
-               ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
+  (add-to-list 'org-latex-classes
+               '("org-plain-latex"
+                 "\\documentclass{article}
+                [NO-DEFAULT-PACKAGES]
+                [PACKAGES]
+                \\newcommand{\\checkbox}{\\text{[ ]}} % Define \checkbox
+                \\newcommand{\\checkedbox}{\\text{[X]}} % Define \checkedbox
+                [EXTRA]"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
+
+(after! org
+  ;; Minted config for much better syntax highlightig to src blocks.
+  (setq
+   org-latex-listings 'minted
+   ;; minted calls the pygmentize process and thus needs shell escaping
+   org-latex-pdf-process
+   '("xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+     "xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+     "xelatex -shell-escape -interaction nonstopmode -output-directory %o %f")
+   ;; NOTE I don't actually add minted to the package list, I'll just \usepackage it when needed
+
+   ;;(setq org-latex-pdf-process
+   ;;'("latexmk -f -pdf %f")) ; Doesn't work with pdflatex
+   ;; Margins
+   ;;(add-to-list 'org-latex-packages-alist '("a4paper,margin=1.1in" "geometry"))
+
+   ;; Add 'colorlinks' option to hyperrref, its much prettier
+   org-latex-hyperref-template
+   "\\hypersetup{
+ pdfauthor={%a},
+ pdftitle={%t},
+ pdfkeywords={%k},
+ pdfsubject={%d},
+ pdfcreator={%c},
+ pdflang={%L},
+ colorlinks=true,
+ linkcolor={cyan}
+}"
+   ;; page break after TOC
+   org-latex-toc-command "\\tableofcontents\n\\pagebreak\n\n")
+  ;; org-latex-minted-options '(("bgcolor" "{white!98!black}"))
+  ;; org-latex-minted-options '(("bgcolor" "\\color{white!96!black}"))
+  ;; In case I configured hyperref in a separate latex preamble
+  ;;(setq org-latex-hyperref-template ""))
+  (add-hook! 'org-roam-buffer-prepare-hook
+    (setq display-line-numbers nil)))
 #+END_SRC
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp :tangle yes
 (setq org-highlight-latex-and-related '(native))
 
 (require 'org-src)
 (add-to-list 'org-src-block-faces '("latex" (:inherit default :extend t)))
+
+;; Define the custom checklist symbols in LaTeX
+(defun my-org-latex-checklist-filter (text backend info)
+  "Replace Org checklist symbols with custom LaTeX symbols."
+  (when (org-export-derived-backend-p backend 'latex)
+    (let ((text (replace-regexp-in-string "\\[ \\]" "\\\\checkbox" text))
+          (text (replace-regexp-in-string "\\[X\\]" "\\\\checkedbox" text)))
+      text)))
+
+;; Add the custom filter to the export process
+(add-hook 'org-export-filter-final-output-functions
+          'my-org-latex-checklist-filter)
 #+END_SRC
 
 ** PDF View Configuration
@@ -666,7 +846,7 @@ What appears at the beginning!
 * TRAMP WINDOWS
 PuTTY Installation and plink ENV/Variable for Host Connections.
 
-#+BEGIN_SRC emacs-lisp :tangle no
+#+BEGIN_SRC emacs-lisp :tangle yes
 (setq password-cache-expiry nil)
 
 (when (eq window-system 'w32)
@@ -676,3 +856,80 @@ PuTTY Installation and plink ENV/Variable for Host Connections.
     (setenv "PATH" (concat putty-directory ";" (getenv "PATH")))
     (add-to-list 'exec-path putty-directory)))
 #+END_SRC
+
+* OPEN DIRECTORY
+Custom script to open directories
+
+#+begin_src emacs-lisp :tangle yes
+(defun open-directory (dir)
+  "Open the specified directory DIR in Dired mode."
+  (interactive "DChoose directory: ") ; Prompt for directory
+  (dired dir))
+#+end_src
+
+** WORK
+#+begin_src emacs-lisp :tangle yes
+(defun shoptron ()
+  "Open the Shoptron main Directory"
+  (interactive)
+  (open-directory "/plinkx:Shoptron:~/html"))
+
+(defun shtheme ()
+  "Open the ShoptronTheme main Directory"
+  (interactive)
+  (open-directory "/plinkx:Shoptron:~/html/custom/plugins/ShoptronTheme"))
+
+(defun shconfigurator ()
+  "Open the ShoptronConfiurator main Directory"
+  (interactive)
+  (open-directory "/plinkx:Shoptron:~/html/custom/plugins/ShoptronConfigurator"))
+#+end_src
+
+* GPTEl
+Registering Backend Models and AIs, making default Backend:
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(setq
+ gptel-model "mistral:latest"
+ gptel-backend (gptel-make-ollama "Ollama"
+                 :host "192.168.1.12:11434"
+                 :stream t
+                 :models '("codellama"))) ; mistral:latest
+#+END_SRC
+
+** Ollama v0.2.1
+
+#+BEGIN_SRC emacs-lisp :tangle no
+(gptel-make-ollama "Ollama"        ; Name of Backend
+  :host "192.168.1.12:11434"       ; Where it's running
+  :stream t                        ; Stream responses
+  :models '("codellama"))          ; mistral:latest
+#+END_SRC
+
+* HTML Export Config
+#+BEGIN_SRC emacs-lisp :tangle no
+(defun my-org-html-verse-block (oldfun src-block contents info)
+  (let* ((old-ret (funcall oldfun src-block contents info))
+         (class-tag (org-export-read-attribute :attr_html src-block :class))
+         (id-tag (org-export-read-attribute :attr_html src-block :id)))
+    (if (or class-tag id-tag)
+        (concat
+         "<xmp "
+         (if class-tag (format "class=\"%s\" " class-tag))
+         (if id-tag (format "id=\"%s\" " id-tag))
+         ">"
+         old-ret
+         "</xmp>")
+      old-ret)))
+
+(advice-add 'org-html-verse-block :around #'my-org-html-verse-block)
+#+END_SRC
+
+* SERVER SOCKET - SERVER FILE
+#+begin_src emacs-lisp :tangle yes
+(require 'server)
+(setq server-use-tcp t
+      server-socket-dir "~/.emacs.d/server")
+(unless (server-running-p)
+    (server-start))
+#+end_src

@@ -12,20 +12,23 @@
         org-todo-keywords        ; This overwrites the default Doom org-todo-keywords
         '((sequence
            "TODO(t)"           ; A task that is ready to be tackled
+           "CONTENT(n)"        ; Content to accomplish
+           "STREAM(s)"         ; Stream planned
+           "WEB(e)"            ; Website Tasks
+           "CODE(m)"           ; Coding Tasks
+           "STORY(y)"          ; Storytelling TODO
+           "TEST(c)"           ; Blog writing assignments
+           "DEVELOP(d)"        ; Things to develop
            "DAILY(a)"          ; A Daily Task
            "MONDAY(1)"         ; The Tasks of the Monday
            "ODDT(3)"           ; The Wednesday and Friday Tasks
            "WEEKLY(k)"         ; A Weekly Task
            "DATE(4)"         ; A Weekly Task
            "EVENT(5)"         ; A Weekly Task
-           "CONTENT(n)"        ; Content to accomplish
-           "STREAM(s)"         ; Stream planned
-           "WEB(e)"            ; Website Tasks
-           "CODE(m)"           ; Coding Tasks
-           "STORY(y)"          ; Storytelling TODO
            "BLOG(b)"           ; Blog writing assignments
            "GYM(g)"            ; Things to accomplish at the gym
            "PROYECT(p)"           ; A project that contains other tasks
+           "REVIEW(r)"         ; A project that contains other tasks
            "VIDEO(v)"          ; Video assignments
            "WAIT(w)"           ; Something is holding up this task
            "|"                 ; The pipe necessary to separate "active" states and "inactive" states
@@ -107,10 +110,17 @@
 
 (org-babel-do-load-languages
  'org-babel-load-languages
- '((typescript . t)
+ '(
+   (typescript . t)
+   (javascript . t)
+   (emacs-lisp . t)
+   (js . t)
+   (json . t)
+   (php . t)
    ))
 
 (setq org-babel-command:typescript "npx -p typescript -- tsc")
+(setq org-confirm-babel-evaluate nil)
 
 (setq bookmark-default-file "~/.brain.d/bookmarks/bookmarks")
 
