@@ -1,0 +1,30 @@
+# -*- mode: snippet -*-
+# name: PHP File Code Documentation
+# key: _phpfd
+# group: Documentation
+# --
+/**
+ * @file `(file-name-nondirectory (buffer-file-name))` - ${1:TitleOfFile}
+ *
+ * ${3:DescriptionFile}
+ *
+ * PHP-Version @`(string-trim(shell-command-to-string "php --version | head -n 1 | awk '{print $2}'"))`
+ *
+ * @author ${4:Cristian Moreno}
+ * @contact ${5:cristiand.moreno@softtek.com}
+ *
+ * Code Guidelines
+ * - Identation: Use tabs for Identation.
+ * - Naming Conventions: Follow camelCase for all variables and methods.
+ * - Descriptive Naming: Use clear and descriptive names for variables and methods.
+ *
+ * `(let* ((repo-root (string-trim (shell-command-to-string "git rev-parse --show-toplevel")))
+       (repo-url (when (not (string-empty-p repo-root))
+                   (shell-command-to-string (format "git -C %s config --get remote.origin.url" repo-root)))))
+    (if (string-empty-p repo-root)
+      (message "Not inside a Git repository")
+    (if (string-empty-p (string-trim repo-url))
+        (message "No remote URL set for the repository")
+      (message "Repository-URL\n* %s" (string-trim repo-url)))))
+ `
+ */ $0

@@ -1,0 +1,11 @@
+# -*- mode: snippet -*-
+# name: PHP Method Code Documentation
+# key: _phpmd
+# group: Documentation
+# --
+/**
+ * ${1:DescriptionMethod}
+ *
+ * @param ${2:TypeOfParam} $${3:ParamName}
+ * @return ${4:VariablesToReturn}
+ */
