@@ -50,8 +50,8 @@
 (setq delete-by-moving-to-trash t
       trash-directory "~/.local/share/Trash/files/")
 
-(setq user-full-name "Kyonax - Cristian Moreno"
-      user-mail-address "cristian@kyo.wtf")
+(setq user-full-name "Cristian D. Moreno"
+      user-mail-address "iam@kyo.wtf")
 
 (set-buffer-file-coding-system 'unix)
 

@@ -181,8 +181,8 @@ ln -s ~/.local/share/Trash .
 Some functionality uses this to identify you, e.g. GPG configuration, email, clients, file templates and snippets.
 
 #+BEGIN_SRC emacs-lisp :tangle yes
-(setq user-full-name "Kyonax - Cristian Moreno"
-      user-mail-address "cristian@kyo.wtf")
+(setq user-full-name "Cristian D. Moreno"
+      user-mail-address "iam@kyo.wtf")
 
 #+END_SRC
 
