@@ -1,0 +1,20 @@
+# -*- mode: snippet -*-
+# name: create-mixin-with-documentation
+# key: mixincd
+# --
+/**
+ * $1 Mixin
+ *
+ * ${2:DescriptionOfMethod}
+ *
+ * $3
+ */
+@mixin ${1:$(downcase (replace-regexp-in-string " " "-" yas-text))}(${3:$(let* (
+                        (clean-text (replace-regexp-in-string "[^a-zA-Z0-9$_ \n]" "" yas-text))
+                        (words (split-string clean-text "\\s+" t))
+                        (snake-case-words (seq-filter (lambda (word)
+                                                         (string-match-p "[^a-zA-Z0-9_\n]" word))
+                                                       words)))
+                   (replace-regexp-in-string "\\n" "" (mapconcat 'identity snake-case-words ", ")))}) {
+  $0
+}

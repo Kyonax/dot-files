@@ -1,0 +1,31 @@
+# -*- mode: snippet -*-
+# name: CSS Class/Object Styling
+# key: _cssc
+# group: Documentation
+# --
+/**
+ * $1
+ *
+ * ${2:DescriptionOfStyle}
+ */
+${1:$(let* ((text (or yas-text ""))
+            (cleaned-text (replace-regexp-in-string "*" "" text))
+            (lines (if (string-empty-p cleaned-text) '() (split-string cleaned-text "\n" t)))
+            (processed-lines '())
+            (prefix-class ".")
+            (prefix-id "#")
+            (prefix-child "&__"))
+       (if (null lines)
+           ""
+         (dolist (line lines)
+           (let* ((prefix "")
+                  (_ (cond
+                      ((string-match-p "Class" line) (setq prefix prefix-class))
+                      ((string-match-p "Id" line) (setq prefix prefix-id))
+                      ((string-match-p "Child" line) (setq prefix prefix-child))
+                      (t (setq prefix ""))))
+                  (stripped-line (replace-regexp-in-string "\\\\(Class\\\\|Id\\\\|Child\\\\)" "" line)))
+             (push (concat prefix (format "%s " (downcase (replace-regexp-in-string " " "-" (string-trim stripped-line))))) processed-lines)))
+         (mapconcat 'identity (reverse processed-lines) ", ")))} {
+    $0
+}

@@ -22,6 +22,30 @@
 
 /testing/ *testing*
 
+#+begin_src js
+const currencyFormat = new Intl.NumberFormat('es-US', {
+    style: 'currency',
+    currency: 'USD'
+}), movil_price = 23000000, bank = 30000000 , cuota = 0, months = 36, impuestos = 13;
+
+
+console.log(`CUOTA_M: ${currencyFormat.format((bank/months)+(bank*0.13)/months)}`);
+#+end_src
+
+#+RESULTS:
+: CUOTA_M: $941,666.67
+: undefined
+
+#+begin_src js
+let years = 11, km = 172000;
+
+console.log(km/years);
+#+end_src
+
+#+RESULTS:
+: 15636.363636363636
+: undefined
+
 #+begin_quote
         Testing the Thing of Quoting
 #+end_quote

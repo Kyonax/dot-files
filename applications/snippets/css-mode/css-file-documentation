@@ -1,0 +1,73 @@
+# -*- mode: snippet -*-
+# name: css-file-documentation
+# key: cssfd
+# group: Documentation
+# --
+/**
+ * @file `(file-name-nondirectory (buffer-file-name))` - ${2:TitleOfFile}
+ *
+ * ${3:DescriptionOfFile}
+ *
+ * node.js-`(string-trim(shell-command-to-string "node --version | head -n 1"))`
+ *
+ * @author ${4:Cristian Moreno (Kyonax)}
+ * @contact ${5:iamkyo@kyo.wtf}
+ * @date `(format-time-string "%Y-%m-%d")`
+ *
+ * Code Guidelines :: @CCSv0.1
+ * More details: https://code-guidelines.cybercodesyndicate.org
+ * - Tabs only—no spaces.
+ * - Naming:
+ *   - kebab-case for classes and file names (e.g., file-example.js).
+ *   - __underscore for childs (double underscore prefix).
+ * - Meaningful Names btn-default-class over classOne.
+ *
+ * `(let* ((repo-root (string-trim (shell-command-to-string "git rev-parse --show-toplevel")))
+         (repo-url (when (not (string-empty-p repo-root))
+                   (shell-command-to-string (format "git -C %s config --get remote.origin.url" repo-root)))))
+    (if (string-empty-p repo-root)
+        (message "Not inside a Git repository")
+    (if (string-empty-p (string-trim repo-url))
+        (message "No remote URL set for the repository")
+    (message "Repository-URL\n* %s" (string-trim repo-url)))))
+ `
+`
+(let ((import-text yas-selected-text)
+      (lines)
+      (formatted-text '()))
+  (if (not import-text)
+      "*"
+    (setq lines (split-string import-text "\n"))
+    (push "*\n* @dependencies" formatted-text)
+    (dolist (line lines)
+      (cond
+       ((string-match "@use \\([^ ]+\\) as \\([^ ]+\\)" line)
+        (let ((path (match-string 1 line))
+              (alias (string-trim-right (match-string 2 line) ";")))
+          (push (format " * - Using %s from %s" alias path) formatted-text)))
+       ((string-match "@use \\([^ ]+\\)" line)
+        (let ((path (match-string 1 line)))
+          (push (format " * - Using %s" path) formatted-text)))
+       ((string-match "@forward \\([^ ]+\\) as \\([^ ]+\\)" line)
+        (let ((path (match-string 1 line))
+              (alias (string-trim-right (match-string 2 line) ";")))
+          (push (format " * - Forwarding %s from %s" alias path) formatted-text)))
+       ((string-match "@forward \\([^ ]+\\)" line)
+        (let ((path (match-string 1 line)))
+          (push (format " * - Forwarding %s" path) formatted-text)))
+       ((string-match "@import \\([^ ]+\\) as \\([^ ]+\\)" line)
+        (let ((path (match-string 1 line))
+              (alias (string-trim-right (match-string 2 line) ";")))
+          (push (format " * - Importing %s from %s" alias path) formatted-text)))
+       ((string-match "@import \\([^ ]+\\)" line)
+        (let ((path (match-string 1 line)))
+          (push (format " * - Importing %s" path) formatted-text)))))
+    (push "*" formatted-text)
+    (mapconcat 'identity (nreverse formatted-text) "\n")))
+
+    `
+ * @usage
+ * ${6:UsageOfThisFile}
+ */
+`(yas-selected-text)`
+$0
