@@ -1,0 +1,229 @@
+#+TITLE: THE DOOM CONFIG
+#+SUBTITLE: All the Doom Emacs Configuration Files
+#+AUTHOR: Cristian D. Moreno - Kyonax
+#+DATE: 2025-02-12
+#+AUTO_TANGLE: t
+#+LAST_UPDATE: Feb 12, 2025
+#+VERSION: v0.1
+
+This File is the Index of the whole Doom Emacs Files for the Configuration of Doom Emacs, Modify here to generate the new Files.
+
+* TABLE OF CONTENTs :toc:
+- [[#main][MAIN]]
+  - [[#os-prober][OS PROBER]]
+- [[#config-files][CONFIG FILEs]]
+  - [[#packagesel][packages.el]]
+  - [[#configel][config.el]]
+- [[#binaries][BINARIES]]
+  - [[#emacs-client-no-eval][emacs-client-no-eval]]
+  - [[#emacs-client][emacs-client]]
+  - [[#emacs-daemon-create][emacs-daemon-create]]
+  - [[#emacs-daemon-startup][emacs-daemon-startup]]
+  - [[#emacs-kill][emacs-kill]]
+
+* MAIN
+** OS PROBER
+#+begin_src emacs-lisp :tangle no
+(cond ((eq system-type 'gnu/linux)   "Running on GNU/Linux")
+      ((eq system-type 'darwin)      "Running on macOS")
+      ((eq system-type 'windows-nt)  "Running on Windows")
+      ((eq system-type 'berkeley-unix) "Running on Berkeley Unix")
+      ((eq system-type 'cygwin)      "Running on Cygwin")
+      (t "Running on unknown system"))
+#+end_src
+
+* CONFIG FILEs
+** packages.el
+Doom comes with the Default package manager for Doom Emacs, where all the packages will be installed when the command ~doom sync~ is run by the user.
+
+Default File Documentation:
+#+begin_src emacs-lisp :tangle packages.el
+;; -*- no-byte-compile: t; -*-
+;;; $DOOMDIR/packages.el
+
+;; To install a package with Doom you must declare them here and run 'doom sync'
+;; on the command line, then restart Emacs for the changes to take effect -- or
+
+
+;; To install SOME-PACKAGE from MELPA, ELPA or emacsmirror:
+;; (package! some-package)
+
+;; To install a package directly from a remote git repo, you must specify a
+;; `:recipe'. You'll find documentation on what `:recipe' accepts here:
+;; https://github.com/radian-software/straight.el#the-recipe-format
+;; (package! another-package
+;;   :recipe (:host github :repo "username/repo"))
+
+;; If the package you are trying to install does not contain a PACKAGENAME.el
+;; file, or is located in a subdirectory of the repo, you'll need to specify
+;; `:files' in the `:recipe':
+;; (package! this-package
+;;   :recipe (:host github :repo "username/repo"
+;;            :files ("some-file.el" "src/lisp/*.el")))
+
+;; If you'd like to disable a package included with Doom, you can do so here
+;; with the `:disable' property:
+;; (package! builtin-package :disable t)
+
+;; You can override the recipe of a built in package without having to specify
+;; all the properties for `:recipe'. These will inherit the rest of its recipe
+;; from Doom or MELPA/ELPA/Emacsmirror:
+;; (package! builtin-package :recipe (:nonrecursive t))
+;; (package! builtin-package-2 :recipe (:repo "myfork/package"))
+
+;; Specify a `:branch' to install a package from a particular branch or tag.
+;; This is required for some packages whose default branch isn't 'master' (which
+;; our package manager can't deal with; see radian-software/straight.el#279)
+;; (package! builtin-package :recipe (:branch "develop"))
+
+;; Use `:pin' to specify a particular commit to install.
+;; (package! builtin-package :pin "1a2b3c4d5e")
+
+
+;; Doom's packages are pinned to a specific commit and updated from release to
+;; release. The `unpin!' macro allows you to unpin single packages...
+;; (unpin! pinned-package)
+;; ...or multiple packages
+;; (unpin! pinned-package another-pinned-package)
+;; ...Or *all* packages (NOT RECOMMENDED; will likely break things)
+;; (unpin! t)
+#+end_src
+
+*** BEACON
+#+begin_src emacs-lisp :tangle packages.el
+(package! beacon)
+#+end_src
+
+*** CLIPPY
+#+begin_src emacs-lisp :tangle packages.el
+(package! clippy)
+#+end_src
+
+*** COMPANY-TABNINE
+#+begin_src emacs-lisp :tangle packages.el
+(package! company-tabnine)
+#+end_src
+
+*** DIRED-OPEN
+#+begin_src emacs-lisp :tangle packages.el
+(package! dired-open)
+#+end_src
+
+*** DIRED-SUBTREE
+#+begin_src emacs-lisp :tangle packages.el
+(package! dired-subtree)
+#+end_src
+
+*** ELFEEDED-GOODIES
+#+begin_src emacs-lisp :tangle packages.el
+(package! elfeed-goodies)
+#+end_src
+
+*** EMOJIFY
+#+begin_src emacs-lisp :tangle packages.el
+(package! emojify)
+#+end_src
+
+*** EVIL-TUTOR
+#+begin_src emacs-lisp :tangle packages.el
+(package! evil-tutor)
+#+end_src
+
+*** FLX
+#+begin_src emacs-lisp :tangle packages.el
+(package! flx)
+#+end_src
+
+*** GPTEL
+#+begin_src emacs-lisp :tangle packages.el
+(package! gptel)
+#+end_src
+
+*** IVY-POSFRAME
+#+begin_src emacs-lisp :tangle packages.el
+(package! ivy-posframe)
+#+end_src
+
+*** IVY-PRESCIENT
+#+begin_src emacs-lisp :tangle packages.el
+(package! ivy-prescient)
+#+end_src
+
+*** OLIVETTI
+#+begin_src emacs-lisp :tangle packages.el
+(package! olivetti)
+#+end_src
+
+*** ORG-AUTO-TANGLE
+#+begin_src emacs-lisp :tangle packages.el
+(package! org-auto-tangle)
+#+end_src
+
+*** ORG-BULLETS
+#+begin_src emacs-lisp :tangle packages.el
+(package! org-bullets)
+#+end_src
+
+*** ORG-WEB-TOOLS
+#+begin_src emacs-lisp :tangle packages.el
+(package! org-web-tools)
+#+end_src
+
+*** PASSWORD-STORE
+#+begin_src emacs-lisp :tangle packages.el
+(package! password-store)
+#+end_src
+
+*** PEEP-DIRED
+#+begin_src emacs-lisp :tangle packages.el
+(package! peep-dired)
+#+end_src
+
+*** RAINBOW-MODE
+#+begin_src emacs-lisp :tangle packages.el
+(package! rainbow-mode)
+#+end_src
+
+*** RESIZE-WINDOW
+#+begin_src emacs-lisp :tangle packages.el
+(package! resize-window)
+#+end_src
+
+*** TLDR
+#+begin_src emacs-lisp :tangle packages.el
+(package! tldr)
+#+end_src
+
+*** TREE-SITTER
+#+begin_src emacs-lisp :tangle packages.el
+(package! tree-sitter)
+#+end_src
+
+*** TREE-SITTER-LANGS
+#+begin_src emacs-lisp :tangle packages.el
+(package! tree-sitter-langs)
+#+end_src
+
+*** WC-MODE
+#+begin_src emacs-lisp :tangle packages.el
+(package! wc-mode)
+#+end_src
+
+*** WEB-MODE
+#+begin_src emacs-lisp :tangle packages.el
+(package! web-mode)
+#+end_src
+
+*** ORG-ROAM-UI
+#+begin_src emacs-lisp :tangle packages.el
+(unpin! org-roam company-org-roam)
+(package! org-roam-ui)
+#+end_src
+** config.el
+
+* BINARIES
+** emacs-client-no-eval
+** emacs-client
+** emacs-daemon-create
+** emacs-daemon-startup
+** emacs-kill
