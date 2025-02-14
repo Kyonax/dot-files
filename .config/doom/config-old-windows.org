@@ -1,7 +1,7 @@
 #+TITLE: Kyonax's Doom Emacs Config
 #+AUTHOR: Cristian D. Moreno - Kyonax
 #+PROPERTY: header-args :tangle config.el
-#+auto_tangle: t
+#+auto_tangle: nil
 #+DESCRIPTION: Kyonax's personal Doom Emacs Config.
 #+STARTUP: showeverything
 #+VERSION: v0.2
@@ -26,7 +26,6 @@
   - [[#org-roam-keymaps-config-and-templates][Org-roam Keymaps, Config, and Templates]]
 - [[#plugins--tools-set-up][Plugins & Tools (set-up)]]
   - [[#melpa][MELPA]]
-  - [[#powerline-config][Powerline Config]]
   - [[#beacon-plugin][Beacon Plugin]]
   - [[#lsp-plugin--add-ons][lsp Plugin & add-ons]]
   - [[#clippy-plugin][Clippy Plugin]]
@@ -146,6 +145,7 @@ Dired is the file manager within Emacs.  Below, I setup keybindings for image pr
                               ("mp4" . "mpv")))
 #+end_src
 
+
 ** Keybindings Within Dired With Peep-Dired-Mode Enabled
 If peep-dired is enabled, you will get image previews as you go up/down with 'j' and 'k'
 
@@ -162,11 +162,13 @@ If peep-dired is enabled, you will get image previews as you go up/down with 'j'
 (add-hook 'peep-dired-hook 'evil-normalize-keymaps)
 #+END_SRC
 
+
 ** Making deleted files go to trash can
 #+begin_src emacs-lisp
 (setq delete-by-moving-to-trash t
       trash-directory "~/.local/share/Trash/files/")
 #+end_src
+
 
 =NOTE=: For convenience, you may want to create a symlink to 'local/share/Trash' in your home directory:
 #+begin_example
@@ -187,11 +189,13 @@ Some functionality uses this to identify you, e.g. GPG configuration, email, cli
 
 #+END_SRC
 
+
 ** File Coding System
 
 #+BEGIN_SRC emacs-lisp :tangle yes
 (set-buffer-file-coding-system 'unix)
 #+END_SRC
+
 
 ** ORG Config (set-up)
 *** ORG Mode
@@ -233,15 +237,24 @@ ORG Mode main configuration - inspired by DT
            "CANCELLED(c)" )))) ; Task has been cancelled                        )
 #+END_SRC
 
+
 *** Org-auto-tangle
 =org-auto-tangle= allows you to add the option =#+auto_tangle: t= in your Org file so that it automatically tangles when you save the document.  I have made adding this to your file even easier by creating a function 'dt/insert-auto-tangle-tag' and setting it to a keybinding 'SPC i a'.
 
 #+begin_src emacs-lisp :tangle yes
-(use-package! org-auto-tangle
-  :defer t
-  :hook (org-mode . org-auto-tangle-mode)
-  :config
-  (setq org-auto-tangle-default t))
+(defun dt/tangle-on-save ()
+  "If the current Org buffer has the auto_tangle tag, execute all code blocks and tangle the file."
+  (when (and (derived-mode-p 'org-mode)
+             ;; Check for the #+auto_tangle: t tag in the file
+             (save-excursion
+               (goto-char (point-min))
+               (re-search-forward "^#\\+auto_tangle:[ \t]*t" nil t)))
+    (org-babel-tangle)))
+
+;; Add dt/tangle-on-save to the after-save-hook for Org mode buffers only.
+(add-hook 'org-mode-hook
+          (lambda ()
+            (add-hook 'after-save-hook #'dt/tangle-on-save nil t)))
 
 (defun dt/insert-auto-tangle-tag ()
   "Insert auto-tangle tag in a literate config."
@@ -253,6 +266,7 @@ ORG Mode main configuration - inspired by DT
 (map! :leader
       :desc "Insert auto_tangle tag" "i a" #'dt/insert-auto-tangle-tag)
 #+end_src
+
 
 *** Org-agenda
 #+BEGIN_SRC emacs-lisp :tangle yes
@@ -310,6 +324,7 @@ ORG Mode main configuration - inspired by DT
           (alltodo "")))))
 #+END_SRC
 
+
 #+BEGIN_SRC emacs-lisp :tangle yes
 (use-package org-fancy-priorities
   :ensure t
@@ -322,6 +337,7 @@ ORG Mode main configuration - inspired by DT
      (?B :foreground "#98be65" :weight regular)
      (?C :foreground "#c678dd" :weight regular))))
 #+END_SRC
+
 
 *** Org ob-languages
 #+BEGIN_SRC emacs-lisp :tangle yes
@@ -339,6 +355,7 @@ ORG Mode main configuration - inspired by DT
 (setq org-babel-command:typescript "npx -p typescript -- tsc")
 (setq org-confirm-babel-evaluate nil)
 #+END_SRC
+
 
 ** Bookmarks
 *** Bookmarks
@@ -362,6 +379,7 @@ Bookmarks are somewhat like registers in that they record positions you can jump
        :desc "Save current bookmarks to bookmark file" "w" #'bookmark-save))
 #+END_SRC
 
+
 * DOOM Customization
 ** DOOM Theme
 There are two ways to load a theme. Both assume the theme is installed and available. You can either set `doom-theme' or manually load a theme with the `load-theme' function. This is the default:
@@ -382,6 +400,7 @@ There are two ways to load a theme. Both assume the theme is installed and avail
       :desc "Load new theme" "h t" #'counsel-load-theme)
 #+END_SRC
 
+
 ** Style Line Numbers
 This determines the style of line numbers in effect. If set to `nil', line numbers are disabled. For relative line numbers, set this to `relative'.
 
@@ -390,6 +409,7 @@ This determines the style of line numbers in effect. If set to `nil', line numbe
 (setq display-line-numbers-mode t)
 (setq line-number-mode t)
 #+END_SRC
+
 
 ** Fonts distribution
 Settings related to fonts within Doom Emacs:
@@ -411,8 +431,6 @@ Settings related to fonts within Doom Emacs:
   '(font-lock-keyword-face :slant italic))
 #+END_SRC
 
-#+RESULTS:
-| doom--customize-themes-h-462 | doom--customize-themes-h-465 | doom--customize-themes-h-735 |
 
 * ORG ROAM (set-up)
 ** Main Config
@@ -430,6 +448,7 @@ Init Configuration and initialization of Org-roam
           org-roam-ui-update-on-save t
           org-roam-ui-open-on-start t))
 #+END_SRC
+
 
 ** Org-roam Keymaps, Config, and Templates
 More configs for ORG-roam
@@ -469,6 +488,7 @@ More configs for ORG-roam
 #+END_SRC
 
 
+
 | COMMAND                            | DESCRIPTION                                 | KEYBINDING |
 |------------------------------------+---------------------------------------------+------------|
 | org-roam-dailies-capture-yesterday | /Create a daily roam node for Yesterday/      | SPC n D Y  |
@@ -486,6 +506,7 @@ More configs for ORG-roam
        :desc "Daily Nodes - Tomorrow" "T" #'org-roam-dailies-capture-tomorrow))
 #+end_src
 
+
 #+BEGIN_SRC emacs-lisp :tangle yes
 (map! :leader
       (:prefix ("n e" . "Find Roam Nodes")
@@ -494,6 +515,7 @@ More configs for ORG-roam
        :desc "Daily Nodes - Today" "H" #'org-roam-dailies-goto-today
        :desc "Daily Nodes - Tomorrow" "T" #'org-roam-dailies-goto-tomorrow))
 #+END_SRC
+
 
 * Plugins & Tools (set-up)
 ** MELPA
@@ -506,17 +528,12 @@ More configs for ORG-roam
 (package-initialize)
 #+END_SRC
 
+
 #+BEGIN_SRC emacs-lisp :tangle yes
 (add-to-list 'package-archives
              '("melpa-stable" . "https://stable.melpa.org/packages/") t)
 #+END_SRC
-** Powerline Config
-Necessary for Windows usage
 
-#+BEGIN_SRC emacs-lisp :tangle yes
-(require 'powerline)
-(powerline-default-theme)
-#+END_SRC
 
 ** Beacon Plugin
 Never lose your cursor.  When you scroll, your cursor will shine!  This is a global minor-mode. Turn it on everywhere with:
@@ -524,6 +541,7 @@ Never lose your cursor.  When you scroll, your cursor will shine!  This is a glo
 #+BEGIN_SRC emacs-lisp :tangle yes
 (beacon-mode 1)
 #+END_SRC
+
 
 ** lsp Plugin & add-ons
 Initialization of lsp.
@@ -533,6 +551,7 @@ Initialization of lsp.
   (setq ccls-executable "C:/ProgramData/chocolatey/bin/ccls.exe")
   (set-lsp-priority! 'ccls 0))
 #+END_SRC
+
 
 ** Clippy Plugin
 Gives us a popup box with "Clippy, the paper clip". You can make him say various things by calling 'clippy-say' function.  But the more useful functions of clippy are the two describe functions provided: 'clippy-describe-function' and 'clippy-describe-variable'.  Hit the appropriate keybinding while the point is over a function/variable to call it.  A popup with helpful clippy will appear, telling you about the function/variable (using describe-function and describe-variable respectively).
@@ -550,6 +569,7 @@ Gives us a popup box with "Clippy, the paper clip". You can make him say various
 
 #+end_src
 
+
 ** Modeline
 The modeline is the bottom status bar that appears in Emacs windows.  For more information on what is available to configure in the Doom modeline, check out:
 https://github.com/seagle0128/doom-modeline
@@ -566,6 +586,7 @@ https://github.com/seagle0128/doom-modeline
       doom-modeline-persp-icon t) ;; adds folder icon next to persp name
 #+END_SRC
 
+
 ** TREEMACS
 TREEMACS PERSONALIZATION
 #+BEGIN_SRC emacs-lisp :tangle yes
@@ -575,6 +596,7 @@ TREEMACS PERSONALIZATION
         treemacs-width 40))
 #+END_SRC
 
+
 ** Line Settings
 I have toggled display-line-numbers-type so I have line numbers displayed. Doom Emacs uses 'SPC t' for "toggle" commands, so I choose 'SPC t t' for toggle-truncate-lines.
 
@@ -583,6 +605,7 @@ I have toggled display-line-numbers-type so I have line numbers displayed. Doom 
       :desc "Toggle truncate lines"
       "t t" #'toggle-truncate-lines)
 #+END_SRC
+
 
 ** Ivy
 Ivy is a generic completion mechanism for Emacs.
@@ -623,6 +646,7 @@ Available functions (positions) for 'ivy-posframe-display-functions-alist'
 (ivy-posframe-mode 1) ; 1 enables posframe-mode, 0 disables it.
 #+END_SRC
 
+
 ** IVY KEYBINDINGS
 By default, Doom Emacs does not use 'SPC v', so the format I use for these bindings is 'SPC v' plus 'key'.
 
@@ -632,6 +656,7 @@ By default, Doom Emacs does not use 'SPC v', so the format I use for these bindi
        :desc "Ivy push view" "v p" #'ivy-push-view
        :desc "Ivy switch view" "v s" #'ivy-switch-view))
 #+END_SRC
+
 
 ** RAINBOW MODE
 Rainbox mode displays the actual color for any hex value color.  It's such a nice feature that I wanted it turned on all the time, regardless of what mode I am in.  The following creates a global minor mode for rainbow-mode and enables it (exception: org-agenda-mode since rainbow-mode destroys all highlighting in org-agenda).
@@ -645,10 +670,12 @@ Rainbox mode displays the actual color for any hex value color.  It's such a nic
 (global-rainbow-mode 1 )
 #+end_src
 
+
 #+BEGIN_SRC emacs-lisp :tangle yes
 (add-hook! 'rainbow-mode-hook
   (hl-line-mode (if rainbow-mode -1 +1)))
 #+END_SRC
+
 
 ** LateX Config
 The Latex Configuration to export high quality PDF's
@@ -707,6 +734,7 @@ The Latex Configuration to export high quality PDF's
     (setq display-line-numbers nil)))
 #+END_SRC
 
+
 #+BEGIN_SRC emacs-lisp :tangle yes
 (setq org-highlight-latex-and-related '(native))
 
@@ -726,6 +754,7 @@ The Latex Configuration to export high quality PDF's
           'my-org-latex-checklist-filter)
 #+END_SRC
 
+
 ** PDF View Configuration
 PDF Viewer
 
@@ -736,8 +765,6 @@ PDF Viewer
   :config
   (setq pdf-view-midnight-colors '("#ABB2BF" . "#282C35")))
 #+END_SRC
-#+RESULTS:
-| latex | (:inherit default :extend t) |
 
 * START PAGE
 What appears at the beginning!
@@ -785,6 +812,7 @@ What appears at the beginning!
 (setq +doom-dashboard-ascii-banner-fn #'my-weebery-is-always-greater)
 #+END_SRC
 
+
 ** CUSTOM FACES DASHBOARD
  Custom Colors for the Dashboard Config.
 
@@ -793,6 +821,7 @@ What appears at the beginning!
   '(doom-dashboard-banner :foreground "#9FE573" :background "#000000" :weight bold)
   '(doom-dashboard-loaded :foreground "#9FE573" :background "#000000" :weight bold))
 #+END_SRC
+
 
 * GPTEl
 Registering Backend Models and AIs, making default Backend:
@@ -817,6 +846,7 @@ Registering Backend Models and AIs, making default Backend:
    :models '(;; xAI now only offers `grok-beta` as of the time of this writing
              grok-2-latest)))
 #+END_SRC
+
 
 ** DIRECTIVEs
 #+begin_src emacs-lisp :tangle yes
@@ -892,12 +922,14 @@ Important Notes:
 
 #+end_src
 
+
 * TRAMP WINDOWS
 PuTTY Installation and plink ENV/Variable for Host Connections.
 
 #+BEGIN_SRC emacs-lisp :tangle yes
 (setq password-cache-expiry nil)
 #+END_SRC
+
 
 #+begin_src emacs-lisp :tangle yes
 ;;; package --- Inserting a new Tramp Method
@@ -913,6 +945,7 @@ PuTTY Installation and plink ENV/Variable for Host Connections.
 				     "dockware@127.0.0.1 -pw dockware"))))
                (tramp-remote-shell "/bin/sh")))
 #+end_src
+
 
 #+BEGIN_SRC emacs-lisp :tangle no
 (setq password-cache-expiry nil)
@@ -1030,7 +1063,6 @@ Custom script to open directories
 
 * SHELL FOR COMPILATION
 #+begin_src emacs-lisp :tangle yes
-(use-package compile
-  :config
-  (setq! shell-file-name "C:/Users/MORENOC0/scoop/apps/pwsh/7.5.0/pwsh.exe"))
+;; (setq shell-file-name "C:/cygwin/bin/bash.exe")
+(setq shell-file-name "C:/Users/MORENOC0/scoop/apps/pwsh/7.5.0/pwsh.exe")
 #+end_src

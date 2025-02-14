@@ -90,10 +90,6 @@
 
 (package! tldr)
 
-(package! tree-sitter)
-
-(package! tree-sitter-langs)
-
 (package! wc-mode)
 
 (package! web-mode)

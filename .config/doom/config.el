@@ -1,3 +1,361 @@
+(use-package beacon
+  :config
+  (beacon-mode 1))
+
+(setq bookmark-default-file "~/.brain.d/bookmarks/bookmarks")
+
+(map! :leader
+      (:prefix ("b". "buffer")
+       :desc "List bookmarks"                          "L" #'list-bookmarks
+       :desc "Set bookmark"                            "m" #'bookmark-set
+       :desc "Delete bookmark"                         "M" #'bookmark-set
+       :desc "Save current bookmarks to bookmark file" "w" #'bookmark-save))
+
+(use-package editorconfig
+  :ensure t
+  :config
+  (editorconfig-mode 1))
+
+(set-buffer-file-coding-system 'unix)
+
+(setq doom-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
+      doom-variable-pitch-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
+      doom-big-font (font-spec :family "SpaceMono Nerd Font Mono" :size 18))
+(after! doom-themes
+  (setq doom-themes-enable-bold t
+        doom-themes-enable-italic t))
+(custom-set-faces!
+  '(font-lock-comment-face :slant italic)
+  '(font-lock-keyword-face :slant italic))
+
+(map! :leader
+      :desc "Toggle truncate lines"
+      "t t" #'toggle-truncate-lines)
+
+(use-package package
+  :config
+  (add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
+  (add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
+  (package-initialize))
+
+(use-package doom-modeline
+  :config
+  (set-face-attribute 'mode-line nil :font "SpaceMono Nerd Font Mono")
+  (setq doom-modeline-support-imenu t
+      doom-modeline-buffer-state-icon t
+      doom-modeline-icon t
+      doom-modeline-height 33
+      doom-modeline-bar-width 6
+      doom-modeline-persp-name t
+      doom-modeline-persp-icon t))
+
+(use-package server
+  :config
+  (setq server-use-tcp t
+      server-socket-dir "~/.config/emacs/server"))
+
+(defun kyo/toggle-shell-cygwin ()
+  "Toggle between PowerShell and Cygwin as the default shell."
+  (interactive)
+  (if (string= shell-file-name "~/scoop/apps/pwsh/7.5.0/pwsh.exe")
+      (setq shell-file-name "C:/cygwin/bin/bash.exe")
+    (setq shell-file-name "~/scoop/apps/pwsh/7.5.0/pwsh.exe"))
+  (message "Shell toggled to: %s" shell-file-name))
+
+(setq shell-file-name "~/scoop/apps/pwsh/7.5.0/pwsh.exe")
+
+(map! :leader
+      :desc "Toggle Shells between PowerShell and Cygwin."
+      "t h" #'kyo/toggle-shell-cygwin)
+
+(remove-hook '+doom-dashboard-functions #'doom-dashboard-widget-shortmenu)
+
+(add-hook! '+doom-dashboard-functions :append
+  (insert "\n" (+doom-dashboard--center +doom-dashboard--width "I am Kyo\nkyonax_on_tech - iam@kyo.wtf - github.com/Kyonax")))
+
+(defun kyo/my-shit-is-always-greater ()
+  (let* ((banner '(
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣧⡀⣿⣤⣀⣾⣅⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠠⣤⣤⠲⠶⣦⡿⣿⣿⣿⣿⣿⣿⣿⣴⣴⠖⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⢲⣦⣿⣟⠛⡓⣀⠐⠋⢽⠟⡿⢿⣿⣿⢛⢷⣤⣤⠄⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠠⢤⣦⣤⡦⠆⢈⢋⣡⡔⠁⢀⡠⠐⢻⡿⢃⡄⠀⣿⣧⣤⣀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⣀⣴⣾⡿⠗⡪⢛⣿⣿⣷⢾⡟⠀⣊⣴⣷⣿⢧⣦⣿⣿⢿⣁⣀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⢈⡬⠟⠂⠀⠖⠀⠞⠉⡽⠃⢈⠡⢋⠏⡰⠀⡿⠈⠛⣿⡇⠸⢢⡀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠊⠄⠁⠀⠐⣀⣪⢀⣔⡤⠂⣠⢀⡴⠀⣡⡀⠁⠈⠃⡢⠡⣄⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠄⠀⢤⣜⣉⡛⠻⢿⣷⣿⣿⣾⣷⡾⠿⠷⠆⢁⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⣾⠧⣬⣍⣑⠢⣽⣿⣿⣋⡤⠴⠒⢛⣳⣧⠀⠈⠀⢤⡄⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⣤⣧⠀⡄⢿⣧⡙⠛⠻⣤⣿⣿⣿⣿⣠⣿⡿⠟⣹⡧⠐⠠⠠⣿⡧⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⣠⣾⣿⣿⣧⡀⠸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣾⡿⠁⢋⡄⠐⣿⣿⠀⠀⠀⠀"
+                   "⠀⠀⢀⣼⣿⣿⣿⣿⣟⠀⠀⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠃⠀⣿⡧⠀⣿⣿⡀⣧⠀⠀"
+                   "⠀⠀⣿⣿⣿⣿⣿⠛⢿⣷⡄⢢⠘⢿⣿⣿⣿⣿⣿⣿⣿⣿⠟⢁⠀⠀⢛⣩⣴⣿⡿⢃⡌⠀⠀"
+                   "⠀⠀⠙⣿⣿⣿⣿⣿⣶⣌⠻⢦⡁⠀⠻⣿⣿⣿⣿⠿⠋⠀⣘⣡⣶⣿⡿⠟⣛⣡⠶⢋⠄⠀⠀"
+                   "⠀⠀⠀⠈⠻⠿⡿⡿⣿⣿⣿⣦⣙⠢⠀⠀⠈⠈⣀⣤⣶⣿⣟⢛⡩⠔⣒⣩⣥⣤⣶⣿⠂⠀⠀"
+                   "⠀⠀⠀⠀⠀⠰⣶⣦⣦⣦⡙⢿⡿⠓⣀⣠⣴⣿⣿⣿⡿⢛⣩⣴⣾⣿⡿⠿⠛⠋⠉⠁⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠈⠙⠻⢿⣿⣦⣅⠘⠿⠋⠁⢈⠟⣫⣿⣿⠿⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠃⠐⡄⠀⠁⡺⠛⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
+                   ))
+         (longest-line (apply #'max (mapcar #'length banner))))
+    (put-text-property
+     (point)
+     (dolist (line banner (point))
+       (insert (+doom-dashboard--center
+                +doom-dashboard--width
+                (concat line (make-string (max 0 (- longest-line (length line))) 32)))
+               "\n"))
+     'face 'doom-dashboard-banner)))
+
+(setq +doom-dashboard-ascii-banner-fn #'kyo/my-shit-is-always-greater)
+
+(custom-set-faces!
+  '(doom-dashboard-banner :foreground "#9FE573" :background "#000000" :weight bold)
+  '(doom-dashboard-loaded :foreground "#9FE573" :background "#000000" :weight bold))
+
+(setq doom-theme 'gruber-darker)
+(map! :leader
+      :desc "Load new theme" "h t" #'counsel-load-theme)
+
+(use-package treemacs
+  :config
+  (setq evil-treemacs-state-cursor t
+        treemacs-show-cursor t
+        treemacs-width 40))
+
+(setq display-line-numbers-type 'relative
+      display-line-numbers-mode t
+      line-number-mode t)
+
+(defun kyo/js2-mode-setup ()
+  (js2-minor-mode))
+
+(use-package js2-mode
+  :mode (("\\.plugin\\.js\\'" . js2-mode)
+         ("\\.js\\'" . js2-mode)
+         ("\\.jsx\\'" . js2-mode)
+         ("\\.mjs\\'" . js2-mode)
+         ("\\.cjs\\'" . js2-mode)
+         ("\\.es6\\'" . js2-mode))
+  :interpreter ("javascript" . js2-mode)
+  :hook ((js2-mode . lsp-deferred)
+         (js2-mode . kyo/js2-mode-setup)))
+
+(after! ccls
+  (setq ccls-executable "C:/ProgramData/chocolatey/bin/ccls.exe")
+  (set-lsp-priority! 'ccls 0))
+
+(defun kyo/lsp-mode-setup ()
+  (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
+  (lsp-headerline-breadcrumb-mode)
+  (lsp-ui-sideline-toggle-symbols-info))
+
+(use-package lsp-mode
+  :commands (lsp lsp-deferred)
+  :hook ((js2-mode . lsp-mode)
+         (web-mode . lsp-mode)
+         (lsp-mode . kyo/lsp-mode-setup))
+  :init
+  (setq lsp-keymap-prefix "C-c l")
+  :config
+  (lsp-enable-which-key-integration t))
+
+(defvar my-org-todo-keywords
+  '("TODO(t)"    ; A task that is ready to be tackled
+    "CODE(m)"    ; Coding Tasks
+    "TEST(c)"    ; Blog writing assignments
+    "DEVELOP(d)" ; Things to develop
+    "MEET(5)"    ; A Meeting
+    "PROYECT(p)" ; A project that contains other tasks
+    "REVIEW(r)"  ; A project that contains other tasks
+    "WAIT(w)"    ; Something is holding up this task
+    "|"          ; Separates active from inactive states
+    "DONE(d)"    ; Task has been completed
+    "CANCELLED(c)")  ; Task has been cancelled
+  "List of Org todo keywords for the sequence.")
+
+(after! org
+  (require 'org-bullets)
+  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
+  (setq org-directory "~/org"
+        org-ellipsis " ▼ "
+        org-superstar-headline-bullets-list '("" "" "" "󰺕" "󰻂" "󰪥" "󰻃")
+        org-superstar-itembullet-alist '((?+ . ?➤) (?- . ?✦)) ; changes +/- symbols in item lists
+        org-hide-emphasis-markers t
+        org-todo-keywords `((sequence ,@my-org-todo-keywords))))
+
+(setq org-agenda-block-separator 175)
+
+(after! org
+  (setq org-agenda-files '("~/.brain.d/roam-nodes/2025-02-13-$S-work_s_org_agenda_file.org")))
+
+(setq org-agenda-custom-commands
+      '(("v" "A better agenda view"
+         ((tags "PRIORITY=\"A\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "High-priority unfinished tasks:")))
+          (tags "PRIORITY=\"B\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Medium-priority unfinished tasks:")))
+          (tags "PRIORITY=\"C\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Low-priority unfinished tasks:")))
+          (tags "maritz"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Maritz:")))
+          (tags "softtek"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Softtek:")))
+          (tags "shoptron"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Shoptron:")))
+          (tags "work"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Work Tasks:")))
+          (tags "meeting"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Important Meetings:")))
+          (agenda "")
+          (alltodo "")))))
+
+(defun kyo/tangle-on-save ()
+  "If the current Org buffer has the auto_tangle tag, execute all code blocks and tangle the file."
+  (when (and (derived-mode-p 'org-mode)
+             ;; Check for the #+auto_tangle: t tag in the file
+             (save-excursion
+               (goto-char (point-min))
+               (re-search-forward "^#\\+auto_tangle:[ \t]*t" nil t)))
+    (org-babel-tangle)))
+
+;; Add kyo/tangle-on-save to the after-save-hook for Org mode buffers only.
+(add-hook 'org-mode-hook
+          (lambda ()
+            (add-hook 'after-save-hook #'kyo/tangle-on-save nil t)))
+
+(defun kyo/insert-auto-tangle-tag ()
+  "Insert auto-tangle tag in a literate config."
+  (interactive)
+  (evil-org-open-below 1)
+  (insert "#+auto_tangle: t ")
+  (evil-force-normal-state))
+
+(map! :leader
+      :desc "Insert auto_tangle tag" "i a" #'kyo/insert-auto-tangle-tag)
+
+(org-babel-do-load-languages
+ 'org-babel-load-languages
+ '((typescript . t)
+   (javascript . t)
+   (emacs-lisp . t)
+   (js . t)
+   (json . t)
+   (php . t)
+   ))
+
+(setq org-babel-command:typescript "npx -p typescript -- tsc")
+(setq org-confirm-babel-evaluate nil)
+
+(use-package org-fancy-priorities
+  :ensure t
+  :hook
+  (org-mode . org-fancy-priorities-mode)
+  :config
+  (setq org-fancy-priorities-list '("" "󱡞" "󰝨")
+   org-priority-faces
+   '((?A :foreground "#ff6c6b" :weight regular)
+     (?B :foreground "#98be65" :weight regular)
+     (?C :foreground "#c678dd" :weight regular))))
+
+(defvar my-org-roam-capture-templates
+  '(
+    ("d" "default" plain "%?"
+     :if-new (file+head "%<%Y-%m-%d-$S>-${slug}.org"
+                        "#+title: ${title}\n")
+     :unnarrowed t)
+    ("s" "Not Time Stamp File" plain "%?"
+     :if-new (file+head "${slug}.org"
+                        "#+title: ${title}\n")
+     :unnarrowed t)
+    ("f" "New Feature Azure DevOps" plain
+     (file "~/.brain.d/roam-nodes/templates/NEWNodeTemplate.org")
+     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                        "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
+     :unnarrowed t)
+    ("i" "New Sentinel Inspection" plain
+     (file "~/.brain.d/roam-nodes/templates/NEWNodeSentinelInspection.org")
+     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                        "#+TITLE: Kyonax's Daily Sentinel Inspection ~ %<%d/%m/%Y> \n")
+     :unnarrowed t)
+    ("p" "New PBI Azure DevOps" plain
+     (file "~/.brain.d/roam-nodes/templates/NEWNodeProject.org")
+     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                        "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
+     :unnarrowed t))
+  "My custom Org Roam capture templates for Windows/Work.")
+
+(after! org-roam
+  :ensure t
+  :init
+  (setq org-roam-v2-ack t)
+  :custom
+  (setq org-roam-directory "~/.brain.d/roam-nodes")
+  (setq org-roam-dailies-directory "~/.brain.d/agenda")
+  (setq org-roam-completion-everywhere t)
+  (setq org-roam-capture-templates `,my-org-roam-capture-templates))
+
+(map! :leader
+      (:prefix ("n D" . "Create Roam Nodes")
+       :desc "Daily Nodes - Yesterday" "Y" #'org-roam-dailies-capture-yesterday
+       :desc "Daily Nodes - Today" "H" #'org-roam-dailies-capture-today
+       :desc "Daily Nodes - Calendar" "C" #'org-roam-dailies-capture-date
+       :desc "Daily Nodes - Tomorrow" "T" #'org-roam-dailies-capture-tomorrow))
+
+(map! :leader
+      (:prefix ("n e" . "Find Roam Nodes")
+       :desc "Daily Nodes - Date" "d" #'org-roam-dailies-goto-date
+       :desc "Daily Nodes - Yesterday" "Y" #'org-roam-dailies-goto-yesterday
+       :desc "Daily Nodes - Today" "H" #'org-roam-dailies-goto-today
+       :desc "Daily Nodes - Tomorrow" "T" #'org-roam-dailies-goto-tomorrow))
+
+(use-package! websocket
+    :after org-roam)
+(use-package! org-roam-ui
+    :after org
+    :hook (after-init . org-roam-ui-mode)
+    :config
+    (setq org-roam-ui-sync-theme t
+          org-roam-ui-follow t
+          org-roam-ui-update-on-save t
+          org-roam-ui-open-on-start t))
+
+(define-globalized-minor-mode global-rainbow-mode rainbow-mode
+  (lambda ()
+    (when (not (memq major-mode
+                (list 'org-agenda-mode)))
+     (rainbow-mode 1))))
+(global-rainbow-mode 1 )
+
+(add-hook! 'rainbow-mode-hook
+  (hl-line-mode (if rainbow-mode -1 +1)))
+
+(defun kyo/web-mode-setup ()
+  (setq web-mode-enable-current-element-highlight t)
+  (setq web-mode-enable-current-column-highlight t)
+  (setq web-mode-block-padding 2))
+
+(use-package web-mode
+  :mode (("\\.html\\'" . web-mode)
+         ("\\.html\\.twig\\'" . web-mode))
+  :hook (web-mode . kyo/web-mode-setup))
+
+(use-package whitespace-mode
+  :hook ((js2-mode . whitespace-mode)
+         (web-mode . whitespace-mode)
+         (php-mode . whitespace-mode)))
+
+(setq user-full-name "Cristian D. Moreno - Kyonax"
+      user-mail-address "iam@kyo.wtf")
+
 (map! :leader
       (:prefix ("d" . "dired")
        :desc "Open dired" "d" #'dired
@@ -10,7 +368,7 @@
 (evil-define-key 'normal dired-mode-map
   (kbd "M-RET") 'dired-display-file
   (kbd "h") 'dired-up-directory
-  (kbd "l") 'dired-open-file ; use dired-find-file instead of dired-open.
+  (kbd "l") 'dired-open-file
   (kbd "m") 'dired-mark
   (kbd "t") 'dired-toggle-marks
   (kbd "u") 'dired-unmark
@@ -22,7 +380,7 @@
   (kbd "P") 'dired-do-print
   (kbd "R") 'dired-do-rename
   (kbd "T") 'dired-do-touch
-  (kbd "Y") 'dired-copy-filenamecopy-filename-as-kill ; copies filename to kill ring.
+  (kbd "Y") 'dired-copy-filenamecopy-filename-as-kill
   (kbd "Z") 'dired-do-compress
   (kbd "+") 'dired-create-directory
   (kbd "-") 'dired-do-kill-lines
@@ -50,411 +408,25 @@
 (setq delete-by-moving-to-trash t
       trash-directory "~/.local/share/Trash/files/")
 
-(setq user-full-name "Cristian D. Moreno"
-      user-mail-address "cristian.moreno@maritz.com")
+(defun kyo/open-directory (dir)
+  "Open the specified directory DIR in Dired mode."
+  (interactive "DChoose directory: ") ; Prompt for directory
+  (dired dir))
 
-(set-buffer-file-coding-system 'unix)
-
-(after! org
-  (require 'org-bullets)
-  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
-  (setq org-directory "~/org"
-        org-ellipsis " ▼ "
-        org-superstar-headline-bullets-list '("" "" "" "󰺕" "󰻂" "󰪥" "󰻃")
-        org-superstar-itembullet-alist '((?+ . ?➤) (?- . ?✦)) ; changes +/- symbols in item lists
-        org-hide-emphasis-markers t
-        org-todo-keywords        ; This overwrites the default Doom org-todo-keywords
-        '((sequence
-           "TODO(t)"           ; A task that is ready to be tackled
-           "CONTENT(n)"        ; Content to accomplish
-           "STREAM(s)"         ; Stream planned
-           "WEB(e)"            ; Website Tasks
-           "CODE(m)"           ; Coding Tasks
-           "STORY(y)"          ; Storytelling TODO
-           "TEST(c)"           ; Blog writing assignments
-           "DEVELOP(d)"        ; Things to develop
-           "DAILY(a)"          ; A Daily Task
-           "MONDAY(1)"         ; The Tasks of the Monday
-           "ODDT(3)"           ; The Wednesday and Friday Tasks
-           "WEEKLY(k)"         ; A Weekly Task
-           "DATE(4)"         ; A Weekly Task
-           "EVENT(5)"         ; A Weekly Task
-           "BLOG(b)"           ; Blog writing assignments
-           "GYM(g)"            ; Things to accomplish at the gym
-           "PROYECT(p)"           ; A project that contains other tasks
-           "REVIEW(r)"         ; A project that contains other tasks
-           "VIDEO(v)"          ; Video assignments
-           "WAIT(w)"           ; Something is holding up this task
-           "|"                 ; The pipe necessary to separate "active" states and "inactive" states
-           "DONE(d)"           ; Task has been completed
-           "CANCELLED(c)" )))) ; Task has been cancelled                        )
-
-(use-package! org-auto-tangle
-  :defer t
-  :hook (org-mode . org-auto-tangle-mode)
-  :config
-  (setq org-auto-tangle-default t))
-
-(defun dt/insert-auto-tangle-tag ()
-  "Insert auto-tangle tag in a literate config."
+(defun shoptron ()
+  "Open the Shoptron main Directory"
   (interactive)
-  (evil-org-open-below 1)
-  (insert "#+auto_tangle: t ")
-  (evil-force-normal-state))
+  (open-directory "/plinkw:dockware@127.0.0.1:~/html"))
 
-(map! :leader
-      :desc "Insert auto_tangle tag" "i a" #'dt/insert-auto-tangle-tag)
+(defun shtheme ()
+  "Open the ShoptronTheme main Directory"
+  (interactive)
+  (open-directory "/plinkw:dockware@127.0.0.1:~/html/custom/plugins/ShoptronTheme"))
 
-(after! org
-  (setq org-agenda-files '("~/.brain.d/roam-nodes/20240912084617-agenda.org")))
-
-(setq
-   ;; org-fancy-priorities-list '("[A]" "[B]" "[C]")
-   ;; org-fancy-priorities-list '("🐲" "🐉" "🀄")
-   ;; org-fancy-priorities-list '("🟥" "🟧" "🟨")
-   org-agenda-block-separator 175)
-
-(setq org-agenda-custom-commands
-      '(("v" "A better agenda view"
-         ((tags "PRIORITY=\"A\""
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
-                 (org-agenda-overriding-header "High-priority unfinished tasks:")))
-          (tags "PRIORITY=\"B\""
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
-                 (org-agenda-overriding-header "Medium-priority unfinished tasks:")))
-          (tags "PRIORITY=\"C\""
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
-                 (org-agenda-overriding-header "Low-priority unfinished tasks:")))
-          (tags "maritz"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
-                 (org-agenda-overriding-header "Tasks for Maritz:")))
-          (tags "softtek"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
-                 (org-agenda-overriding-header "Tasks for Softtek:")))
-          (tags "shoptron"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
-                 (org-agenda-overriding-header "Tasks for Shoptron:")))
-          (tags "homea"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "[#A] Home Daily Tasks:")))
-          (tags "homeb"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "[#B] Home Wed-Fri Day Tasks:")))
-          (tags "homec"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "[#C] Home Weekly Tasks:")))
-          (tags "health"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Family Health:")))
-          (tags "work"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Work Tasks:")))
-          (tags "kyo"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Kyonax's Projects:")))
-          (tags "event"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Important Events:")))
-          (agenda "")
-          (alltodo "")))))
-
-(use-package org-fancy-priorities
-  :ensure t
-  :hook
-  (org-mode . org-fancy-priorities-mode)
-  :config
-  (setq org-fancy-priorities-list '("" "󱡞" "󰝨")
-   org-priority-faces
-   '((?A :foreground "#ff6c6b" :weight regular)
-     (?B :foreground "#98be65" :weight regular)
-     (?C :foreground "#c678dd" :weight regular))))
-
-(org-babel-do-load-languages
- 'org-babel-load-languages
- '(
-   (typescript . t)
-   (javascript . t)
-   (emacs-lisp . t)
-   (js . t)
-   (json . t)
-   (php . t)
-   ))
-
-(setq org-babel-command:typescript "npx -p typescript -- tsc")
-(setq org-confirm-babel-evaluate nil)
-
-(setq bookmark-default-file "~/.brain.d/bookmarks/bookmarks")
-
-(map! :leader
-      (:prefix ("b". "buffer")
-       :desc "List bookmarks"                          "L" #'list-bookmarks
-       :desc "Set bookmark"                            "m" #'bookmark-set
-       :desc "Delete bookmark"                         "M" #'bookmark-set
-       :desc "Save current bookmarks to bookmark file" "w" #'bookmark-save))
-
-(setq doom-theme 'gruber-darker)
-(map! :leader
-      :desc "Load new theme" "h t" #'counsel-load-theme)
-
-(setq display-line-numbers-type 'relative)
-(setq display-line-numbers-mode t)
-(setq line-number-mode t)
-
-(setq doom-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
-      doom-variable-pitch-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
-      doom-big-font (font-spec :family "SpaceMono Nerd Font Mono" :size 18))
-(after! doom-themes
-  (setq doom-themes-enable-bold t
-        doom-themes-enable-italic t))
-(custom-set-faces!
-  '(font-lock-comment-face :slant italic)
-  '(font-lock-keyword-face :slant italic))
-
-(use-package! websocket
-    :after org-roam)
-(use-package! org-roam-ui
-    :after org
-    :hook (after-init . org-roam-ui-mode)
-    :config
-    (setq org-roam-ui-sync-theme t
-          org-roam-ui-follow t
-          org-roam-ui-update-on-save t
-          org-roam-ui-open-on-start t))
-
-(after! org-roam
-  :ensure t
-  :init
-  (setq org-roam-v2-ack t)
-  :custom
-  (setq org-roam-directory "~/.brain.d/roam-nodes")
-  (setq org-roam-dailies-directory "~/.brain.d/agenda")
-  (setq org-roam-completion-everywhere t)
-  (setq org-roam-capture-templates
-        '(
-          ("d" "default" plain "%?"
-            :if-new (file+head "%<%Y-%m-%d-$S>-${slug}.org"
-                               "#+title: ${title}\n") :unnarrowed t)
-          ("s" "Not Time Stamp File" plain "%?"
-            :if-new (file+head "${slug}.org"
-                               "#+title: ${title}\n") :unnarrowed t)
-          ("f" "New Feature Azure DevOps" plain
-           (file "~/.brain.d/roam-nodes/templates/NEWNodeTemplate.org")
-           :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
-                              "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
-           :unnarrowed t)
-          ("i" "New Sentinel Inspection" plain
-           (file "~/.brain.d/roam-nodes/templates/NEWNodeSentinelInspection.org")
-           :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
-                              "#+TITLE: Kyonax's Daily Sentinel Inspection ~ %<%d/%m/%Y> \n")
-           :unnarrowed t)
-          ("p" "New PBI Azure DevOps" plain
-           (file "~/.brain.d/roam-nodes/templates/NEWNodeProject.org")
-           :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
-                              "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
-           :unnarrowed t))))
-
-(map! :leader
-      (:prefix ("n D" . "Create Roam Nodes")
-       :desc "Daily Nodes - Yesterday" "Y" #'org-roam-dailies-capture-yesterday
-       :desc "Daily Nodes - Today" "H" #'org-roam-dailies-capture-today
-       :desc "Daily Nodes - Calendar" "C" #'org-roam-dailies-capture-date
-       :desc "Daily Nodes - Tomorrow" "T" #'org-roam-dailies-capture-tomorrow))
-
-(map! :leader
-      (:prefix ("n e" . "Find Roam Nodes")
-       :desc "Daily Nodes - Date" "d" #'org-roam-dailies-goto-date
-       :desc "Daily Nodes - Yesterday" "Y" #'org-roam-dailies-goto-yesterday
-       :desc "Daily Nodes - Today" "H" #'org-roam-dailies-goto-today
-       :desc "Daily Nodes - Tomorrow" "T" #'org-roam-dailies-goto-tomorrow))
-
-(require 'package)
-(add-to-list 'package-archives '("melpa" . "https://melpa.org/packages/") t)
-;; Comment/uncomment this line to enable MELPA Stable if desired.  See `package-archive-priorities`
-;; and `package-pinned-packages`. Most users will not need or want to do this.
-;;(add-to-list 'package-archives '("melpa-stable" . "https://stable.melpa.org/packages/") t)
-(package-initialize)
-
-(add-to-list 'package-archives
-             '("melpa-stable" . "https://stable.melpa.org/packages/") t)
-
-(require 'powerline)
-(powerline-default-theme)
-
-(beacon-mode 1)
-
-(after! ccls
-  (setq ccls-executable "C:/ProgramData/chocolatey/bin/ccls.exe")
-  (set-lsp-priority! 'ccls 0))
-
-(map! :leader
-      (:prefix ("c h" . "Help info from Clippy")
-       :desc "Clippy describes function under point" "f" #'clippy-describe-function
-       :desc "Clippy describes variable under point" "v" #'clippy-describe-variable))
-
-(set-face-attribute 'mode-line nil :font "SpaceMono Nerd Font Mono")
-(setq doom-modeline-support-imenu t ;;
-      doom-modeline-buffer-state-icon t ;;
-      doom-modeline-icon t ;;
-      doom-modeline-height 30     ;; sets modeline height
-      doom-modeline-bar-width 5   ;; sets right bar width
-      doom-modeline-persp-name t  ;; adds perspective name to modeline
-      doom-modeline-persp-icon t) ;; adds folder icon next to persp name
-
-(after! treemacs
-  (setq evil-treemacs-state-cursor t
-        treemacs-show-cursor t
-        treemacs-width 40))
-
-(map! :leader
-      :desc "Toggle truncate lines"
-      "t t" #'toggle-truncate-lines)
-
-(setq ivy-posframe-display-functions-alist
-      '((swiper                     . ivy-posframe-display-at-point)
-        (complete-symbol            . ivy-posframe-display-at-point)
-        (counsel-M-x                . ivy-display-function-fallback)
-        (counsel-esh-history        . ivy-posframe-display-at-window-center)
-        (counsel-describe-function  . ivy-display-function-fallback)
-        (counsel-describe-variable  . ivy-display-function-fallback)
-        (counsel-find-file          . ivy-display-function-fallback)
-        (counsel-recentf            . ivy-display-function-fallback)
-        (counsel-register           . ivy-posframe-display-at-frame-bottom-window-center)
-        (dmenu                      . ivy-posframe-display-at-frame-top-center)
-        (nil                        . ivy-posframe-display))
-      ivy-posframe-height-alist
-      '((swiper . 20)
-        (dmenu . 20)
-        (t . 10)))
-(ivy-posframe-mode 1) ; 1 enables posframe-mode, 0 disables it.
-
-(map! :leader
-      (:prefix ("v" . "Ivy")
-       :desc "Ivy push view" "v p" #'ivy-push-view
-       :desc "Ivy switch view" "v s" #'ivy-switch-view))
-
-(define-globalized-minor-mode global-rainbow-mode rainbow-mode
-  (lambda ()
-    (when (not (memq major-mode
-                (list 'org-agenda-mode)))
-     (rainbow-mode 1))))
-(global-rainbow-mode 1 )
-
-(add-hook! 'rainbow-mode-hook
-  (hl-line-mode (if rainbow-mode -1 +1)))
-
-(with-eval-after-load 'ox-latex
-  (add-to-list 'org-latex-classes
-               '("org-plain-latex"
-                 "\\documentclass{article}
-                [NO-DEFAULT-PACKAGES]
-                [PACKAGES]
-                \\newcommand{\\checkbox}{\\text{[ ]}} % Define \checkbox
-                \\newcommand{\\checkedbox}{\\text{[X]}} % Define \checkedbox
-                [EXTRA]"
-                 ("\\section{%s}" . "\\section*{%s}")
-                 ("\\subsection{%s}" . "\\subsection*{%s}")
-                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
-                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
-                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
-
-(after! org
-  ;; Minted config for much better syntax highlightig to src blocks.
-  (setq
-   org-latex-listings 'minted
-   ;; minted calls the pygmentize process and thus needs shell escaping
-   org-latex-pdf-process
-   '("xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"
-     "xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"
-     "xelatex -shell-escape -interaction nonstopmode -output-directory %o %f")
-   ;; NOTE I don't actually add minted to the package list, I'll just \usepackage it when needed
-
-   ;;(setq org-latex-pdf-process
-   ;;'("latexmk -f -pdf %f")) ; Doesn't work with pdflatex
-   ;; Margins
-   ;;(add-to-list 'org-latex-packages-alist '("a4paper,margin=1.1in" "geometry"))
-
-   ;; Add 'colorlinks' option to hyperrref, its much prettier
-   org-latex-hyperref-template
-   "\\hypersetup{
- pdfauthor={%a},
- pdftitle={%t},
- pdfkeywords={%k},
- pdfsubject={%d},
- pdfcreator={%c},
- pdflang={%L},
- colorlinks=true,
- linkcolor={cyan}
-}"
-   ;; page break after TOC
-   org-latex-toc-command "\\tableofcontents\n\\pagebreak\n\n")
-  ;; org-latex-minted-options '(("bgcolor" "{white!98!black}"))
-  ;; org-latex-minted-options '(("bgcolor" "\\color{white!96!black}"))
-  ;; In case I configured hyperref in a separate latex preamble
-  ;;(setq org-latex-hyperref-template ""))
-  (add-hook! 'org-roam-buffer-prepare-hook
-    (setq display-line-numbers nil)))
-
-(setq org-highlight-latex-and-related '(native))
-
-(require 'org-src)
-(add-to-list 'org-src-block-faces '("latex" (:inherit default :extend t)))
-
-;; Define the custom checklist symbols in LaTeX
-(defun my-org-latex-checklist-filter (text backend info)
-  "Replace Org checklist symbols with custom LaTeX symbols."
-  (when (org-export-derived-backend-p backend 'latex)
-    (let ((text (replace-regexp-in-string "\\[ \\]" "\\\\checkbox" text))
-          (text (replace-regexp-in-string "\\[X\\]" "\\\\checkedbox" text)))
-      text)))
-
-;; Add the custom filter to the export process
-(add-hook 'org-export-filter-final-output-functions
-          'my-org-latex-checklist-filter)
-
-(remove-hook '+doom-dashboard-functions #'doom-dashboard-widget-shortmenu)
-
-(add-hook! '+doom-dashboard-functions :append
-  (insert "\n" (+doom-dashboard--center +doom-dashboard--width "kyonax_on_tech - is.kyonax")))
-
-                (defun my-weebery-is-always-greater ()
-  (let* ((banner '(
-"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣧⡀⣿⣤⣀⣾⣅⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠠⣤⣤⠲⠶⣦⡿⣿⣿⣿⣿⣿⣿⣿⣴⣴⠖⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⢲⣦⣿⣟⠛⡓⣀⠐⠋⢽⠟⡿⢿⣿⣿⢛⢷⣤⣤⠄⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠠⢤⣦⣤⡦⠆⢈⢋⣡⡔⠁⢀⡠⠐⢻⡿⢃⡄⠀⣿⣧⣤⣀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⣀⣴⣾⡿⠗⡪⢛⣿⣿⣷⢾⡟⠀⣊⣴⣷⣿⢧⣦⣿⣿⢿⣁⣀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⢈⡬⠟⠂⠀⠖⠀⠞⠉⡽⠃⢈⠡⢋⠏⡰⠀⡿⠈⠛⣿⡇⠸⢢⡀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠊⠄⠁⠀⠐⣀⣪⢀⣔⡤⠂⣠⢀⡴⠀⣡⡀⠁⠈⠃⡢⠡⣄⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠄⠀⢤⣜⣉⡛⠻⢿⣷⣿⣿⣾⣷⡾⠿⠷⠆⢁⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⣾⠧⣬⣍⣑⠢⣽⣿⣿⣋⡤⠴⠒⢛⣳⣧⠀⠈⠀⢤⡄⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⣤⣧⠀⡄⢿⣧⡙⠛⠻⣤⣿⣿⣿⣿⣠⣿⡿⠟⣹⡧⠐⠠⠠⣿⡧⠀⠀⠀⠀"
-"⠀⠀⠀⠀⣠⣾⣿⣿⣧⡀⠸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣾⡿⠁⢋⡄⠐⣿⣿⠀⠀⠀⠀"
-"⠀⠀⢀⣼⣿⣿⣿⣿⣟⠀⠀⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠃⠀⣿⡧⠀⣿⣿⡀⣧⠀⠀"
-"⠀⠀⣿⣿⣿⣿⣿⠛⢿⣷⡄⢢⠘⢿⣿⣿⣿⣿⣿⣿⣿⣿⠟⢁⠀⠀⢛⣩⣴⣿⡿⢃⡌⠀⠀"
-"⠀⠀⠙⣿⣿⣿⣿⣿⣶⣌⠻⢦⡁⠀⠻⣿⣿⣿⣿⠿⠋⠀⣘⣡⣶⣿⡿⠟⣛⣡⠶⢋⠄⠀⠀"
-"⠀⠀⠀⠈⠻⠿⡿⡿⣿⣿⣿⣦⣙⠢⠀⠀⠈⠈⣀⣤⣶⣿⣟⢛⡩⠔⣒⣩⣥⣤⣶⣿⠂⠀⠀"
-"⠀⠀⠀⠀⠀⠰⣶⣦⣦⣦⡙⢿⡿⠓⣀⣠⣴⣿⣿⣿⡿⢛⣩⣴⣾⣿⡿⠿⠛⠋⠉⠁⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠈⠙⠻⢿⣿⣦⣅⠘⠿⠋⠁⢈⠟⣫⣿⣿⠿⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠃⠐⡄⠀⠁⡺⠛⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-))
-         (longest-line (apply #'max (mapcar #'length banner))))
-    (put-text-property
-     (point)
-     (dolist (line banner (point))
-       (insert (+doom-dashboard--center
-                +doom-dashboard--width
-                (concat line (make-string (max 0 (- longest-line (length line))) 32)))
-               "\n"))
-     'face 'doom-dashboard-banner)))
-
-(setq +doom-dashboard-ascii-banner-fn #'my-weebery-is-always-greater)
-
-(custom-set-faces!
-  '(doom-dashboard-banner :foreground "#9FE573" :background "#000000" :weight bold)
-  '(doom-dashboard-loaded :foreground "#9FE573" :background "#000000" :weight bold))
+(defun shconfigurator ()
+  "Open the ShoptronConfiurator main Directory"
+  (interactive)
+  (open-directory "/plinkw:dockware@127.0.0.1:~/html/custom/plugins/ShoptronConfigurator"))
 
 (gptel-make-openai "xAI"
   :host "api.x.ai"
@@ -467,9 +439,9 @@
 (setq
  gptel-model   'grok-2-latest
  gptel-backend
- (gptel-make-openai "xAI"           ;Any name you want
+ (gptel-make-openai "xAI"
    :host "api.x.ai"
-   :key (shell-command-to-string (format "gopass show sub/private_key/xai"))              ;can be a function that returns the key
+   :key (shell-command-to-string (format "gopass show sub/private_key/xai"))
    :endpoint "/v1/chat/completions"
    :stream t
    :models '(;; xAI now only offers `grok-beta` as of the time of this writing
@@ -545,104 +517,119 @@ Important Notes:
 ")
  ))
 
+(setq ivy-posframe-display-functions-alist
+      '((swiper                     . ivy-posframe-display-at-point)
+        (complete-symbol            . ivy-posframe-display-at-point)
+        (counsel-M-x                . ivy-display-function-fallback)
+        (counsel-esh-history        . ivy-posframe-display-at-window-center)
+        (counsel-describe-function  . ivy-display-function-fallback)
+        (counsel-describe-variable  . ivy-display-function-fallback)
+        (counsel-find-file          . ivy-display-function-fallback)
+        (counsel-recentf            . ivy-display-function-fallback)
+        (counsel-register           . ivy-posframe-display-at-frame-bottom-window-center)
+        (dmenu                      . ivy-posframe-display-at-frame-top-center)
+        (nil                        . ivy-posframe-display))
+      ivy-posframe-height-alist
+      '((swiper . 20)
+        (dmenu . 20)
+        (t . 10)))
+(ivy-posframe-mode 1) ; 1 enables posframe-mode, 0 disables it.
+
+(map! :leader
+      (:prefix ("v" . "Ivy")
+       :desc "Ivy push view" "p" #'ivy-push-view
+       :desc "Ivy switch view" "s" #'ivy-switch-view))
+
+(with-eval-after-load 'ox-latex
+  (add-to-list 'org-latex-classes
+               '("org-plain-latex"
+                 "\\documentclass{article}
+                [NO-DEFAULT-PACKAGES]
+                [PACKAGES]
+                \\newcommand{\\checkbox}{\\text{[ ]}} % Define \checkbox
+                \\newcommand{\\checkedbox}{\\text{[X]}} % Define \checkedbox
+                [EXTRA]"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
+
+(after! org
+  ;; Minted config for much better syntax highlightig to src blocks.
+  (setq
+   org-latex-listings 'minted
+   ;; minted calls the pygmentize process and thus needs shell escaping
+   org-latex-pdf-process
+   '("xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+     "xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+     "xelatex -shell-escape -interaction nonstopmode -output-directory %o %f")
+   ;; NOTE I don't actually add minted to the package list, I'll just \usepackage it when needed
+
+   ;;(setq org-latex-pdf-process
+   ;;'("latexmk -f -pdf %f")) ; Doesn't work with pdflatex
+   ;; Margins
+   ;;(add-to-list 'org-latex-packages-alist '("a4paper,margin=1.1in" "geometry"))
+
+   ;; Add 'colorlinks' option to hyperrref, its much prettier
+   org-latex-hyperref-template
+   "\\hypersetup{
+ pdfauthor={%a},
+ pdftitle={%t},
+ pdfkeywords={%k},
+ pdfsubject={%d},
+ pdfcreator={%c},
+ pdflang={%L},
+ colorlinks=true,
+ linkcolor={cyan}
+}"
+   ;; page break after TOC
+   org-latex-toc-command "\\tableofcontents\n\\pagebreak\n\n")
+  ;; org-latex-minted-options '(("bgcolor" "{white!98!black}"))
+  ;; org-latex-minted-options '(("bgcolor" "\\color{white!96!black}"))
+  ;; In case I configured hyperref in a separate latex preamble
+  ;;(setq org-latex-hyperref-template ""))
+  (add-hook! 'org-roam-buffer-prepare-hook
+    (setq display-line-numbers nil)))
+
+
+(setq org-highlight-latex-and-related '(native))
+
+(require 'org-src)
+(add-to-list 'org-src-block-faces '("latex" (:inherit default :extend t)))
+
+;; Define the custom checklist symbols in LaTeX
+(defun my-org-latex-checklist-filter (text backend info)
+  "Replace Org checklist symbols with custom LaTeX symbols."
+  (when (org-export-derived-backend-p backend 'latex)
+    (let ((text (replace-regexp-in-string "\\[ \\]" "\\\\checkbox" text))
+          (text (replace-regexp-in-string "\\[X\\]" "\\\\checkedbox" text)))
+      text)))
+
+;; Add the custom filter to the export process
+(add-hook 'org-export-filter-final-output-functions
+          'my-org-latex-checklist-filter)
+
+(use-package pdf-view
+  :hook (pdf-tools-enabled . pdf-view-midnight-minor-mode)
+  :hook (pdf-tools-enabled . hide-mode-line-mode)
+  :config
+  (setq pdf-view-midnight-colors '("#888888" . "#111111")))
+
 (setq password-cache-expiry nil)
 
-;;; package --- Inserting a new Tramp Method
-;;; Commentary:
-;;; Adding a new Tramp Method to execute docker containers.
-;;;
-;;; Code:
-(require 'tramp)
-(add-to-list 'tramp-methods `("plinkw"
-               (tramp-login-program "plink")
-               (tramp-login-args (("-ssh")
-				  (,(format
-				     "dockware@127.0.0.1 -pw dockware"))))
-               (tramp-remote-shell "/bin/sh")))
-
-(defun open-directory (dir)
-  "Open the specified directory DIR in Dired mode."
-  (interactive "DChoose directory: ") ; Prompt for directory
-  (dired dir))
-
-(defun shoptron ()
-  "Open the Shoptron main Directory"
-  (interactive)
-  (open-directory "/plinkw:dockware@127.0.0.1:~/html"))
-
-(defun shtheme ()
-  "Open the ShoptronTheme main Directory"
-  (interactive)
-  (open-directory "/plinkw:dockware@127.0.0.1:~/html/custom/plugins/ShoptronTheme"))
-
-(defun shconfigurator ()
-  "Open the ShoptronConfiurator main Directory"
-  (interactive)
-  (open-directory "/plinkw:dockware@127.0.0.1:~/html/custom/plugins/ShoptronConfigurator"))
-
-(require 'server)
-(setq server-use-tcp t
-      server-socket-dir "~/.config/emacs/server")
-;; (unless (server-running-p)
-;;     (server-start))
-
-;;; Tree Sitter
-
-(use-package! tree-sitter
-   :hook (prog-mode . turn-on-tree-sitter-mode)
-   :hook (tree-sitter-after-on . tree-sitter-hl-mode)
-   :config
-   (require 'tree-sitter-langs)
-   ;; This makes every node a link to a section of code
-   (setq tree-sitter-debug-jump-buttons t
-         ;; and this highlights the entire sub tree in your code
-         tree-sitter-debug-highlight-jump-region t))
-
-(use-package treesit
+(use-package tramp
   :config
-  (setq treesit-font-lock-level 4)
-  (setq treesit-extra-load-path '("~/.config/emacs/tree-sitter"))
-  (setq treesit-language-source-alist
-        '((css "https://github.com/tree-sitter/tree-sitter-css" "v0.20.0")
-          (json "https://github.com/tree-sitter/tree-sitter-json" "v0.20.2")
-          (markdown "https://github.com/ikatyang/tree-sitter-markdown" "v0.7.1")
-          (html "https://github.com/tree-sitter/tree-sitter-html" "v0.20.1")
-          (php "https://github.com/tree-sitter/tree-sitter-php" "master" "php/src")
-          (javascript "https://github.com/tree-sitter/tree-sitter-javascript" "v0.20.1")))
-  (setq major-mode-remap-alist
-        '((css-mode . css-ts-mode)
-          (html-mode . html-ts-mode)
-          (markdown-mode . markdown-ts-mode)
-          (json-mode . json-ts-mode)
-          (php-mode . php-ts-mode)
-          (js2-mode . js-ts-mode))))
+  (add-to-list 'tramp-methods `("plinkw"
+                                (tramp-login-program "plink")
+                                (tramp-login-args (("-ssh")
+                                                   (,(format
+                                                      "dockware@127.0.0.1 -pw dockware"))))
+                                (tramp-remote-shell "/bin/sh"))))
 
-
-(use-package combobulate
-   :custom
-   ;; You can customize Combobulate's key prefix here.
-   ;; Note that you may have to restart Emacs for this to take effect!
-   (combobulate-key-prefix "C-c o")
-   :hook ((prog-mode . combobulate-mode))
-   ;; Amend this to the directory where you keep Combobulate's source
-   ;; code.
-   :load-path ("~/.config/doom/custom_packages/combobulate"))
-
-;; (require 'treesit)
-
-;; (add-to-list 'treesit-language-source-alist
-;;              '(php "~/.config/emacs/tree-sitter/tree-sitter-php"))
-
-;; (add-to-list 'major-mode-remap-alist
-;;              '(php-mode . php-ts-mode))
-
-(use-package web-mode
-  :config
-  (add-to-list 'auto-mode-alist '("\\.html\\.twig\\'" . web-mode))
-  (setq web-mode-enable-current-element-highlight t)
-  (setq web-mode-enable-current-column-highlight t)
-  (setq web-mode-block-padding 2))
-
-(use-package compile
-  :config
-  (setq! shell-file-name "C:/Users/MORENOC0/scoop/apps/pwsh/7.5.0/pwsh.exe"))
+(when (eq window-system 'w32)
+  (setq tramp-default-method "plink")
+  (when (and (not (string-match putty-directory (getenv "PATH")))
+	     (file-directory-p putty-directory))
+    (setenv "PATH" (concat putty-directory ";" (getenv "PATH")))
+    (add-to-list 'exec-path putty-directory)))
