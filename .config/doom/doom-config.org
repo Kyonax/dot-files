@@ -792,6 +792,13 @@ Setup the ~whitespace-mode~ package to use it on the main languages that I work 
 (setq user-full-name "Cristian D. Moreno - Kyonax"
       user-mail-address "iam@kyo.wtf")
 #+end_src
+*** CUSTOM PACKAGEs
+**** EMACS TV
+*EmacsTV* Project which I'm working on - [[https://github.com/emacstv/emacstv.github.io][Github Repo]].
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
+(add-load-path! "~/Documents/emacstv.github.io-kyo/")
+(require 'emacstv)
+#+end_src
 
 *** DIRED PACKAGE
 Setup the ~dired~ file manager, new keybindings, implementation of ~peep-dired~, and general configurations.
