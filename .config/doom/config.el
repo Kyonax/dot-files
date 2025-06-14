@@ -16,6 +16,8 @@
   :config
   (editorconfig-mode 1))
 
+(set-buffer-file-coding-system 'unix)
+
 (setq doom-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
       doom-variable-pitch-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
       doom-big-font (font-spec :family "SpaceMono Nerd Font Mono" :size 18))
@@ -52,10 +54,24 @@
   (setq server-use-tcp t
       server-socket-dir "~/.config/emacs/server"))
 
+(defun kyo/toggle-shell-cygwin ()
+  "Toggle between PowerShell and Cygwin as the default shell."
+  (interactive)
+  (if (string= shell-file-name "~/scoop/apps/pwsh/7.5.0/pwsh.exe")
+      (setq shell-file-name "C:/cygwin/bin/bash.exe")
+    (setq shell-file-name "~/scoop/apps/pwsh/7.5.0/pwsh.exe"))
+  (message "Shell toggled to: %s" shell-file-name))
+
+(setq shell-file-name "~/scoop/apps/pwsh/7.5.0/pwsh.exe")
+
+(map! :leader
+      :desc "Toggle Shells between PowerShell and Cygwin."
+      "t h" #'kyo/toggle-shell-cygwin)
+
 (remove-hook '+doom-dashboard-functions #'doom-dashboard-widget-shortmenu)
 
 (add-hook! '+doom-dashboard-functions :append
-  (insert "\n" (+doom-dashboard--center +doom-dashboard--width "I am Kyo\nkyonax_on_tech - iam@kyo.wtf - github.com/Kyonax")))
+  (insert "\n" (+doom-dashboard--center +doom-dashboard--width "I am Kyo")))
 
 (defun kyo/my-shit-is-always-greater ()
   (let* ((banner '(
@@ -125,6 +141,10 @@
   :hook ((js2-mode . lsp-deferred)
          (js2-mode . kyo/js2-mode-setup)))
 
+(after! ccls
+  (setq ccls-executable "C:/ProgramData/chocolatey/bin/ccls.exe")
+  (set-lsp-priority! 'ccls 0))
+
 (defun kyo/lsp-mode-setup ()
   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
   (lsp-headerline-breadcrumb-mode)
@@ -140,6 +160,24 @@
   :config
   (lsp-enable-which-key-integration t))
 
+(use-package lsp-ui-mode
+  :hook ((js2-mode . lsp-ui-mode)
+         (web-mode . lsp-ui-mode)))
+
+(defvar my-org-todo-keywords
+  '("TODO(t)"    ; A task that is ready to be tackled
+    "CODE(m)"    ; Coding Tasks
+    "TEST(c)"    ; Blog writing assignments
+    "DEVELOP(d)" ; Things to develop
+    "MEET(5)"    ; A Meeting
+    "PROYECT(p)" ; A project that contains other tasks
+    "REVIEW(r)"  ; A project that contains other tasks
+    "WAIT(w)"    ; Something is holding up this task
+    "|"          ; Separates active from inactive states
+    "DONE(d)"    ; Task has been completed
+    "CANCELLED(c)")  ; Task has been cancelled
+  "List of Org todo keywords for the sequence.")
+
 (after! org
   (require 'org-bullets)
   (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
@@ -151,6 +189,38 @@
         org-todo-keywords `((sequence ,@my-org-todo-keywords))))
 
 (setq org-agenda-block-separator 175)
+
+(after! org
+  (setq org-agenda-files '("~/.brain.d/roam-nodes/2025-02-13-$S-work_s_org_agenda_file.org")))
+
+(setq org-agenda-custom-commands
+      '(("v" "A better agenda view"
+         ((tags "PRIORITY=\"A\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "High-priority unfinished tasks:")))
+          (tags "PRIORITY=\"B\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Medium-priority unfinished tasks:")))
+          (tags "PRIORITY=\"C\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Low-priority unfinished tasks:")))
+          (tags "maritz"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Maritz:")))
+          (tags "softtek"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Softtek:")))
+          (tags "shoptron"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Shoptron:")))
+          (tags "work"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Work Tasks:")))
+          (tags "meeting"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Important Meetings:")))
+          (agenda "")
+          (alltodo "")))))
 
 (defun kyo/tangle-on-save ()
   "If the current Org buffer has the auto_tangle tag, execute all code blocks and tangle the file."
@@ -184,6 +254,7 @@
    (js . t)
    (json . t)
    (php . t)
+   (web . t)
    ))
 
 (setq org-babel-command:typescript "npx -p typescript -- tsc")
@@ -199,6 +270,38 @@
    '((?A :foreground "#ff6c6b" :weight regular)
      (?B :foreground "#98be65" :weight regular)
      (?C :foreground "#c678dd" :weight regular))))
+
+(defvar my-org-roam-capture-templates
+  '(
+    ("d" "default" plain "%?"
+     :if-new (file+head "%<%Y-%m-%d-$S>-${slug}.org"
+                        "#+title: ${title}\n")
+     :unnarrowed t)
+    ("s" "Not Time Stamp File" plain "%?"
+     :if-new (file+head "${slug}.org"
+                        "#+title: ${title}\n")
+     :unnarrowed t)
+    ("f" "New Feature Azure DevOps" plain
+     (file "~/.brain.d/roam-nodes/templates/NEWNodeTemplate.org")
+     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                        "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
+     :unnarrowed t)
+    ("v" "New Invoice" plain
+     (file "~/.brain.d/roam-nodes/templates/NEWNodeInvoice.org")
+     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                        "#+TITLE: Invoice ${client-name}\n#+AUTHOR: ${author='Cristian D. Moreno - Kyonax'}\n")
+     :unnarrowed t)
+    ("i" "New Sentinel Inspection" plain
+     (file "~/.brain.d/roam-nodes/templates/NEWNodeSentinelInspection.org")
+     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                        "#+TITLE: Kyonax's Daily Sentinel Inspection ~ %<%d/%m/%Y> \n")
+     :unnarrowed t)
+    ("p" "New PBI Azure DevOps" plain
+     (file "~/.brain.d/roam-nodes/templates/NEWNodeProject.org")
+     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                        "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
+     :unnarrowed t))
+  "My custom Org Roam capture templates for Windows/Work.")
 
 (after! org-roam
   :ensure t
@@ -320,6 +423,40 @@
   (interactive "DChoose directory: ") ; Prompt for directory
   (dired dir))
 
+(defun shoptron ()
+  "Open the Shoptron main Directory"
+  (interactive)
+  (kyo/open-directory "/plinkw:dockware@127.0.0.1:~/html"))
+
+(defun shtheme ()
+  "Open the ShoptronTheme main Directory"
+  (interactive)
+  (kyo/open-directory "/plinkw:dockware@127.0.0.1:~/html/custom/plugins/ShoptronTheme"))
+
+(defun shconfigurator ()
+  "Open the ShoptronConfiurator main Directory"
+  (interactive)
+  (kyo/open-directory "/plinkw:dockware@127.0.0.1:~/html/custom/plugins/ShoptronConfigurator"))
+
+(gptel-make-openai "xAI"
+  :host "api.x.ai"
+  :key (shell-command-to-string (format "gopass show sub/private_key/xai"))
+  :endpoint "/v1/chat/completions"
+  :stream t
+  :models '(grok-2-latest))
+
+;; OPTIONAL configuration
+(setq
+ gptel-model   'grok-2-latest
+ gptel-backend
+ (gptel-make-openai "xAI"
+   :host "api.x.ai"
+   :key (shell-command-to-string (format "gopass show sub/private_key/xai"))
+   :endpoint "/v1/chat/completions"
+   :stream t
+   :models '(;; xAI now only offers `grok-beta` as of the time of this writing
+             grok-2-latest)))
+
 (setq! gptel-directives '(
  (default . "Test 32")
  (studying .
@@ -387,6 +524,108 @@ Important Notes:
     Always verify the documentation matches the code, ensuring accuracy and relevance.
     Keep explanations terse, professional, and focused. Skip pleasantries or unnecessary details.
     Always return just the answer and only the answer. Do not enclose it in code blocks, as we are already in a code editor.
+")
+ (manual .
+ "
+Please use the data provided in the following list to fill out the detailed Org mode template below. As you generate the final output, restructure and rephrase the text with improved grammar and clarity. Ensure that the language is professional and straightforward—avoid buzzwords—but feel free to add a touch of techy netrunner style with subtle, clever expressions. The final result should maintain a clear, structured format that is easy to understand for any developer.
+
+Identifier Replacement:
+
+No matter whether the list refers to a FT (Feature) or a PBI (Product Backlog Item), adjust the identifiers accordingly. For example, if the list refers to an FT Feature, then the IDs should use the format ft-001 instead of pbi-001. This rule applies to all identifiers in the template.
+
+Word Enclosure Guidelines:
+
+- For any word related to code, variable names, file paths, or any similar technical identifiers, use the tilde enclosure. For example: ~example~
+- For important words or main ideas, use the asterisk enclosure. For example: *example*
+- For notes or specifications, use the slash enclosure. For example: /example/
+
+Label Formatting:
+For any label text in the Org Template that ends with a colon, enclose the label (excluding the colon) in asterisks. For example:
+
+- Change '- Criterion 1:' to '- *Criterion 1*:'.
+- Apply this formatting to all similar instances (e.g., Dependencies, Technical Challenges, etc.).
+
+Conditional Template Section Removal:
+
+If the provided list indicates 'Not information,' 'Not used,' or any similar phrasing that expresses the absence of information for a particular section, please remove that section from the final output.
+
+Dynamic CUSTOM_ID Suffixing:
+
+For all Org CUSTOM_ID fields, append the provided ID (whether it is FT or PBI) to the end of the CUSTOM_ID. For example, if the item is pbi-5676, then the CUSTOM_ID for the 'Additional Information' section should be :CUSTOM_ID: additional-information-pbi-5676. Similarly, if it is an FT Feature such as ft-1234, then the CUSTOM_ID should be :CUSTOM_ID: additional-information-ft-1234. Apply this pattern consistently for all CUSTOM_ID fields throughout the template.
+
+Cross-Reference Linking:
+
+Whenever the output text references another part of the template (e.g., 'Look at the References to know more'), generate an Org link using the corresponding CUSTOM_ID. For example, such a reference should be formatted as [[#references-pbi-001][References]] or [[#references-ft-1234][References]] (using the appropriate ID).
+
+Detailed Org Template:
+```org
+*[Feature Name] - [Feature ID]
+
+**Overview
+[Provide a clear and concise explanation of the feature and its development based on the Theme Plugin. Include the purpose, functionality, Important Development tasks or Functionalities, and any user-facing changes.]
+
+[Connection to business backlogs. Use the Bussiness Feature Description and Acceptance Criteria to Explain how the Development handled this requirements (e.g., how it supports business goals or requirements).]
+
+<#+begin_quote
+Business Description:
+
+[Add the Busines Description and highlight the important words.]
+#+end_quote
+
+***Acceptance Criteria
+[Provide a concise explanation about the Acceptance Criteria in just One Parragraph]
+
+[List detailed criteria that must be met for the feature to be considered complete and ready for release.]
+
+- [ ] [Description]
+- [ ] [Description]
+- [ ] [Description]
+- [ ] ...
+
+**PBIs
+[List of Product Backlog Items (PBIs) associated with this feature (e.g., PBI-123, PBI-456).]
+
+- [ ] [PBI Name and ID, Use this URL to create a direct Link to the PBI https://dev.azure.com/experient/Products/_workitems/edit/(The PBI ID) ]
+- [ ] [PBI Name and ID, Use this URL to create a direct Link to the PBI https://dev.azure.com/experient/Products/_workitems/edit/(The PBI ID) ]
+- [ ] [PBI Name and ID, Use this URL to create a direct Link to the PBI https://dev.azure.com/experient/Products/_workitems/edit/(The PBI ID) ]
+- [ ] ...
+
+**Technical Approach
+[Provide a clear and concise technical explanation about the Approach for the Feature Solution, what is the logic behind it and how this affect the Theme Plugin.]
+
+   *** Frontend
+     - *Twig templates*: [The Reason of why was necessary to add or override Twig Templates].
+     - *SCSS*: [The Reason of why was necessary to add or override SCSS].
+     - *Plugin JS Scripts*: [The Reason of why was necessary to add or override Plugin JS].
+   *** Backend
+     - *Symfony controllers*: [The Reason of why was necessary to add or override Symfony Controllers].
+     - *PageLoader classes*: [The Reason of why was necessary to add or override Page Loaders].
+     - *Store API integrations*: [The Reason of why was necessary to add or override API Integrations].
+
+**Development Workflow
+[Description of the request flow for this feature (e.g., how data moves from routes, controllers to templates).]
+
+**Deployment
+[Steps or considerations for deploying this feature (e.g., service registration, cache clearing, theme compilation, build-storefront, build-administration).]
+
+**Current Status
+[Current development status: Completed / In Progress / Pending. And explain the why of the Status]
+
+**Key Considerations
+[Important notes for development (e.g., adherence to Store API standards, cache management).]
+
+**Challenges
+[Known issues or potential obstacles (e.g., ensuring test coverage, deployment complexities).]
+
+**Modified Files
+[List all files that were modified, added, or deleted as part of this feature implementation.]
+
+| File Path         | Change Type (Added/Modified/Deleted) | Brief Description of Change                |
+|-------------------+--------------------------------------+--------------------------------------------|
+| ~path/to/file1.js~  | Modified                             | Updated function ~X~ to handle new feature ~Y~ |
+| ~path/to/file2.css~ | Added                                | New styles for feature ~Z~ UI                |
+| ~path/to/file3.py~  | Deleted                              | Removed deprecated function                |
+```
 ")
  ))
 
@@ -490,3 +729,53 @@ Important Notes:
   (setq pdf-view-midnight-colors '("#888888" . "#111111")))
 
 (setq password-cache-expiry nil)
+
+(use-package tramp
+  :config
+  (add-to-list 'tramp-methods `("plinkw"
+                                (tramp-login-program "plink")
+                                (tramp-login-args (("-ssh")
+                                                   (,(format
+                                                      "dockware@127.0.0.1 -pw dockware"))))
+                                (tramp-remote-shell "/bin/sh"))))
+
+(when (eq window-system 'w32)
+  (setq tramp-default-method "plink")
+  (when (and (not (string-match putty-directory (getenv "PATH")))
+	     (file-directory-p putty-directory))
+    (setenv "PATH" (concat putty-directory ";" (getenv "PATH")))
+    (add-to-list 'exec-path putty-directory)))
+
+(defun kyo/create-invoice-number (&optional dir invoice-paths)
+  "Search for invoice files in DIR or INVOICE-PATHS, count them,
+   and return the next invoice number formatted with the current date.
+
+   DIR is the directory to search for invoice files. If not provided,
+   it defaults to the current directory.
+
+   INVOICE-PATHS is a list of file paths to check for invoice files.
+   If provided, it is used instead of searching a directory.
+
+   The next invoice number is based on the quantity of matched files
+   with 'invoice' in their names."
+  (let* ((current-year (format-time-string "%Y"))
+         (current-month (format-time-string "%m"))
+         (current-day (format-time-string "%d"))
+         (invoice-count 0))
+
+    ;; Count invoice files
+    (if invoice-paths
+        (dolist (path invoice-paths)
+          (when (and (stringp path)
+                     (string-match-p "invoice" (file-name-nondirectory path))
+                     (file-exists-p path))
+            (setq invoice-count (1+ invoice-count))))
+      (let ((files (directory-files (or dir default-directory) t "\\(invoice\\|-invoice\\)")))
+        (dolist (file files)
+          (when (string-match-p "invoice" (file-name-nondirectory file))
+            (setq invoice-count (1+ invoice-count))))))
+
+    ;; Calculate and format the next invoice number
+    (let* ((next-number (1+ invoice-count))
+           (formatted-number (format "%02d" next-number)))
+      (concat current-year current-month current-day "-" formatted-number))))
