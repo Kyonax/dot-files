@@ -16,7 +16,7 @@
   :config
   (editorconfig-mode 1))
 
-(set-buffer-file-coding-system 'unix)
+(set-buffer-file-coding-system 'utf-8-dos)
 
 (setq doom-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
       doom-variable-pitch-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
