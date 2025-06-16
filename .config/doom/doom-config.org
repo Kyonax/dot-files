@@ -42,7 +42,7 @@ Call the function in a condition when creating the ~:tangle~ property in blocks,
 
 Example of Usage:
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "os") "config.el" "no")
-(message "Hello There I'm on Windows")
+(message "Hello There I'm on %s" (org-babel-ref-resolve "get-os-type"))
 #+end_src
 
 * CONFIG FILEs
