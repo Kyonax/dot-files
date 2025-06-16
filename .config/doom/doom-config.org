@@ -266,7 +266,11 @@ Enable the usage of ~editorconfig~ package. Consistency while develop [[https://
 **** FILE CODING SYSTEM
 Set the File Coding System always to unix, this configuration is tweaked to maintain consistency across OS, used just on ~windows~ setup.
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
-(set-buffer-file-coding-system 'unix)
+(set-buffer-file-coding-system 'utf-8-dos)
+#+end_src
+
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
+(set-buffer-file-coding-system 'utf-8-unix)
 #+end_src
 
 **** FONTs

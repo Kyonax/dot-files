@@ -16,6 +16,8 @@
   :config
   (editorconfig-mode 1))
 
+(set-buffer-file-coding-system 'utf-8-dos)
+
 (setq doom-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
       doom-variable-pitch-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
       doom-big-font (font-spec :family "SpaceMono Nerd Font Mono" :size 18))
@@ -40,17 +42,17 @@
   :config
   (set-face-attribute 'mode-line nil :font "SpaceMono Nerd Font Mono")
   (setq doom-modeline-support-imenu t
-      doom-modeline-buffer-state-icon t
-      doom-modeline-icon t
-      doom-modeline-height 33
-      doom-modeline-bar-width 6
-      doom-modeline-persp-name t
-      doom-modeline-persp-icon t))
+        doom-modeline-buffer-state-icon t
+        doom-modeline-icon t
+        doom-modeline-height 33
+        doom-modeline-bar-width 6
+        doom-modeline-persp-name t
+        doom-modeline-persp-icon t))
 
 (use-package server
   :config
   (setq server-use-tcp t
-      server-socket-dir "~/.config/emacs/server"))
+        server-socket-dir "~/.config/emacs/server"))
 
 (remove-hook '+doom-dashboard-functions #'doom-dashboard-widget-shortmenu)
 
@@ -200,10 +202,10 @@
   (org-mode . org-fancy-priorities-mode)
   :config
   (setq org-fancy-priorities-list '("" "󱡞" "󰝨")
-   org-priority-faces
-   '((?A :foreground "#ff6c6b" :weight regular)
-     (?B :foreground "#98be65" :weight regular)
-     (?C :foreground "#c678dd" :weight regular))))
+        org-priority-faces
+        '((?A :foreground "#ff6c6b" :weight regular)
+          (?B :foreground "#98be65" :weight regular)
+          (?C :foreground "#c678dd" :weight regular))))
 
 (after! org-roam
   :ensure t
@@ -230,21 +232,21 @@
        :desc "Daily Nodes - Tomorrow" "T" #'org-roam-dailies-goto-tomorrow))
 
 (use-package! websocket
-    :after org-roam)
+  :after org-roam)
 (use-package! org-roam-ui
-    :after org
-    :hook (after-init . org-roam-ui-mode)
-    :config
-    (setq org-roam-ui-sync-theme t
-          org-roam-ui-follow t
-          org-roam-ui-update-on-save t
-          org-roam-ui-open-on-start t))
+  :after org
+  :hook (after-init . org-roam-ui-mode)
+  :config
+  (setq org-roam-ui-sync-theme t
+        org-roam-ui-follow t
+        org-roam-ui-update-on-save t
+        org-roam-ui-open-on-start t))
 
 (define-globalized-minor-mode global-rainbow-mode rainbow-mode
   (lambda ()
     (when (not (memq major-mode
-                (list 'org-agenda-mode)))
-     (rainbow-mode 1))))
+                     (list 'org-agenda-mode)))
+      (rainbow-mode 1))))
 (global-rainbow-mode 1 )
 
 (add-hook! 'rainbow-mode-hook
@@ -326,9 +328,9 @@
   (dired dir))
 
 (setq! gptel-directives '(
- (default . "Test 32")
- (studying .
-"I am working in Doom Emacs using Org Mode to document research in a `.org` file. My goal is to improve the quality of the file, making it more readable, accessible, and well-structured for learning and reference. Depending on my request, you will provide one of the following types of support:
+                          (default . "Test 32")
+                          (studying .
+                                    "I am working in Doom Emacs using Org Mode to document research in a `.org` file. My goal is to improve the quality of the file, making it more readable, accessible, and well-structured for learning and reference. Depending on my request, you will provide one of the following types of support:
 
 1. **Rewriting the Whole File**:
    - If I ask to rewrite the entire `.org` file, provide **only the new structured `.org` file** as the output, without any explanations, documentation, or unrelated content. Follow these guidelines:
@@ -363,8 +365,8 @@
 **Deliverables**:
  - Provide only the requested output, whether it’s a rewritten .org file, support for a small piece of research, improved text structure, examples, references, or translations. Do not include additional explanations or unrelated content unless explicitly requested.
  ")
- (documentation .
-  "
+                          (documentation .
+                                         "
 You are an expert developer specialized in refining code documentation. Your sole focus is improving the clarity and readability of the documentation without altering the code or structure. Follow these guidelines strictly:
 Description
 
@@ -393,8 +395,8 @@ Important Notes:
     Keep explanations terse, professional, and focused. Skip pleasantries or unnecessary details.
     Always return just the answer and only the answer. Do not enclose it in code blocks, as we are already in a code editor.
 ")
- (manual .
- "
+                          (manual .
+                                  "
 Please use the data provided in the following list to fill out the detailed Org mode template below. As you generate the final output, restructure and rephrase the text with improved grammar and clarity. Ensure that the language is professional and straightforward—avoid buzzwords—but feel free to add a touch of techy netrunner style with subtle, clever expressions. The final result should maintain a clear, structured format that is easy to understand for any developer.
 
 Identifier Replacement:
@@ -495,7 +497,7 @@ Business Description:
 | ~path/to/file3.py~  | Deleted                              | Removed deprecated function                |
 ```
 ")
- ))
+                          ))
 
 (setq ivy-posframe-display-functions-alist
       '((swiper                     . ivy-posframe-display-at-point)
