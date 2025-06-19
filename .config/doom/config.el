@@ -42,17 +42,31 @@
   :config
   (set-face-attribute 'mode-line nil :font "SpaceMono Nerd Font Mono")
   (setq doom-modeline-support-imenu t
-        doom-modeline-buffer-state-icon t
-        doom-modeline-icon t
-        doom-modeline-height 33
-        doom-modeline-bar-width 6
-        doom-modeline-persp-name t
-        doom-modeline-persp-icon t))
+      doom-modeline-buffer-state-icon t
+      doom-modeline-icon t
+      doom-modeline-height 33
+      doom-modeline-bar-width 6
+      doom-modeline-persp-name t
+      doom-modeline-persp-icon t))
 
 (use-package server
   :config
   (setq server-use-tcp t
-        server-socket-dir "~/.config/emacs/server"))
+      server-socket-dir "~/.config/emacs/server"))
+
+(defun kyo/toggle-shell-cygwin ()
+  "Toggle between PowerShell and Cygwin as the default shell."
+  (interactive)
+  (if (string= shell-file-name "~/scoop/apps/pwsh/7.5.0/pwsh.exe")
+      (setq shell-file-name "C:/cygwin/bin/bash.exe")
+    (setq shell-file-name "~/scoop/apps/pwsh/7.5.0/pwsh.exe"))
+  (message "Shell toggled to: %s" shell-file-name))
+
+(setq shell-file-name "~/scoop/apps/pwsh/7.5.0/pwsh.exe")
+
+(map! :leader
+      :desc "Toggle Shells between PowerShell and Cygwin."
+      "t h" #'kyo/toggle-shell-cygwin)
 
 (remove-hook '+doom-dashboard-functions #'doom-dashboard-widget-shortmenu)
 
@@ -113,6 +127,13 @@
       display-line-numbers-mode t
       line-number-mode t)
 
+(setq lsp-ui-doc-show-with-cursor t)
+(setq lsp-ui-doc-delay 0.2)
+
+(map! :leader
+      :desc "Show LSP UI Doc"
+      "c d" #'lsp-ui-doc-show)
+
 (defun kyo/js2-mode-setup ()
   (js2-minor-mode))
 
@@ -127,6 +148,18 @@
   :hook ((js2-mode . lsp-deferred)
          (js2-mode . kyo/js2-mode-setup)))
 
+(use-package typescript-mode
+  :mode (("\\.ts\\'" . typescript-mode)
+         ("\\.tsx\\'" . typescript-mode))
+  :hook (typescript-mode . lsp-deferred))
+
+(use-package json-mode
+  :mode ("\\.json\\'" . json-mode))
+
+(after! ccls
+  (setq ccls-executable "C:/ProgramData/chocolatey/bin/ccls.exe")
+  (set-lsp-priority! 'ccls 0))
+
 (defun kyo/lsp-mode-setup ()
   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
   (lsp-headerline-breadcrumb-mode)
@@ -135,16 +168,33 @@
 (use-package lsp-mode
   :commands (lsp lsp-deferred)
   :hook ((js2-mode . lsp-mode)
+         (typescript-mode . lsp-mode)
          (web-mode . lsp-mode)
          (lsp-mode . kyo/lsp-mode-setup))
+
   :init
   (setq lsp-keymap-prefix "C-c l")
   :config
   (lsp-enable-which-key-integration t))
 
-(use-package lsp-ui-mode
+(use-package lsp-ui
   :hook ((js2-mode . lsp-ui-mode)
+         (typescript-mode . lsp-ui-mode)
          (web-mode . lsp-ui-mode)))
+
+(defvar my-org-todo-keywords
+  '("TODO(t)"    ; A task that is ready to be tackled
+    "CODE(m)"    ; Coding Tasks
+    "TEST(c)"    ; Blog writing assignments
+    "DEVELOP(d)" ; Things to develop
+    "MEET(5)"    ; A Meeting
+    "PROYECT(p)" ; A project that contains other tasks
+    "REVIEW(r)"  ; A project that contains other tasks
+    "WAIT(w)"    ; Something is holding up this task
+    "|"          ; Separates active from inactive states
+    "DONE(d)"    ; Task has been completed
+    "CANCELLED(c)")  ; Task has been cancelled
+  "List of Org todo keywords for the sequence.")
 
 (after! org
   (require 'org-bullets)
@@ -157,6 +207,38 @@
         org-todo-keywords `((sequence ,@my-org-todo-keywords))))
 
 (setq org-agenda-block-separator 175)
+
+(after! org
+  (setq org-agenda-files '("~/.brain.d/roam-nodes/2025-02-13-$S-work_s_org_agenda_file.org")))
+
+(setq org-agenda-custom-commands
+      '(("v" "A better agenda view"
+         ((tags "PRIORITY=\"A\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "High-priority unfinished tasks:")))
+          (tags "PRIORITY=\"B\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Medium-priority unfinished tasks:")))
+          (tags "PRIORITY=\"C\""
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Low-priority unfinished tasks:")))
+          (tags "maritz"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Maritz:")))
+          (tags "softtek"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Softtek:")))
+          (tags "shoptron"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Shoptron:")))
+          (tags "work"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Work Tasks:")))
+          (tags "meeting"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Important Meetings:")))
+          (agenda "")
+          (alltodo "")))))
 
 (defun kyo/tangle-on-save ()
   "If the current Org buffer has the auto_tangle tag, execute all code blocks and tangle the file."
@@ -202,10 +284,42 @@
   (org-mode . org-fancy-priorities-mode)
   :config
   (setq org-fancy-priorities-list '("" "󱡞" "󰝨")
-        org-priority-faces
-        '((?A :foreground "#ff6c6b" :weight regular)
-          (?B :foreground "#98be65" :weight regular)
-          (?C :foreground "#c678dd" :weight regular))))
+   org-priority-faces
+   '((?A :foreground "#ff6c6b" :weight regular)
+     (?B :foreground "#98be65" :weight regular)
+     (?C :foreground "#c678dd" :weight regular))))
+
+(defvar my-org-roam-capture-templates
+  '(
+    ("d" "default" plain "%?"
+     :if-new (file+head "%<%Y-%m-%d-$S>-${slug}.org"
+                        "#+title: ${title}\n")
+     :unnarrowed t)
+    ("s" "Not Time Stamp File" plain "%?"
+     :if-new (file+head "${slug}.org"
+                        "#+title: ${title}\n")
+     :unnarrowed t)
+    ("f" "New Feature Azure DevOps" plain
+     (file "~/.brain.d/roam-nodes/templates/NEWNodeTemplate.org")
+     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                        "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
+     :unnarrowed t)
+    ("v" "New Invoice" plain
+     (file "~/.brain.d/roam-nodes/templates/NEWNodeInvoice.org")
+     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                        "#+TITLE: Invoice ${client-name}\n#+AUTHOR: ${author='Cristian D. Moreno - Kyonax'}\n")
+     :unnarrowed t)
+    ("i" "New Sentinel Inspection" plain
+     (file "~/.brain.d/roam-nodes/templates/NEWNodeSentinelInspection.org")
+     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                        "#+TITLE: Kyonax's Daily Sentinel Inspection ~ %<%d/%m/%Y> \n")
+     :unnarrowed t)
+    ("p" "New PBI Azure DevOps" plain
+     (file "~/.brain.d/roam-nodes/templates/NEWNodeProject.org")
+     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                        "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
+     :unnarrowed t))
+  "My custom Org Roam capture templates for Windows/Work.")
 
 (after! org-roam
   :ensure t
@@ -232,21 +346,21 @@
        :desc "Daily Nodes - Tomorrow" "T" #'org-roam-dailies-goto-tomorrow))
 
 (use-package! websocket
-  :after org-roam)
+    :after org-roam)
 (use-package! org-roam-ui
-  :after org
-  :hook (after-init . org-roam-ui-mode)
-  :config
-  (setq org-roam-ui-sync-theme t
-        org-roam-ui-follow t
-        org-roam-ui-update-on-save t
-        org-roam-ui-open-on-start t))
+    :after org
+    :hook (after-init . org-roam-ui-mode)
+    :config
+    (setq org-roam-ui-sync-theme t
+          org-roam-ui-follow t
+          org-roam-ui-update-on-save t
+          org-roam-ui-open-on-start t))
 
 (define-globalized-minor-mode global-rainbow-mode rainbow-mode
   (lambda ()
     (when (not (memq major-mode
-                     (list 'org-agenda-mode)))
-      (rainbow-mode 1))))
+                (list 'org-agenda-mode)))
+     (rainbow-mode 1))))
 (global-rainbow-mode 1 )
 
 (add-hook! 'rainbow-mode-hook
@@ -262,10 +376,41 @@
          ("\\.html\\.twig\\'" . web-mode))
   :hook (web-mode . kyo/web-mode-setup))
 
+(use-package flycheck
+  :init (global-flycheck-mode)
+  :hook ((js2-mode . flycheck-mode)
+         (typescript-mode . flycheck-mode)))
+
 (use-package whitespace-mode
   :hook ((js2-mode . whitespace-mode)
+         (typescript-mode . whitespace-mode)
          (web-mode . whitespace-mode)
-         (php-mode . whitespace-mode)))
+         (php-mode . whitespace-mode)
+         (json-mode . whitespace-mode)))
+
+(use-package prettier-js
+  :hook ((js2-mode . prettier-js-mode)
+         (typescript-mode . prettier-js-mode)
+         (json-mode . prettier-js-mode)
+         (web-mode . prettier-js-mode)))
+
+(defun kyo/run-prettier ()
+  "Format the current file using the Prettier CLI if available."
+  (interactive)
+  (when (and buffer-file-name
+             (string-match-p
+              "\\.\\(js\\|jsx\\|ts\\|tsx\\|mjs\\|cjs\\|es6\\|json\\|html?\\)\\'"
+              buffer-file-name))
+    (let* ((project-root (locate-dominating-file buffer-file-name "node_modules"))
+           (local-prettier (and project-root (expand-file-name "node_modules/.bin/prettier" project-root)))
+           (prettier-bin (or (and local-prettier (file-executable-p local-prettier) local-prettier)
+                             (executable-find "prettier"))))
+      (when prettier-bin
+        (shell-command-to-string
+         (format "%s --write %s"
+                 (shell-quote-argument prettier-bin)
+                 (shell-quote-argument buffer-file-name)))
+        (revert-buffer t t t)))))
 
 (setq user-full-name "Cristian D. Moreno - Kyonax"
       user-mail-address "iam@kyo.wtf")
@@ -327,10 +472,44 @@
   (interactive "DChoose directory: ") ; Prompt for directory
   (dired dir))
 
+(defun shoptron ()
+  "Open the Shoptron main Directory"
+  (interactive)
+  (kyo/open-directory "/plinkw:dockware@127.0.0.1:~/html"))
+
+(defun shtheme ()
+  "Open the ShoptronTheme main Directory"
+  (interactive)
+  (kyo/open-directory "/plinkw:dockware@127.0.0.1:~/html/custom/plugins/ShoptronTheme"))
+
+(defun shconfigurator ()
+  "Open the ShoptronConfiurator main Directory"
+  (interactive)
+  (kyo/open-directory "/plinkw:dockware@127.0.0.1:~/html/custom/plugins/ShoptronConfigurator"))
+
+(gptel-make-openai "xAI"
+  :host "api.x.ai"
+  :key (shell-command-to-string (format "gopass show sub/private_key/xai"))
+  :endpoint "/v1/chat/completions"
+  :stream t
+  :models '(grok-2-latest))
+
+;; OPTIONAL configuration
+(setq
+ gptel-model   'grok-2-latest
+ gptel-backend
+ (gptel-make-openai "xAI"
+   :host "api.x.ai"
+   :key (shell-command-to-string (format "gopass show sub/private_key/xai"))
+   :endpoint "/v1/chat/completions"
+   :stream t
+   :models '(;; xAI now only offers `grok-beta` as of the time of this writing
+             grok-2-latest)))
+
 (setq! gptel-directives '(
-                          (default . "Test 32")
-                          (studying .
-                                    "I am working in Doom Emacs using Org Mode to document research in a `.org` file. My goal is to improve the quality of the file, making it more readable, accessible, and well-structured for learning and reference. Depending on my request, you will provide one of the following types of support:
+ (default . "Test 32")
+ (studying .
+"I am working in Doom Emacs using Org Mode to document research in a `.org` file. My goal is to improve the quality of the file, making it more readable, accessible, and well-structured for learning and reference. Depending on my request, you will provide one of the following types of support:
 
 1. **Rewriting the Whole File**:
    - If I ask to rewrite the entire `.org` file, provide **only the new structured `.org` file** as the output, without any explanations, documentation, or unrelated content. Follow these guidelines:
@@ -365,8 +544,8 @@
 **Deliverables**:
  - Provide only the requested output, whether it’s a rewritten .org file, support for a small piece of research, improved text structure, examples, references, or translations. Do not include additional explanations or unrelated content unless explicitly requested.
  ")
-                          (documentation .
-                                         "
+ (documentation .
+  "
 You are an expert developer specialized in refining code documentation. Your sole focus is improving the clarity and readability of the documentation without altering the code or structure. Follow these guidelines strictly:
 Description
 
@@ -395,8 +574,8 @@ Important Notes:
     Keep explanations terse, professional, and focused. Skip pleasantries or unnecessary details.
     Always return just the answer and only the answer. Do not enclose it in code blocks, as we are already in a code editor.
 ")
-                          (manual .
-                                  "
+ (manual .
+ "
 Please use the data provided in the following list to fill out the detailed Org mode template below. As you generate the final output, restructure and rephrase the text with improved grammar and clarity. Ensure that the language is professional and straightforward—avoid buzzwords—but feel free to add a touch of techy netrunner style with subtle, clever expressions. The final result should maintain a clear, structured format that is easy to understand for any developer.
 
 Identifier Replacement:
@@ -497,7 +676,7 @@ Business Description:
 | ~path/to/file3.py~  | Deleted                              | Removed deprecated function                |
 ```
 ")
-                          ))
+ ))
 
 (setq ivy-posframe-display-functions-alist
       '((swiper                     . ivy-posframe-display-at-point)
@@ -599,6 +778,22 @@ Business Description:
   (setq pdf-view-midnight-colors '("#888888" . "#111111")))
 
 (setq password-cache-expiry nil)
+
+(use-package tramp
+  :config
+  (add-to-list 'tramp-methods `("plinkw"
+                                (tramp-login-program "plink")
+                                (tramp-login-args (("-ssh")
+                                                   (,(format
+                                                      "dockware@127.0.0.1 -pw dockware"))))
+                                (tramp-remote-shell "/bin/sh"))))
+
+(when (eq window-system 'w32)
+  (setq tramp-default-method "plink")
+  (when (and (not (string-match putty-directory (getenv "PATH")))
+	     (file-directory-p putty-directory))
+    (setenv "PATH" (concat putty-directory ";" (getenv "PATH")))
+    (add-to-list 'exec-path putty-directory)))
 
 (defun kyo/create-invoice-number (&optional dir invoice-paths)
   "Search for invoice files in DIR or INVOICE-PATHS, count them,

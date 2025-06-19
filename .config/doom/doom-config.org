@@ -426,6 +426,19 @@ Set Default configuration for the UI of the Emacs Editor.
       display-line-numbers-mode t
       line-number-mode t)
 #+end_src
+**** LSP-UI
+LSP UI Defalts
+#+begin_src emacs-lisp :tangle config.el
+(setq lsp-ui-doc-show-with-cursor t)
+(setq lsp-ui-doc-delay 0.2)
+
+(map! :leader
+      :desc "Show LSP UI Doc"
+      "c d" #'lsp-ui-doc-show)
+#+end_src
+
+#+RESULTS:
+: lsp-ui-doc-show
 
 *** EDITOR MODEs
 **** JS2-MODE
@@ -445,6 +458,23 @@ Setup the ~js2-mode~ package to use it on all the Javascript Files.
   :hook ((js2-mode . lsp-deferred)
          (js2-mode . kyo/js2-mode-setup)))
 #+end_src
+
+**** TYPESCRIPT-MODE
+Setup the ~typescript-mode~ package to use it on all the TS Files.
+#+begin_src emacs-lisp :tangle config.el
+(use-package typescript-mode
+  :mode (("\\.ts\\'" . typescript-mode)
+         ("\\.tsx\\'" . typescript-mode))
+  :hook (typescript-mode . lsp-deferred))
+ #+end_src
+
+**** JSON-MODE
+Setup the ~json-mode~ package to use it on all the Json Files.
+#+begin_src emacs-lisp :tangle config.el
+(use-package json-mode
+  :mode ("\\.json\\'" . json-mode))
+#+end_src
+
 **** LSP-MODE
 Setting up the ccls (C/C++/Objective-C language server) to use with ~lsp~.
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
@@ -463,15 +493,18 @@ Setup the ~lsp-mode~ package to use it on the main languages that I work with.
 (use-package lsp-mode
   :commands (lsp lsp-deferred)
   :hook ((js2-mode . lsp-mode)
+         (typescript-mode . lsp-mode)
          (web-mode . lsp-mode)
          (lsp-mode . kyo/lsp-mode-setup))
+
   :init
   (setq lsp-keymap-prefix "C-c l")
   :config
   (lsp-enable-which-key-integration t))
 
-(use-package lsp-ui-mode
+(use-package lsp-ui
   :hook ((js2-mode . lsp-ui-mode)
+         (typescript-mode . lsp-ui-mode)
          (web-mode . lsp-ui-mode)))
 #+end_src
 
@@ -634,6 +667,7 @@ Setup the ~org-babel-languages~ to evaluate all this languages from the org code
 (setq org-babel-command:typescript "npx -p typescript -- tsc")
 (setq org-confirm-babel-evaluate nil)
 #+end_src
+
 
 ***** FANCY PRIORITIEs
 Setup the ~org-fancy-priorities~ package to stylize the priorities of the Org Files.
@@ -798,14 +832,54 @@ Setup the ~web-mode~ package to use it on all html template files.
          ("\\.html\\.twig\\'" . web-mode))
   :hook (web-mode . kyo/web-mode-setup))
 #+end_src
+**** FLYCHECK
+Add =flycheck= with eslint for JSX/TSX.
+#+begin_src emacs-lisp :tangle config.el
+(use-package flycheck
+  :init (global-flycheck-mode)
+  :hook ((js2-mode . flycheck-mode)
+         (typescript-mode . flycheck-mode)))
+#+end_src
 
 **** WHITESPACE-MODE
 Setup the ~whitespace-mode~ package to use it on the main languages that I work with.
 #+begin_src emacs-lisp :tangle config.el
 (use-package whitespace-mode
   :hook ((js2-mode . whitespace-mode)
+         (typescript-mode . whitespace-mode)
          (web-mode . whitespace-mode)
-         (php-mode . whitespace-mode)))
+         (php-mode . whitespace-mode)
+         (json-mode . whitespace-mode)))
+#+end_src
+
+**** PRETTIER (CLI)
+Setup Prettier CLI to format ~js2-mode~, ~typescript-mode~, ~web-mode~, and ~json-mode~ files before saving.
+Disable LSP formatting and indentation to avoid conflicts.
+
+#+begin_src emacs-lisp :tangle config.el
+(use-package prettier-js
+  :hook ((js2-mode . prettier-js-mode)
+         (typescript-mode . prettier-js-mode)
+         (json-mode . prettier-js-mode)
+         (web-mode . prettier-js-mode)))
+
+(defun kyo/run-prettier ()
+  "Format the current file using the Prettier CLI if available."
+  (interactive)
+  (when (and buffer-file-name
+             (string-match-p
+              "\\.\\(js\\|jsx\\|ts\\|tsx\\|mjs\\|cjs\\|es6\\|json\\|html?\\)\\'"
+              buffer-file-name))
+    (let* ((project-root (locate-dominating-file buffer-file-name "node_modules"))
+           (local-prettier (and project-root (expand-file-name "node_modules/.bin/prettier" project-root)))
+           (prettier-bin (or (and local-prettier (file-executable-p local-prettier) local-prettier)
+                             (executable-find "prettier"))))
+      (when prettier-bin
+        (shell-command-to-string
+         (format "%s --write %s"
+                 (shell-quote-argument prettier-bin)
+                 (shell-quote-argument buffer-file-name)))
+        (revert-buffer t t t)))))
 #+end_src
 
 *** USER DEFAULTs
