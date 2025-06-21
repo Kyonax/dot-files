@@ -28,6 +28,10 @@
   '(font-lock-comment-face :slant italic)
   '(font-lock-keyword-face :slant italic))
 
+(setenv "SSH_ASKPASS" "C:/Program Files/Git/mingw64/libexec/git-core/git-gui--askpass")
+
+(setenv "SSH_AUTH_SOCK" "\\\\.\\pipe\\openssh-ssh-agent")
+
 (map! :leader
       :desc "Toggle truncate lines"
       "t t" #'toggle-truncate-lines)
