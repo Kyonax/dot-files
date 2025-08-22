@@ -1,0 +1,15 @@
+[window]
+
+padding.x = 6
+padding.y = 12
+
+[font]
+
+size = 9
+offset.y = -5
+
+normal.family = "SpaceMono Nerd Font Mono"
+normal.style = "Retina"
+
+bold.family = "SpaceMono Nerd Font Mono"
+bold.style = "Bold"
