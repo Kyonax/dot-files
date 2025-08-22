@@ -1,9 +1,9 @@
 #+TITLE: THE DOOM CONFIG
 #+SUBTITLE: All my Doom Emacs Configuration Files
 #+AUTHOR: Cristian D. Moreno - Kyonax
-#+DATE: 2025-02-12
+#+DATE: 2025-06-20
 #+auto_tangle: t
-#+LAST_UPDATE: Feb 12, 2025
+#+LAST_UPDATE: Jun 20, 2025
 #+VERSION: v0.1
 
 This ain't an average doom-config file, this is the master index of my entire Doom Emacs setup. Just one file, locked on generating the necessary tweaks to maintain my setup across all OS. My master file, jacked to fit my pesonal needs. Use it as your blueprint, but don't even think about PRs.
@@ -113,7 +113,7 @@ Default File Documentation:
 #+end_src
 
 *** COMPANY-TABNINE
-#+begin_src emacs-lisp :tangle packages.el
+#+begin_src emacs-lisp :tangle no
 (package! company-tabnine)
 #+end_src
 
@@ -222,6 +222,19 @@ Default File Documentation:
 (unpin! org-roam company-org-roam)
 (package! org-roam-ui)
 #+end_src
+
+*** RUBY SET-UP
+#+begin_src emacs-lisp :tangle packages.el
+(package! harpoon)
+(package! robe :disable t)
+(package! rails-routes)
+(package! rails-i18n)
+(package! multi-line)
+(package! ruby-refactor)
+
+(package! string-inflection)
+#+end_src
+
 ** config.el
 *** EDITOR DEFAULTs
 **** BEACON PACKAGE
@@ -230,6 +243,8 @@ Setup the ~beacon~ package to never lose the cursor. Shiny cursor interaction wh
 (use-package beacon
   :config
   (beacon-mode 1))
+
+(setq evil-escape-key-sequence "jk")
 #+end_src
 
 **** BOOKMARKs
@@ -257,6 +272,8 @@ Setup the ~bookmarks~ for the editor.
 **** EDITORCONFIG PACKAGE
 Enable the usage of ~editorconfig~ package. Consistency while develop [[https://github.com/editorconfig/editorconfig-emacs#readme][Read More]].
 #+begin_src emacs-lisp :tangle config.el
+(setq +file-templates-dir (expand-file-name "templates" doom-user-dir))
+
 (use-package editorconfig
   :ensure t
   :config
@@ -331,7 +348,7 @@ Setup the ~modeline~ package, this is the bottom status bar that appears in Emac
 
 **** SERVER SOCKET
 Generate the ~server-socket~ on a specific location. Daemon performance requirements.
-#+begin_src emacs-lisp :tangle config.el
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
 (use-package server
   :config
   (setq server-use-tcp t
@@ -424,7 +441,7 @@ Setup the ~treemacs~ package used as a File Manager.
   :config
   (setq evil-treemacs-state-cursor t
         treemacs-show-cursor t
-        treemacs-width 40))
+        treemacs-width 39))
 #+end_src
 
 **** UI
@@ -445,10 +462,33 @@ LSP UI Defalts
       "c d" #'lsp-ui-doc-show)
 #+end_src
 
-#+RESULTS:
-: lsp-ui-doc-show
-
 *** EDITOR MODEs
+**** SCSS-MODE
+Setup the ~scss-mode~ package to use it on all SCSS files with LSP and linters.
+#+begin_src emacs-lisp :tangle config.el
+(use-package scss-mode
+  :mode ("\\.scss\\'" . scss-mode)
+  :hook ((scss-mode . lsp-deferred)
+         (scss-mode . flycheck-mode)
+         (scss-mode . whitespace-mode)
+         (scss-mode . prettier-js-mode))
+  :config
+  (setq css-indent-offset 2))
+#+end_src
+
+**** CSS-MODE
+Setup the ~css-mode~ package to use it on all CSS files with LSP and linters.
+#+begin_src emacs-lisp :tangle config.el
+(use-package css-mode
+  :mode ("\\.css\\'" . css-mode)
+  :hook ((css-mode . lsp-deferred)
+         (css-mode . flycheck-mode)
+         (css-mode . whitespace-mode)
+         (css-mode . prettier-js-mode))
+  :config
+  (setq css-indent-offset 2))
+#+end_src
+
 **** JS2-MODE
 Setup the ~js2-mode~ package to use it on all the Javascript Files.
 #+begin_src emacs-lisp :tangle config.el
@@ -483,6 +523,26 @@ Setup the ~json-mode~ package to use it on all the Json Files.
   :mode ("\\.json\\'" . json-mode))
 #+end_src
 
+**** RUBY-MODE
+Setup the ~ruby-mode~ package to use it on all Ruby files with LSP and linters.
+#+begin_src emacs-lisp :tangle config.el
+(use-package ruby-mode
+  :mode (("\\.rb\\'" . ruby-mode)
+         ("\\.rake\\'" . ruby-mode)
+         ("\\.gemspec\\'" . ruby-mode)
+         ("Rakefile\\'" . ruby-mode)
+         ("Gemfile\\'" . ruby-mode)
+         ("Guardfile\\'" . ruby-mode)
+         ("Capfile\\'" . ruby-mode))
+  :interpreter "ruby"
+  :hook ((ruby-mode . lsp-deferred)
+         (ruby-mode . flycheck-mode)
+         (ruby-mode . whitespace-mode))
+  :config
+  (setq ruby-indent-level 2
+        ruby-insert-encoding-magic-comment nil))
+#+end_src
+
 **** LSP-MODE
 Setting up the ccls (C/C++/Objective-C language server) to use with ~lsp~.
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
@@ -492,11 +552,17 @@ Setting up the ccls (C/C++/Objective-C language server) to use with ~lsp~.
 #+end_src
 
 Setup the ~lsp-mode~ package to use it on the main languages that I work with.
-#+begin_src emacs-lisp :tangle config.el
+#+begin_src emacs-lisp :tangle no
 (defun kyo/lsp-mode-setup ()
   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
   (lsp-headerline-breadcrumb-mode)
   (lsp-ui-sideline-toggle-symbols-info))
+#+end_src
+
+#+begin_src emacs-lisp :tangle config.el
+(defun kyo/lsp-mode-setup ()
+  (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
+  (lsp-headerline-breadcrumb-mode))
 
 (use-package lsp-mode
   :commands (lsp lsp-deferred)
@@ -515,10 +581,37 @@ Setup the ~lsp-mode~ package to use it on the main languages that I work with.
          (typescript-mode . lsp-ui-mode)
          (web-mode . lsp-ui-mode)))
 #+end_src
+#+begin_src emacs-lisp :tangle config.el
+(setq lsp-solargraph-use-bundler t)
+
+(with-eval-after-load 'lsp-mode
+  (add-to-list 'lsp-language-id-configuration '(ruby-mode . "ruby"))
+  (lsp-register-client
+   (make-lsp-client :new-connection (lsp-stdio-connection '("solargraph" "stdio"))
+                    :major-modes '(ruby-mode)
+                    :priority -1
+                    :server-id 'ruby-ls)))
+#+end_src
 
 **** ORG-MODE
 Setup the ~org-mode~ package to use the magick on my Org Files.
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
+(defvar my-org-todo-keywords
+  '("TODO(t)"    ; A task that is ready to be tackled
+    "CODE(m)"    ; Coding Tasks
+    "TEST(c)"    ; Blog writing assignments
+    "DEVELOP(d)" ; Things to develop
+    "MEET(5)"    ; A Meeting
+    "PROYECT(p)" ; A project that contains other tasks
+    "REVIEW(r)"  ; A project that contains other tasks
+    "WAIT(w)"    ; Something is holding up this task
+    "|"          ; Separates active from inactive states
+    "DONE(d)"    ; Task has been completed
+    "CANCELLED(c)")  ; Task has been cancelled
+  "List of Org todo keywords for the sequence.")
+#+end_src
+
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
 (defvar my-org-todo-keywords
   '("TODO(t)"    ; A task that is ready to be tackled
     "CODE(m)"    ; Coding Tasks
@@ -658,6 +751,7 @@ Setup the ~org-auto-tangle~ to Org Files when the document is saved, this functi
 (map! :leader
       :desc "Insert auto_tangle tag" "i a" #'kyo/insert-auto-tangle-tag)
 #+end_src
+
 ***** BABEL
 Setup the ~org-babel-languages~ to evaluate all this languages from the org code blocks.
 #+begin_src emacs-lisp :tangle config.el
@@ -675,7 +769,6 @@ Setup the ~org-babel-languages~ to evaluate all this languages from the org code
 (setq org-babel-command:typescript "npx -p typescript -- tsc")
 (setq org-confirm-babel-evaluate nil)
 #+end_src
-
 
 ***** FANCY PRIORITIEs
 Setup the ~org-fancy-priorities~ package to stylize the priorities of the Org Files.
@@ -813,6 +906,7 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
           org-roam-ui-update-on-save t
           org-roam-ui-open-on-start t))
 #+end_src
+
 **** RAINBOW-MODE
 Set the ~rainbow-mode~ package to displays the actual color for any hex value color.
 #+begin_src emacs-lisp :tangle config.el
@@ -840,6 +934,7 @@ Setup the ~web-mode~ package to use it on all html template files.
          ("\\.html\\.twig\\'" . web-mode))
   :hook (web-mode . kyo/web-mode-setup))
 #+end_src
+
 **** FLYCHECK
 Add =flycheck= with eslint for JSX/TSX.
 #+begin_src emacs-lisp :tangle config.el
@@ -893,7 +988,7 @@ Disable LSP formatting and indentation to avoid conflicts.
 *** USER DEFAULTs
 #+begin_src emacs-lisp :tangle config.el
 (setq user-full-name "Cristian D. Moreno - Kyonax"
-      user-mail-address "iam@kyo.wtf")
+      user-mail-address "kyonax.corp@gmail.com")
 #+end_src
 
 *** DIRED PACKAGE
@@ -1036,11 +1131,11 @@ Setup the ~gptel~ package to use LLMs on Emacs.
   :key (shell-command-to-string (format "gopass show sub/private_key/xai"))
   :endpoint "/v1/chat/completions"
   :stream t
-  :models '(grok-2-latest))
+  :models '(grok-3-latest))
 
 ;; OPTIONAL configuration
 (setq
- gptel-model   'grok-2-latest
+ gptel-model   'grok-3-latest
  gptel-backend
  (gptel-make-openai "xAI"
    :host "api.x.ai"
@@ -1048,11 +1143,36 @@ Setup the ~gptel~ package to use LLMs on Emacs.
    :endpoint "/v1/chat/completions"
    :stream t
    :models '(;; xAI now only offers `grok-beta` as of the time of this writing
-             grok-2-latest)))
+             grok-3-latest)))
 #+end_src
 
-- *Directives Config:*
-#+begin_src emacs-lisp :tangle config.el
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
+(gptel-make-openai "xAI"
+  :host "api.x.ai"
+  :key (shell-command-to-string (format "pass show private_key/xai | tr -d '\n'"))
+  :endpoint "/v1/chat/completions"
+  :stream t
+  :models '(grok-3-latest))
+
+;; OPTIONAL configuration
+(setq
+ gptel-model   'grok-3-latest
+ gptel-backend
+ (gptel-make-openai "xAI"           ;Any name you want
+   :host "api.x.ai"
+   :key (shell-command-to-string (format "pass show private_key/xai | tr -d '\n'"))              ;can be a function that returns the key
+   :endpoint "/v1/chat/completions"
+   :stream t
+   :models '(;; xAI now only offers `grok-beta` as of the time of this writing
+             grok-3-latest)))
+
+(add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
+#+end_src
+
+**** DIRECTIVEs CONFIG
+
+- *Default Work - OLD:*
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
 (setq! gptel-directives '(
  (default . "Test 32")
  (studying .
@@ -1226,6 +1346,22 @@ Business Description:
  ))
 #+end_src
 
+- *Directives Linux - Freelance*:
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
+(setq! gptel-directives '(
+ (default .
+  "
+")
+ (documentation .
+  "
+")
+ (manual .
+ "
+")
+ ))
+#+end_src
+
+
 *** IVY PACKAGE
 Setup the ~ivy~ package for Emacs, generic completion mechanism. Implementing posframe for ivy, and the configuration documentation.
 
@@ -1275,6 +1411,7 @@ Available positions for the posframe implementation ~ivy-posframe-display-functi
        :desc "Ivy push view" "p" #'ivy-push-view
        :desc "Ivy switch view" "s" #'ivy-switch-view))
 #+end_src
+
 *** LATEX PACKAGE
 Setup the ~latext~ package to use with org.
 #+begin_src emacs-lisp :tangle config.el
@@ -1348,6 +1485,7 @@ Setup the ~latext~ package to use with org.
 (add-hook 'org-export-filter-final-output-functions
           'my-org-latex-checklist-filter)
 #+end_src
+
 *** PDF VIEWER
 Configure the ~pdf~ viewer.
 #+begin_src emacs-lisp :tangle config.el
@@ -1357,6 +1495,7 @@ Configure the ~pdf~ viewer.
   :config
   (setq pdf-view-midnight-colors '("#888888" . "#111111")))
 #+end_src
+
 *** TRAMP
 Setup the ~tramp~ package to be used on Windows.
 #+BEGIN_SRC emacs-lisp :tangle config.el
@@ -1380,6 +1519,18 @@ Setup the ~tramp~ package to be used on Windows.
 	     (file-directory-p putty-directory))
     (setenv "PATH" (concat putty-directory ";" (getenv "PATH")))
     (add-to-list 'exec-path putty-directory)))
+#+end_src
+*** RUBY SET-UP
+#+begin_src emacs-lisp :tangle config.el
+(load (expand-file-name "modules/editor.el" doom-user-dir))
+(load (expand-file-name "modules/misc.el" doom-user-dir))
+(load (expand-file-name "modules/ruby.el" doom-user-dir))
+(load (expand-file-name "modules/ruby-autocomplete.el" doom-user-dir))
+(load (expand-file-name "modules/term.el" doom-user-dir))
+(load (expand-file-name "modules/git.el" doom-user-dir))
+(load (expand-file-name "modules/lsp.el" doom-user-dir))
+(load (expand-file-name "modules/org.el" doom-user-dir))
+(load (expand-file-name "modules/autocomplete.el" doom-user-dir))
 #+end_src
 
 * CUSTOM FUNCTIONs

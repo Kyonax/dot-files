@@ -2,6 +2,8 @@
   :config
   (beacon-mode 1))
 
+(setq evil-escape-key-sequence "jk")
+
 (setq bookmark-default-file "~/.brain.d/bookmarks/bookmarks")
 
 (map! :leader
@@ -11,12 +13,14 @@
        :desc "Delete bookmark"                         "M" #'bookmark-set
        :desc "Save current bookmarks to bookmark file" "w" #'bookmark-save))
 
+(setq +file-templates-dir (expand-file-name "templates" doom-user-dir))
+
 (use-package editorconfig
   :ensure t
   :config
   (editorconfig-mode 1))
 
-(set-buffer-file-coding-system 'utf-8-dos)
+(set-buffer-file-coding-system 'utf-8-unix)
 
 (setq doom-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
       doom-variable-pitch-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
@@ -27,10 +31,6 @@
 (custom-set-faces!
   '(font-lock-comment-face :slant italic)
   '(font-lock-keyword-face :slant italic))
-
-(setenv "SSH_ASKPASS" "C:/Program Files/Git/mingw64/libexec/git-core/git-gui--askpass")
-
-(setenv "SSH_AUTH_SOCK" "\\\\.\\pipe\\openssh-ssh-agent")
 
 (map! :leader
       :desc "Toggle truncate lines"
@@ -52,25 +52,6 @@
       doom-modeline-bar-width 6
       doom-modeline-persp-name t
       doom-modeline-persp-icon t))
-
-(use-package server
-  :config
-  (setq server-use-tcp t
-      server-socket-dir "~/.config/emacs/server"))
-
-(defun kyo/toggle-shell-cygwin ()
-  "Toggle between PowerShell and Cygwin as the default shell."
-  (interactive)
-  (if (string= shell-file-name "~/scoop/apps/pwsh/7.5.0/pwsh.exe")
-      (setq shell-file-name "C:/cygwin/bin/bash.exe")
-    (setq shell-file-name "~/scoop/apps/pwsh/7.5.0/pwsh.exe"))
-  (message "Shell toggled to: %s" shell-file-name))
-
-(setq shell-file-name "~/scoop/apps/pwsh/7.5.0/pwsh.exe")
-
-(map! :leader
-      :desc "Toggle Shells between PowerShell and Cygwin."
-      "t h" #'kyo/toggle-shell-cygwin)
 
 (remove-hook '+doom-dashboard-functions #'doom-dashboard-widget-shortmenu)
 
@@ -125,7 +106,7 @@
   :config
   (setq evil-treemacs-state-cursor t
         treemacs-show-cursor t
-        treemacs-width 40))
+        treemacs-width 39))
 
 (setq display-line-numbers-type 'relative
       display-line-numbers-mode t
@@ -137,6 +118,24 @@
 (map! :leader
       :desc "Show LSP UI Doc"
       "c d" #'lsp-ui-doc-show)
+
+(use-package scss-mode
+  :mode ("\\.scss\\'" . scss-mode)
+  :hook ((scss-mode . lsp-deferred)
+         (scss-mode . flycheck-mode)
+         (scss-mode . whitespace-mode)
+         (scss-mode . prettier-js-mode))
+  :config
+  (setq css-indent-offset 2))
+
+(use-package css-mode
+  :mode ("\\.css\\'" . css-mode)
+  :hook ((css-mode . lsp-deferred)
+         (css-mode . flycheck-mode)
+         (css-mode . whitespace-mode)
+         (css-mode . prettier-js-mode))
+  :config
+  (setq css-indent-offset 2))
 
 (defun kyo/js2-mode-setup ()
   (js2-minor-mode))
@@ -160,14 +159,25 @@
 (use-package json-mode
   :mode ("\\.json\\'" . json-mode))
 
-(after! ccls
-  (setq ccls-executable "C:/ProgramData/chocolatey/bin/ccls.exe")
-  (set-lsp-priority! 'ccls 0))
+(use-package ruby-mode
+  :mode (("\\.rb\\'" . ruby-mode)
+         ("\\.rake\\'" . ruby-mode)
+         ("\\.gemspec\\'" . ruby-mode)
+         ("Rakefile\\'" . ruby-mode)
+         ("Gemfile\\'" . ruby-mode)
+         ("Guardfile\\'" . ruby-mode)
+         ("Capfile\\'" . ruby-mode))
+  :interpreter "ruby"
+  :hook ((ruby-mode . lsp-deferred)
+         (ruby-mode . flycheck-mode)
+         (ruby-mode . whitespace-mode))
+  :config
+  (setq ruby-indent-level 2
+        ruby-insert-encoding-magic-comment nil))
 
 (defun kyo/lsp-mode-setup ()
   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
-  (lsp-headerline-breadcrumb-mode)
-  (lsp-ui-sideline-toggle-symbols-info))
+  (lsp-headerline-breadcrumb-mode))
 
 (use-package lsp-mode
   :commands (lsp lsp-deferred)
@@ -185,6 +195,16 @@
   :hook ((js2-mode . lsp-ui-mode)
          (typescript-mode . lsp-ui-mode)
          (web-mode . lsp-ui-mode)))
+
+(setq lsp-solargraph-use-bundler t)
+
+(with-eval-after-load 'lsp-mode
+  (add-to-list 'lsp-language-id-configuration '(ruby-mode . "ruby"))
+  (lsp-register-client
+   (make-lsp-client :new-connection (lsp-stdio-connection '("solargraph" "stdio"))
+                    :major-modes '(ruby-mode)
+                    :priority -1
+                    :server-id 'ruby-ls)))
 
 (defvar my-org-todo-keywords
   '("TODO(t)"    ; A task that is ready to be tackled
@@ -213,7 +233,7 @@
 (setq org-agenda-block-separator 175)
 
 (after! org
-  (setq org-agenda-files '("~/.brain.d/roam-nodes/2025-02-13-$S-work_s_org_agenda_file.org")))
+  (setq org-agenda-files '("~/.brain.d/roam-nodes/20240912084617-agenda.org")))
 
 (setq org-agenda-custom-commands
       '(("v" "A better agenda view"
@@ -226,18 +246,27 @@
           (tags "PRIORITY=\"C\""
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
                  (org-agenda-overriding-header "Low-priority unfinished tasks:")))
-          (tags "maritz"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
-                 (org-agenda-overriding-header "Tasks for Maritz:")))
-          (tags "softtek"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
-                 (org-agenda-overriding-header "Tasks for Softtek:")))
-          (tags "shoptron"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
-                 (org-agenda-overriding-header "Tasks for Shoptron:")))
+          (tags "homea"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "[#A] Home Daily Tasks:")))
+          (tags "homeb"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "[#B] Home Wed-Fri Day Tasks:")))
+          (tags "homec"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "[#C] Home Weekly Tasks:")))
+          (tags "health"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Family Health:")))
           (tags "work"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
                  (org-agenda-overriding-header "Work Tasks:")))
+          (tags "kyo"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Kyonax's Projects:")))
+          (tags "event"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
+                 (org-agenda-overriding-header "Important Events:")))
           (tags "meeting"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
                  (org-agenda-overriding-header "Important Meetings:")))
@@ -308,22 +337,22 @@
      :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
                         "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
      :unnarrowed t)
-    ("v" "New Invoice" plain
-     (file "~/.brain.d/roam-nodes/templates/NEWNodeInvoice.org")
-     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
-                        "#+TITLE: Invoice ${client-name}\n#+AUTHOR: ${author='Cristian D. Moreno - Kyonax'}\n")
-     :unnarrowed t)
     ("i" "New Sentinel Inspection" plain
      (file "~/.brain.d/roam-nodes/templates/NEWNodeSentinelInspection.org")
      :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
                         "#+TITLE: Kyonax's Daily Sentinel Inspection ~ %<%d/%m/%Y> \n")
+     :unnarrowed t)
+    ("v" "New Invoice" plain
+     (file "~/.brain.d/roam-nodes/templates/NEWNodeInvoice.org")
+     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                        "#+TITLE: Invoice ${Client Name}\n#+AUTHOR: %^{Author | Cristian D. Moreno - Kyonax}\n")
      :unnarrowed t)
     ("p" "New PBI Azure DevOps" plain
      (file "~/.brain.d/roam-nodes/templates/NEWNodeProject.org")
      :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
                         "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
      :unnarrowed t))
-  "My custom Org Roam capture templates for Windows/Work.")
+  "My custom Org Roam personal capture templates.")
 
 (after! org-roam
   :ensure t
@@ -417,7 +446,7 @@
         (revert-buffer t t t)))))
 
 (setq user-full-name "Cristian D. Moreno - Kyonax"
-      user-mail-address "iam@kyo.wtf")
+      user-mail-address "kyonax.corp@gmail.com")
 
 (map! :leader
       (:prefix ("d" . "dired")
@@ -476,209 +505,36 @@
   (interactive "DChoose directory: ") ; Prompt for directory
   (dired dir))
 
-(defun shoptron ()
-  "Open the Shoptron main Directory"
-  (interactive)
-  (kyo/open-directory "/plinkw:dockware@127.0.0.1:~/html"))
-
-(defun shtheme ()
-  "Open the ShoptronTheme main Directory"
-  (interactive)
-  (kyo/open-directory "/plinkw:dockware@127.0.0.1:~/html/custom/plugins/ShoptronTheme"))
-
-(defun shconfigurator ()
-  "Open the ShoptronConfiurator main Directory"
-  (interactive)
-  (kyo/open-directory "/plinkw:dockware@127.0.0.1:~/html/custom/plugins/ShoptronConfigurator"))
-
 (gptel-make-openai "xAI"
   :host "api.x.ai"
-  :key (shell-command-to-string (format "gopass show sub/private_key/xai"))
+  :key (shell-command-to-string (format "pass show private_key/xai | tr -d '\n'"))
   :endpoint "/v1/chat/completions"
   :stream t
-  :models '(grok-2-latest))
+  :models '(grok-3-latest))
 
 ;; OPTIONAL configuration
 (setq
- gptel-model   'grok-2-latest
+ gptel-model   'grok-3-latest
  gptel-backend
- (gptel-make-openai "xAI"
+ (gptel-make-openai "xAI"           ;Any name you want
    :host "api.x.ai"
-   :key (shell-command-to-string (format "gopass show sub/private_key/xai"))
+   :key (shell-command-to-string (format "pass show private_key/xai | tr -d '\n'"))              ;can be a function that returns the key
    :endpoint "/v1/chat/completions"
    :stream t
    :models '(;; xAI now only offers `grok-beta` as of the time of this writing
-             grok-2-latest)))
+             grok-3-latest)))
+
+(add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
 
 (setq! gptel-directives '(
- (default . "Test 32")
- (studying .
-"I am working in Doom Emacs using Org Mode to document research in a `.org` file. My goal is to improve the quality of the file, making it more readable, accessible, and well-structured for learning and reference. Depending on my request, you will provide one of the following types of support:
-
-1. **Rewriting the Whole File**:
-   - If I ask to rewrite the entire `.org` file, provide **only the new structured `.org` file** as the output, without any explanations, documentation, or unrelated content. Follow these guidelines:
-     - Use clear and consistent title structures (all titles must be in UPPER CASE; plural words like CATs should have a lowercase 's').
-     - Apply Org Mode best practices for documenting research, such as logical hierarchy, tags, and metadata.
-     - Do not modify the existing configuration data (e.g., `:PROPERTIES:`, `#+title:`, `#+filetags:`, etc.).
-     - Organize content with sections, subsections, and bullet points.
-     - Include `.org` code blocks to demonstrate improvements and practical exercises (if applicable).
-
-2. **Support for Small Pieces of Research**:
-   - If I ask for help with a small piece of research or a specific point, focus on providing clear, concise, and well-structured support. Follow these strategies:
-     - Use human-readable and learning-friendly formats.
-     - Explain complex terms or concepts if necessary.
-     - Provide examples, references, or documentation if requested.
-     - Structure the response to make it easy to integrate into the `.org` file.
-
-3. **Improving Text Structure**:
-   - If I ask for help structuring text to make it more readable, focus on organizing the content logically. Use headings, bullet points, and clear formatting to enhance readability.
-
-4. **Providing Examples or References**:
-   - If I ask for examples, provide `.org` code blocks or practical demonstrations.
-   - If I ask for references or documentation, suggest reliable sources or links to further information.
-
-5. **Translation into Other Languages**:
-  - If I ask for translation support, provide an accurate and context-aware translation of the specified content into the requested language. Ensure the translation maintains the original meaning, tone, and structure while adapting to the target language's conventions.
-
-**General Guidelines**:
-- Always prioritize clarity, readability, and usability.
-- Adapt your response to the specific type of support I request.
-- Do not include unnecessary explanations, documentation, or unrelated content unless explicitly requested.
-
-**Deliverables**:
- - Provide only the requested output, whether it’s a rewritten .org file, support for a small piece of research, improved text structure, examples, references, or translations. Do not include additional explanations or unrelated content unless explicitly requested.
- ")
+ (default .
+  "
+")
  (documentation .
   "
-You are an expert developer specialized in refining code documentation. Your sole focus is improving the clarity and readability of the documentation without altering the code or structure. Follow these guidelines strictly:
-Description
-
-    Clearly and concisely explain the purpose of the function, class, or module.
-    Cross-check the description with the code to ensure accuracy. The explanation must fully align with what the code does.
-    Avoid jargon or buzzwords like scalable, intuitive, or robust.
-    Provide enough context for someone new to coding to understand, but donÔÇÖt oversimplify.
-
-Usage
-
-    If a usage example exists, ensure it reflects the most common and simplest use case for the code.
-    Verify that the usage aligns with the codeÔÇÖs behavior. Refine it to be precise, accurate, and functional out of the box.
-    Be precise. No room for vagueness.
-
-Parameters/Attributes
-
-    If parameters or attributes are documented, verify they match the code exactly. Ensure names, types, and purposes are accurate and specific.
-    Describe each parameter/attribute in a short, one-line summary that eliminates ambiguity.
-    Do not add parameter documentation if itÔÇÖs not already present in the code.
-
-Important Notes:
-
-    Do not modify the code itself.
-    Do not add new sections or alter the documentation structure.
-    Always verify the documentation matches the code, ensuring accuracy and relevance.
-    Keep explanations terse, professional, and focused. Skip pleasantries or unnecessary details.
-    Always return just the answer and only the answer. Do not enclose it in code blocks, as we are already in a code editor.
 ")
  (manual .
  "
-Please use the data provided in the following list to fill out the detailed Org mode template below. As you generate the final output, restructure and rephrase the text with improved grammar and clarity. Ensure that the language is professional and straightforward—avoid buzzwords—but feel free to add a touch of techy netrunner style with subtle, clever expressions. The final result should maintain a clear, structured format that is easy to understand for any developer.
-
-Identifier Replacement:
-
-No matter whether the list refers to a FT (Feature) or a PBI (Product Backlog Item), adjust the identifiers accordingly. For example, if the list refers to an FT Feature, then the IDs should use the format ft-001 instead of pbi-001. This rule applies to all identifiers in the template.
-
-Word Enclosure Guidelines:
-
-- For any word related to code, variable names, file paths, or any similar technical identifiers, use the tilde enclosure. For example: ~example~
-- For important words or main ideas, use the asterisk enclosure. For example: *example*
-- For notes or specifications, use the slash enclosure. For example: /example/
-
-Label Formatting:
-For any label text in the Org Template that ends with a colon, enclose the label (excluding the colon) in asterisks. For example:
-
-- Change '- Criterion 1:' to '- *Criterion 1*:'.
-- Apply this formatting to all similar instances (e.g., Dependencies, Technical Challenges, etc.).
-
-Conditional Template Section Removal:
-
-If the provided list indicates 'Not information,' 'Not used,' or any similar phrasing that expresses the absence of information for a particular section, please remove that section from the final output.
-
-Dynamic CUSTOM_ID Suffixing:
-
-For all Org CUSTOM_ID fields, append the provided ID (whether it is FT or PBI) to the end of the CUSTOM_ID. For example, if the item is pbi-5676, then the CUSTOM_ID for the 'Additional Information' section should be :CUSTOM_ID: additional-information-pbi-5676. Similarly, if it is an FT Feature such as ft-1234, then the CUSTOM_ID should be :CUSTOM_ID: additional-information-ft-1234. Apply this pattern consistently for all CUSTOM_ID fields throughout the template.
-
-Cross-Reference Linking:
-
-Whenever the output text references another part of the template (e.g., 'Look at the References to know more'), generate an Org link using the corresponding CUSTOM_ID. For example, such a reference should be formatted as [[#references-pbi-001][References]] or [[#references-ft-1234][References]] (using the appropriate ID).
-
-Detailed Org Template:
-```org
-*[Feature Name] - [Feature ID]
-
-**Overview
-[Provide a clear and concise explanation of the feature and its development based on the Theme Plugin. Include the purpose, functionality, Important Development tasks or Functionalities, and any user-facing changes.]
-
-[Connection to business backlogs. Use the Bussiness Feature Description and Acceptance Criteria to Explain how the Development handled this requirements (e.g., how it supports business goals or requirements).]
-
-<#+begin_quote
-Business Description:
-
-[Add the Busines Description and highlight the important words.]
-#+end_quote
-
-***Acceptance Criteria
-[Provide a concise explanation about the Acceptance Criteria in just One Parragraph]
-
-[List detailed criteria that must be met for the feature to be considered complete and ready for release.]
-
-- [ ] [Description]
-- [ ] [Description]
-- [ ] [Description]
-- [ ] ...
-
-**PBIs
-[List of Product Backlog Items (PBIs) associated with this feature (e.g., PBI-123, PBI-456).]
-
-- [ ] [PBI Name and ID, Use this URL to create a direct Link to the PBI https://dev.azure.com/experient/Products/_workitems/edit/(The PBI ID) ]
-- [ ] [PBI Name and ID, Use this URL to create a direct Link to the PBI https://dev.azure.com/experient/Products/_workitems/edit/(The PBI ID) ]
-- [ ] [PBI Name and ID, Use this URL to create a direct Link to the PBI https://dev.azure.com/experient/Products/_workitems/edit/(The PBI ID) ]
-- [ ] ...
-
-**Technical Approach
-[Provide a clear and concise technical explanation about the Approach for the Feature Solution, what is the logic behind it and how this affect the Theme Plugin.]
-
-   *** Frontend
-     - *Twig templates*: [The Reason of why was necessary to add or override Twig Templates].
-     - *SCSS*: [The Reason of why was necessary to add or override SCSS].
-     - *Plugin JS Scripts*: [The Reason of why was necessary to add or override Plugin JS].
-   *** Backend
-     - *Symfony controllers*: [The Reason of why was necessary to add or override Symfony Controllers].
-     - *PageLoader classes*: [The Reason of why was necessary to add or override Page Loaders].
-     - *Store API integrations*: [The Reason of why was necessary to add or override API Integrations].
-
-**Development Workflow
-[Description of the request flow for this feature (e.g., how data moves from routes, controllers to templates).]
-
-**Deployment
-[Steps or considerations for deploying this feature (e.g., service registration, cache clearing, theme compilation, build-storefront, build-administration).]
-
-**Current Status
-[Current development status: Completed / In Progress / Pending. And explain the why of the Status]
-
-**Key Considerations
-[Important notes for development (e.g., adherence to Store API standards, cache management).]
-
-**Challenges
-[Known issues or potential obstacles (e.g., ensuring test coverage, deployment complexities).]
-
-**Modified Files
-[List all files that were modified, added, or deleted as part of this feature implementation.]
-
-| File Path         | Change Type (Added/Modified/Deleted) | Brief Description of Change                |
-|-------------------+--------------------------------------+--------------------------------------------|
-| ~path/to/file1.js~  | Modified                             | Updated function ~X~ to handle new feature ~Y~ |
-| ~path/to/file2.css~ | Added                                | New styles for feature ~Z~ UI                |
-| ~path/to/file3.py~  | Deleted                              | Removed deprecated function                |
-```
 ")
  ))
 
@@ -783,21 +639,15 @@ Business Description:
 
 (setq password-cache-expiry nil)
 
-(use-package tramp
-  :config
-  (add-to-list 'tramp-methods `("plinkw"
-                                (tramp-login-program "plink")
-                                (tramp-login-args (("-ssh")
-                                                   (,(format
-                                                      "dockware@127.0.0.1 -pw dockware"))))
-                                (tramp-remote-shell "/bin/sh"))))
-
-(when (eq window-system 'w32)
-  (setq tramp-default-method "plink")
-  (when (and (not (string-match putty-directory (getenv "PATH")))
-	     (file-directory-p putty-directory))
-    (setenv "PATH" (concat putty-directory ";" (getenv "PATH")))
-    (add-to-list 'exec-path putty-directory)))
+(load (expand-file-name "modules/editor.el" doom-user-dir))
+(load (expand-file-name "modules/misc.el" doom-user-dir))
+(load (expand-file-name "modules/ruby.el" doom-user-dir))
+(load (expand-file-name "modules/ruby-autocomplete.el" doom-user-dir))
+(load (expand-file-name "modules/term.el" doom-user-dir))
+(load (expand-file-name "modules/git.el" doom-user-dir))
+(load (expand-file-name "modules/lsp.el" doom-user-dir))
+(load (expand-file-name "modules/org.el" doom-user-dir))
+(load (expand-file-name "modules/autocomplete.el" doom-user-dir))
 
 (defun kyo/create-invoice-number (&optional dir invoice-paths)
   "Search for invoice files in DIR or INVOICE-PATHS, count them,

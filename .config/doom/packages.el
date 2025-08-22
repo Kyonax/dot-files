@@ -52,8 +52,6 @@
 
 (package! clippy)
 
-(package! company-tabnine)
-
 (package! dired-open)
 
 (package! dired-subtree)
@@ -96,3 +94,12 @@
 
 (unpin! org-roam company-org-roam)
 (package! org-roam-ui)
+
+(package! harpoon)
+(package! robe :disable t)
+(package! rails-routes)
+(package! rails-i18n)
+(package! multi-line)
+(package! ruby-refactor)
+
+(package! string-inflection)
