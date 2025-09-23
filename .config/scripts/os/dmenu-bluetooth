@@ -1,0 +1,247 @@
+#!/usr/bin/env bash
+# bt-menu.sh — single dmenu-driven Bluetooth helper for Arch (bluetoothctl + pactl)
+# Put in ~/.local/bin/bt-menu.sh and chmod +x it
+# Dependencies: bluetoothctl, dmenu, pactl (pipewire-pulse or pulseaudio), notify-send/dunstify (optional)
+
+set -uo pipefail
+IFS=$'\n\t'
+
+BTCTL="bluetoothctl"
+DMENU=(dmenu -i -l 10 \
+    -nb "#1e1e2e" \        # Normal background
+    -nf "#cdd6f4" \        # Normal foreground
+    -sb "#89b4fa" \        # Selected background
+    -sf "#1e1e2e" \        # Selected foreground
+    -fn "SpaceMono Nerd Font Mono:size=12" \
+    -p "Bluetoooooth:")
+NOTIFY_CMD="dunstify"   # falls back to notify-send or echo
+
+LAST_FILE="$HOME/.config/bluetooth/last_device"
+mkdir -p "$(dirname "$LAST_FILE")"
+
+notify() {
+  local t="${1:-}"
+  if command -v $NOTIFY_CMD >/dev/null 2>&1; then
+    $NOTIFY_CMD -u low "Bluetooth" "$t" >/dev/null 2>&1 || true
+  elif command -v notify-send >/dev/null 2>&1; then
+    notify-send "Bluetooth" "$t" >/dev/null 2>&1 || true
+  else
+    echo "Bluetooth: $t"
+  fi
+}
+
+ensure_bt_ready() {
+  # tries to start system bluetooth if not active (may require sudo)
+  if ! systemctl is-active --quiet bluetooth; then
+    notify "Starting bluetooth service..."
+    sudo systemctl start bluetooth || true
+  fi
+  # make sure agent/power on
+  $BTCTL <<EOF >/dev/null 2>&1
+agent on
+default-agent
+power on
+EOF
+}
+
+mac_to_card() {
+  # convert MAC to pulseaudio/pipewire style bluez_card.MAC_WITH_UNDERSCORES
+  local mac="$1"
+  printf "bluez_card.%s" "${mac//:/_}"
+}
+
+get_devices_list() {
+  # print "MAC — Name" lines (both discovered and paired)
+  $BTCTL devices 2>/dev/null | sed -E 's/^Device //' | awk '{$1=$1; print}' | awk -F' ' '{m=$1; $1=""; sub(/^ /,""); print m " — " $0}'
+}
+
+choose_device() {
+  # show devices via dmenu and return mac (or empty)
+  local pick
+  pick=$(get_devices_list | $DMENU -p "Select device:") || return 1
+  echo "$pick" | awk '{print $1}'
+}
+
+scan_devices() {
+  notify "Scanning for 8s..."
+  # start scan for a short period
+  $BTCTL scan on >/dev/null 2>&1 &
+  sleep 8
+  $BTCTL scan off >/dev/null 2>&1
+  notify "Scan finished"
+  # show discovered devices for quick action
+  local dev action mac
+  dev=$(get_devices_list | $DMENU -p "Select device to act on:") || return 0
+  mac=$(echo "$dev" | awk '{print $1}')
+  action=$(printf "Pair\nTrust\nConnect\nInfo\nCancel" | $DMENU -p "Action for $mac") || return 0
+  case "$action" in
+    Pair)  pair_device "$mac" ;;
+    Trust) trust_device "$mac" ;;
+    Connect) connect_device "$mac" ;;
+    Info) info_device "$mac" ;;
+  esac
+}
+
+pair_device() {
+  local mac="$1"
+  [ -z "$mac" ] && return 1
+  notify "Pairing $mac..."
+  $BTCTL pair "$mac" | $DMENU -p "Pair output" >/dev/null 2>&1 || true
+  # if paired, trust it
+  if $BTCTL info "$mac" 2>/dev/null | grep -q "Paired: yes"; then
+    $BTCTL trust "$mac" >/dev/null 2>&1 || true
+    notify "Paired & trusted $mac"
+  else
+    notify "Pairing output shown"
+  fi
+}
+
+trust_device() {
+  local mac="$1"
+  [ -z "$mac" ] && return 1
+  $BTCTL trust "$mac" >/dev/null 2>&1
+  notify "Trusted $mac"
+}
+
+connect_device() {
+  local mac="$1"
+  [ -z "$mac" ] && return 1
+  notify "Connecting $mac..."
+  $BTCTL connect "$mac" | $DMENU -p "Connect output" >/dev/null 2>&1 || true
+  # verify and save last
+  if $BTCTL info "$mac" 2>/dev/null | grep -q "Connected: yes"; then
+    echo "$mac" > "$LAST_FILE"
+    notify "Connected $mac"
+  else
+    notify "Connect attempted (check output)"
+  fi
+}
+
+disconnect_device() {
+  local mac="$1"
+  [ -z "$mac" ] && return 1
+  $BTCTL disconnect "$mac" >/dev/null 2>&1 || true
+  notify "Disconnected $mac"
+}
+
+remove_device() {
+  local mac="$1"
+  [ -z "$mac" ] && return 1
+  $BTCTL remove "$mac" >/dev/null 2>&1 || true
+  # clear last file if it matched
+  if [ -f "$LAST_FILE" ] && [ "$(cat "$LAST_FILE")" = "$mac" ]; then
+    rm -f "$LAST_FILE"
+  fi
+  notify "Removed (unpaired) $mac"
+}
+
+info_device() {
+  local mac="$1"
+  [ -z "$mac" ] && return 1
+  $BTCTL info "$mac" | $DMENU -p "Info for $mac" >/dev/null 2>&1 || true
+}
+
+set_a2dp() {
+  local mac="$1"
+  [ -z "$mac" ] && return 1
+  local card
+  card=$(mac_to_card "$mac")
+  if pactl list cards short | grep -q "$card"; then
+    pactl set-card-profile "$card" a2dp-sink && notify "Profile set to A2DP for $mac"
+  else
+    notify "Card $card not found — connect device first"
+  fi
+}
+
+toggle_connect() {
+  # disconnects the first connected device; if none connected, tries to connect last device or prompts
+  local mac
+  for mac in $($BTCTL devices 2>/dev/null | awk '{print $2}'); do
+    if $BTCTL info "$mac" 2>/dev/null | grep -q "Connected: yes"; then
+      $BTCTL disconnect "$mac" >/dev/null 2>&1
+      notify "Disconnected $mac"
+      return 0
+    fi
+  done
+
+  if [ -f "$LAST_FILE" ]; then
+    mac=$(cat "$LAST_FILE")
+    notify "Connecting last device $mac..."
+    connect_device "$mac"
+    return 0
+  fi
+
+  # fallback to prompt
+  mac=$(choose_device) || return 0
+  connect_device "$mac"
+}
+
+connect_last() {
+  if [ -f "$LAST_FILE" ]; then
+    mac=$(cat "$LAST_FILE")
+    connect_device "$mac"
+  else
+    notify "No last device saved"
+  fi
+}
+
+menu() {
+  printf "%s\n" \
+    "Scan" \
+    "List devices" \
+    "Pair" \
+    "Trust" \
+    "Connect" \
+    "Disconnect" \
+    "Remove (Unpair)" \
+    "Set A2DP" \
+    "Toggle connect/disconnect" \
+    "Connect last" \
+    "Info" \
+    "Quit" \
+  | $DMENU -p "Bluetooth Menu:"
+}
+
+main() {
+  ensure_bt_ready
+  while :; do
+    choice=$(menu) || break
+    case "$choice" in
+      Scan) scan_devices ;;
+      "List devices") get_devices_list | $DMENU -p "Devices" >/dev/null 2>&1 || true ;;
+      Pair)
+        mac=$(choose_device) || continue
+        pair_device "$mac"
+        ;;
+      Trust)
+        mac=$(choose_device) || continue
+        trust_device "$mac"
+        ;;
+      Connect)
+        mac=$(choose_device) || continue
+        connect_device "$mac"
+        ;;
+      Disconnect)
+        mac=$(choose_device) || continue
+        disconnect_device "$mac"
+        ;;
+      "Remove (Unpair)")
+        mac=$(choose_device) || continue
+        remove_device "$mac"
+        ;;
+      "Set A2DP")
+        mac=$(choose_device) || continue
+        set_a2dp "$mac"
+        ;;
+      "Toggle connect/disconnect") toggle_connect ;;
+      "Connect last") connect_last ;;
+      Info)
+        mac=$(choose_device) || continue
+        info_device "$mac"
+        ;;
+      Quit|*) break ;;
+    esac
+  done
+}
+
+main "$@"

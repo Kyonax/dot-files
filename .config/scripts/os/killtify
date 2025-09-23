@@ -1,0 +1,4 @@
+#!/bin/bash
+
+dunstify -a "killtify" -u low "killing-[$1] $2" -t 2000
+killall "$1"

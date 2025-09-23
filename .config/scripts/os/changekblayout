@@ -1,0 +1,24 @@
+#!/bin/bash
+
+CURRENT_LAYOUT=$(setxkbmap -query | awk '/layout:/ { print $2 }')
+ICONS_PATH="$HOME/.config/dunst/fontawesome/svg"
+
+if [ "$CURRENT_LAYOUT" == "us" ]; then
+    NEW_LAYOUT="latam"
+    ICON="$ICONS_PATH/keyboard.svg"
+    MESSAGE="Teclado cambiado a LATAM"
+elif [ "$CURRENT_LAYOUT" == "latam" ]; then
+    NEW_LAYOUT="us"
+    ICON="$ICONS_PATH/keyboard.svg"
+    MESSAGE="Keyboard layout set to US"
+else
+    NEW_LAYOUT="us"
+    ICON="$ICONS_PATH/keyboard.svg"
+    MESSAGE="Layout not recognized, defaulting to US"
+fi
+
+# Change the layout
+setxkbmap "$NEW_LAYOUT"
+
+# Show notification
+dunstify -a "changekblayout" -u low -r 9992 -I "$ICON" "$MESSAGE" -t 2000

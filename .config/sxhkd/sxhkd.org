@@ -1,0 +1,35 @@
+#+title: Configuration file for Keybindings
+#+author: Cristian Moreno - Kyonax
+#+auto_tangle: t
+
+* TABLE OF CONTENTS :toc:
+- [[#open-applications][OPEN APPLICATIONS]]
+  - [[#restart-daemon][Restart Daemon]]
+- [[#os-functions][OS FUNCTIONs]]
+  - [[#changevolume][Changevolume]]
+  - [[#change-keyboard-layout][Change Keyboard Layout]]
+
+* OPEN APPLICATIONS
+#+begin_src txt :tangle ./sxhkdrc
+super + ctrl + {d, e, a, f}
+      { emacs --bg-daemon=local, emacsclient -c --socket-name=local, alacritty, firefox } &
+#+end_src
+
+** Restart Daemon
+#+begin_src txt :tangle ./sxhkdrc
+super + shift + r
+      killtify sxhkd "Config reloaded" && sxhkd &
+#+end_src
+
+* OS FUNCTIONs
+** Changevolume
+#+begin_src txt :tangle ./sxhkdrc
+super + ctrl + {Left, Right, m}
+      changevolume { down, up, mute } &
+#+end_src
+
+** Change Keyboard Layout
+#+begin_src txt :tangle ./sxhkdrc
+super + alt + e
+      changekblayout &
+#+end_src

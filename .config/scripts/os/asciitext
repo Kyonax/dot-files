@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Check if an argument is provided
+if [ $# -eq 0 ]; then
+    echo "ERROR: Parameter not given $0 <word>"
+    exit 1
+fi
+
+word="$1"
+
+# Get the directory where figlet fonts are stored
+font_dir=$(figlet -I 2)
+
+# Loop through all .flf files in the directory
+for font in "$font_dir"/*.flf; do
+    font_name=$(basename "$font" .flf)
+    echo "Font: $font_name"
+    figlet -f "$font_name" "$word"
+    echo "----------------------------------------"
+done
