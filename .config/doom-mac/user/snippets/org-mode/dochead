@@ -1,0 +1,13 @@
+# -*- mode: snippet -*-
+# name: dochead
+# key: dochead
+# uuid: dochead
+# --
+#+TITLE: ${1:Project Name - Short Description}
+#+SUBTITLE: ${2:Project Name - Short Description}
+#+AUTHOR: ${2:Cristian D. Moreno} \\
+#+AUTHOR: ${3:Villavicencio/Colombia | +573022539479 | [[mailto:kyonax.corp@gmail.com][kyonax.corp@gmail.com]] | [[https://www.linkedin.com/in/kyonax/][Linkedin]] | [[https://github.com/Kyonax][Github]] | [[https://kyonax.github.io][Personal Web]]}
+#+FILETAGS: ${4::JS-BK: :CV:}
+#+OPTIONS: ${5:toc:nil} ${6:num:nil} ${7:date:nil} ${8:H:5}
+#+SETUPFILE: ${9:./latex/cv-latex-export.org}
+$0

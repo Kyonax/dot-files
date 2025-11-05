@@ -1,0 +1,40 @@
+--- dmenu.1	2022-10-04 10:36:58.000000000 -0700
++++ dmenu.1	2024-03-23 19:40:27.116453289 -0700
+@@ -8,6 +8,12 @@
+ .IR lines ]
+ .RB [ \-m
+ .IR monitor ]
++.RB [ \-x
++.IR xoffset ]
++.RB [ \-y
++.IR yoffset ]
++.RB [ \-z
++.IR width ]
+ .RB [ \-p
+ .IR prompt ]
+ .RB [ \-fn
+@@ -54,6 +60,24 @@
+ dmenu is displayed on the monitor number supplied. Monitor numbers are starting
+ from 0.
+ .TP
++.BI \-x " xoffset"
++dmenu is placed at this offset measured from the left side of the monitor.
++Can be negative.
++If option
++.B \-m
++is present, the measurement will use the given monitor.
++.TP
++.BI \-y " yoffset"
++dmenu is placed at this offset measured from the top of the monitor.  If the
++.B \-b
++option is used, the offset is measured from the bottom.  Can be negative.
++If option
++.B \-m
++is present, the measurement will use the given monitor.
++.TP
++.BI \-z " width"
++sets the width of the dmenu window.
++.TP
+ .BI \-p " prompt"
+ defines the prompt to be displayed to the left of the input field.
+ .TP

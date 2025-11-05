@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: (last updated date)
+# key: lastu
+# --
+`(format-time-string "%b %d, %Y")`

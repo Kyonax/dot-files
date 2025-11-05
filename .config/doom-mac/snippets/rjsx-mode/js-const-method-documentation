@@ -1,0 +1,25 @@
+# -*- mode: snippet -*-
+# name: js-const-method-documentation
+# key: _jsmc
+# group: Documentation
+# --
+/**
+ * $1
+ *
+ * ${2:DescriptionOfMethod}
+ *
+ * $3
+ * @return $4
+ */
+const ${1:$(downcase (replace-regexp-in-string " " "_" yas-text))} = (${3:$(let* ((clean-text (replace-regexp-in-string "[^a-zA-Z0-9_ \n]" "" yas-text))
+                        (words (split-string clean-text "\\s+" t))
+                        (snake-case-words '()))
+                   (dolist (word words)
+                     (when (string-match-p "^[a-z0-9_]+$" word)
+                       (setq snake-case-words (append snake-case-words (list word)))))
+                   (let ((filtered-words (seq-filter (lambda (word)
+                                                       (string-match-p "_" word))
+                                                     snake-case-words)))
+                     (replace-regexp-in-string "\n" "" (mapconcat 'identity filtered-words ", "))))}) => {
+$0
+};

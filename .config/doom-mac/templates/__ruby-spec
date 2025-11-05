@@ -1,0 +1,5 @@
+require 'rails_helper'
+
+RSpec.describe ${1:`(mapconcat #'capitalize (split-string (replace-regexp-in-string "_spec\\'" "" (file-name-base)) "_") "")`}, type: :${2} do
+  pending "add or delete #{__FILE__}"
+end

@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: Git Commit
+# key: _gc
+# --
+git commit -m ${1:TitleOfCommit} -m ${2:BodyOfCommit}
