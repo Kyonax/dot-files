@@ -1,0 +1,66 @@
+# ~/.config/starship.toml
+# Starship prompt configuration for macOS + NuShell
+# Symbol: ø
+
+# Prompt format
+format = 'kyo@madison-reed $all$directory$character:: '
+
+# Character (the prompt symbol)
+[character]
+success_symbol = "ø "       # Displayed after successful command
+error_symbol = "ø "         # Displayed after failed command
+vicmd_symbol = "ø "          # For vi mode if using vi-mode
+
+# Directory module
+[directory]
+truncation_length = 3       # Show last 3 directories
+truncation_symbol = "…/"     # Shorthand for truncated directories
+read_only = "🔒"
+
+# Git branch module
+[git_branch]
+symbol = "🌱 "               # Optional emoji for branch
+format = "[$symbol$branch]($style) "
+truncation_length = 12
+
+# Git status module
+[git_status]
+conflicted = "≠"
+ahead = "↑"
+behind = "↓"
+staged = "●"
+not_staged = "✚"
+untracked = "…"
+stashed = "💾"
+renamed = "»"
+deleted = "✖"
+
+# NodeJS module
+[nodejs]
+symbol = "⬢ "                # Hexagon for Node
+format = "[$symbol$version]($style) "
+style = "bold green"
+
+# Python module
+[python]
+symbol = "🐍 "
+format = "[$symbol$version]($style) "
+style = "bold yellow"
+
+# Time module
+[time]
+disabled = false
+format = "[$time]($style) "
+style = "bold blue"
+utc_time = false             # Use local time
+time_format = "%H:%M:%S"
+
+# Miscellaneous settings
+[status]
+format = "[$status]($style) "
+style_success = "green"
+style_failure = "red"
+
+# Optional: truncating long lines
+[line_break]
+disabled = false
