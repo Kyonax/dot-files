@@ -1,66 +1,54 @@
 # ~/.config/starship.toml
-# Starship prompt configuration for macOS + NuShell
-# Symbol: ø
 
 # Prompt format
 format = 'kyo@madison-reed $all$directory$character:: '
 
-# Character (the prompt symbol)
 [character]
-success_symbol = "ø "       # Displayed after successful command
-error_symbol = "ø "         # Displayed after failed command
-vicmd_symbol = "ø "          # For vi mode if using vi-mode
+success_symbol = "ø "
+error_symbol   = "ø "
+vicmd_symbol   = "ø "
 
-# Directory module
 [directory]
-truncation_length = 3       # Show last 3 directories
-truncation_symbol = "…/"     # Shorthand for truncated directories
+truncation_length = 3
+truncation_symbol = "…/"
 read_only = "🔒"
 
-# Git branch module
 [git_branch]
-symbol = "🌱 "               # Optional emoji for branch
+symbol = "🌱 "
 format = "[$symbol$branch]($style) "
 truncation_length = 12
 
-# Git status module
 [git_status]
 conflicted = "≠"
-ahead = "↑"
-behind = "↓"
-staged = "●"
-not_staged = "✚"
+ahead     = "↑"
+behind    = "↓"
+staged    = "●"
+modified  = "✚"    # <-- was 'not_staged' before (use 'modified')
 untracked = "…"
-stashed = "💾"
-renamed = "»"
-deleted = "✖"
+stashed   = "💾"
+renamed   = "»"
+deleted   = "✖"
 
-# NodeJS module
 [nodejs]
-symbol = "⬢ "                # Hexagon for Node
+symbol = "⬢ "
 format = "[$symbol$version]($style) "
 style = "bold green"
 
-# Python module
 [python]
 symbol = "🐍 "
 format = "[$symbol$version]($style) "
 style = "bold yellow"
 
-# Time module
 [time]
 disabled = false
 format = "[$time]($style) "
 style = "bold blue"
-utc_time = false             # Use local time
 time_format = "%H:%M:%S"
+# If you want to display UTC or a fixed offset use utc_time_offset.
+# For local time, remove the line below or set it to "local".
+# utc_time_offset = "local"   # or e.g. "-5"
 
-# Miscellaneous settings
 [status]
 format = "[$status]($style) "
-style_success = "green"
-style_failure = "red"
-
-# Optional: truncating long lines
-[line_break]
-disabled = false
+success_style = "green"   # <-- renamed from your old 'style_success'
+failure_style = "red"     # <-- renamed from your old 'style_failure'
