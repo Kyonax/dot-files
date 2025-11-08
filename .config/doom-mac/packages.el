@@ -50,27 +50,119 @@
 
 (package! beacon)
 
+(package! bibtex-completion)
+(package! parsebib)
+(package! ivy-bibtex)
+
+(package! calfw)
+(package! calfw-org)
+(package! org-gcal)
+
+(package! cape)
+
 (package! clippy)
+
+(package! corfu)
+(package! nerd-icons-corfu)
+(package! orderless)
+(package! corfu-terminal)
+
+(package! drag-stuff)
 
 (package! dired-open)
 
 (package! dired-subtree)
+
+(package! editorconfig)
 
 (package! elfeed-goodies)
 
 (package! emojify)
 
 (package! evil-tutor)
+(package! evil-nerd-commenter)
 
 (package! flx)
 
+(package! treesit-fold)
+
 (package! gptel)
+(package! gptel-quick)
+(package! gptel-magit)
 
+(package! ivy-hydra)
 (package! ivy-posframe)
-
 (package! ivy-prescient)
+(package! nerd-icons-ivy-rich)
+
+(package! opencl-mode)
+(package! ccls)
+
+(package! flycheck-cask)
+
+(package! cdlatex)
+
+(package! grip-mode)
+(package! markdown-ts-mode)
+
+(package! org-fancy-priorities)
+(package! org-superstar)
+(package! org-contacts)
+(package! org-download)
+(package! gnuplot)
+(package! gnuplot-mode)
+(package! ox-hugo)
+(package! jupyter)
+(package! org-noter)
+(package! ox-pandoc)
+(package! org-passwords)
+(package! org-pomodoro)
+(package! centered-window)
+(package! org-tree-slide)
+(package! org-re-reveal)
+(package! org-appear)
+(package! org-modern)
+(package! org-roam)
+
+(package! restclient-jq)
+(package! jq-mode)
+
+(package! swift-ts-mode)
+(package! lsp-sourcekit)
+
+(package! counsel-css)
+(package! emmet-mode)
+(package! haml-mode)
+(package! pug-mode)
+(package! rainbow-mode)
+(package! sass-mode)
+(package! slim-mode)
+(package! stylus-mode)
+(package! sws-mode)
+(package! web-mode)
+(package! yaml-mode)
+
+(when (modulep! :tools lookup +docsets)
+  (package! dash-docs)
+  (package! counsel-dash))
+
+(package! osx-dictionary)
+
+(package! lsp-mode)
+(package! lsp-ui)
+(package! lsp-ivy)
+
+(package! evil-magit)
+(package! forge)
+(package! code-review)
+
+(package! osx-trash)
+
+(package! multiple-cursors)
 
 (package! olivetti)
+
+(package! orderless)
 
 (package! org-auto-tangle)
 
@@ -86,22 +178,21 @@
 
 (package! resize-window)
 
+(package! flycheck-posframe)
+
 (package! tldr)
 
-(package! ultra-scroll)
+(package! lsp-treemacs)
 
 (package! wc-mode)
 
 (package! web-mode)
 
+(package! winum)
+
+(package! visual-fill-column)
+
 (unpin! org-roam company-org-roam)
 (package! org-roam-ui)
 
-(package! harpoon)
-(package! robe :disable t)
-(package! rails-routes)
-(package! rails-i18n)
-(package! multi-line)
-(package! ruby-refactor)
-
-(package! string-inflection)
+(package! yasnippet-capf)

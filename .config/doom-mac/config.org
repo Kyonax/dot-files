@@ -1,27 +1,28 @@
 #+TITLE: THE DOOM CONFIG
 #+SUBTITLE: All my Doom Emacs Configuration Files
 #+AUTHOR: Cristian D. Moreno - Kyonax
-#+DATE: 2025-06-20
+#+EMAIL: kyonax.corp@gmail.com
+#+DATE: June 20, 2025
+#+LAST_UPDATE: November 07, 2025
+#+PROJECT: dot-files
+#+VERSION: v1.0
+#+KEYWORDS: emacs, docs, doom config
 #+auto_tangle: t
-#+LAST_UPDATE: Jun 20, 2025
-#+VERSION: v0.1
 
-This ain't an average doom-config file, this is the master index of my entire Doom Emacs setup. Just one file, locked on generating the necessary tweaks to maintain my setup across all OS. My master file, jacked to fit my pesonal needs. Use it as your blueprint, but don't even think about PRs.
+This ain't an average *doom-config file*, this is the master index of my entire Doom Emacs setup. Just one file, locked on generating the necessary tweaks to maintain my setup across all OS. My master file, jacked to fit my pesonal needs. Use it as your blueprint, but don't even think about PRs.
 
-* TABLE OF CONTENTs :toc:
+* MAINTABLE OF CONTENTs :toc:
 - [[#main][MAIN]]
   - [[#os-prober][OS PROBER]]
+  - [[#user--host][USER & HOST]]
+  - [[#environment-profile][ENVIRONMENT PROFILE]]
+  - [[#identity][IDENTITY]]
 - [[#config-files][CONFIG FILEs]]
   - [[#packagesel][packages.el]]
   - [[#configel][config.el]]
+  - [[#initel][init.el]]
 - [[#custom-functions][CUSTOM FUNCTIONs]]
   - [[#create-invoice-number][CREATE INVOICE NUMBER]]
-- [[#binaries][BINARIES]]
-  - [[#emacs-client-no-eval][emacs-client-no-eval]]
-  - [[#emacs-client][emacs-client]]
-  - [[#emacs-daemon-create][emacs-daemon-create]]
-  - [[#emacs-daemon-startup][emacs-daemon-startup]]
-  - [[#emacs-kill][emacs-kill]]
 
 * MAIN
 This file's wired into ~org-mode~ and ~org-babel~, to follow the idea of Literate Programming (in my case for configuration files), that's why is necessary a section to configure all the necessary stuff to make the Master File do magick.
@@ -45,11 +46,96 @@ Example of Usage:
 (message "Hello There I'm on %s" (org-babel-ref-resolve "get-os-type"))
 #+end_src
 
+** USER & HOST
+*Multi-OS, One Setup* — I keep a unified configuration across all my systems, but each OS comes with its own users, hosts, and unique context. Depending on whether I’m using Emacs for work, personal projects, or any other scenario, certain configurations adapt dynamically. This setup helps me instantly recognize where I am and ensures the right configuration loads for the right environment.
+
+#+NAME: get-username
+#+begin_src emacs-lisp :tangle no :exports results :results value
+(let ((os (org-babel-ref-resolve "get-os-type")))
+  (cond
+   ((string= os "linux")   (user-login-name))
+   ((string= os "mac")     (user-login-name))
+   ((string= os "windows") (getenv "USERNAME"))
+   ((string= os "cygwin")  (getenv "USERNAME"))
+   (t "unknown-user")))
+#+end_src
+
+#+NAME: get-hostname
+#+begin_src emacs-lisp :tangle no :exports results :results value
+(let ((os (org-babel-ref-resolve "get-os-type")))
+  (cond
+   ((member os '("linux" "mac"))
+    (string-trim (shell-command-to-string "hostname")))
+   ((member os '("windows" "cygwin"))
+    (or (getenv "COMPUTERNAME") "unknown-host"))
+   (t "unknown-host")))
+#+end_src
+
+Example of Usage:
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "os") "config.el" "no")
+(message "This is my Username %s" (org-babel-ref-resolve "get-username"))
+#+end_src
+
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "os") "config.el" "no")
+(message "This is my Hostname %s" (org-babel-ref-resolve "get-hostname"))
+#+end_src
+
+** ENVIRONMENT PROFILE
+*Profile Selector* — This is where I choose the active profile to ensure each environment loads the right configuration for the context I’m in.
+
+#+NAME: get-profile
+#+begin_src emacs-lisp :tangle no :exports results :results value
+(let* ((hostname (downcase (org-babel-ref-resolve "get-hostname"))))
+  (cond
+   ((string-match-p "kyo-labs" hostname) "personal-linux")
+   ((string-match-p "MacBook-Pro-de-COL-AE-052.local" hostname) "work-mac")
+   (t "default")))
+#+end_src
+
+Example of Usage:
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "os") "config.el" "no")
+(message "This is my Profile %s" (org-babel-ref-resolve "get-profile"))
+#+end_src
+
+** IDENTITY
+*Who Am I?* — Depending on the active profile, I can be anyone. My identity, along with settings for tools, templates, and other resources, updates automatically to match that context.
+
+#+NAME: get-name
+#+begin_src emacs-lisp :tangle no :exports results :results value
+(let* ((profile (org-babel-ref-resolve "get-profile")))
+  (cond
+   ((string= profile "personal-linux")
+    "Cristian D. Moreno - Kyonax")
+   ((string= profile "work-mac")
+    "Cristian D. Moreno - Agile Engine")
+   (t "Cristian D. Moreno")))
+#+end_src
+
+#+NAME: get-email
+#+begin_src emacs-lisp :tangle no :exports results :results value
+(let* ((profile (org-babel-ref-resolve "get-profile")))
+  (cond
+   ((string= profile "personal-linux")
+    "kyonax.corp@gmail.com")
+   ((string= profile "work-mac")
+    "cristian.moreno@agileengine.com")
+   (t "kyonax.corp@gmail.com")))
+#+end_src
+
+*Example of Usage:*
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "os") "config.el" "no")
+(message "This is my Profile %s" (org-babel-ref-resolve "get-name"))
+#+end_src
+
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "os") "config.el" "no")
+(message "This is my Profile %s" (org-babel-ref-resolve "get-email"))
+#+end_src
+
 * CONFIG FILEs
 ** packages.el
 Doom comes with the Default package manager for Doom Emacs, where all the packages will be installed when the command ~doom sync~ is run by the user.
 
-Default File Documentation:
+*** DEFAULT FILE DOCUMENTATION
 #+begin_src emacs-lisp :tangle packages.el
 ;; -*- no-byte-compile: t; -*-
 ;;; $DOOMDIR/packages.el
@@ -106,15 +192,39 @@ Default File Documentation:
 #+begin_src emacs-lisp :tangle packages.el
 (package! beacon)
 #+end_src
+*** BIBLIO
+#+begin_src emacs-lisp :tangle packages.el
+(package! bibtex-completion)
+(package! parsebib)
+(package! ivy-bibtex)
+#+end_src
+*** CALENDAR
+#+begin_src emacs-lisp :tangle packages.el
+(package! calfw)
+(package! calfw-org)
+(package! org-gcal)
+#+end_src
+
+*** CAPE
+#+begin_src emacs-lisp :tangle packages.el
+(package! cape)
+#+end_src
 
 *** CLIPPY
 #+begin_src emacs-lisp :tangle packages.el
 (package! clippy)
 #+end_src
 
-*** COMPANY-TABNINE
-#+begin_src emacs-lisp :tangle no
-(package! company-tabnine)
+*** CORFU
+#+begin_src emacs-lisp :tangle packages.el
+(package! corfu)
+(package! nerd-icons-corfu)
+(package! orderless)
+(package! corfu-terminal)
+#+end_src
+*** DEFAULT
+#+begin_src emacs-lisp :tangle packages.el
+(package! drag-stuff)
 #+end_src
 
 *** DIRED-OPEN
@@ -127,6 +237,11 @@ Default File Documentation:
 (package! dired-subtree)
 #+end_src
 
+*** EDITORCONFIG
+#+begin_src emacs-lisp :tangle packages.el
+(package! editorconfig)
+#+end_src
+
 *** ELFEEDED-GOODIES
 #+begin_src emacs-lisp :tangle packages.el
 (package! elfeed-goodies)
@@ -137,9 +252,10 @@ Default File Documentation:
 (package! emojify)
 #+end_src
 
-*** EVIL-TUTOR
+*** EVIL
 #+begin_src emacs-lisp :tangle packages.el
 (package! evil-tutor)
+(package! evil-nerd-commenter)
 #+end_src
 
 *** FLX
@@ -147,24 +263,119 @@ Default File Documentation:
 (package! flx)
 #+end_src
 
+*** FOLD
+#+begin_src emacs-lisp :tangle packages.el
+(package! treesit-fold)
+#+end_src
+
 *** GPTEL
 #+begin_src emacs-lisp :tangle packages.el
 (package! gptel)
+(package! gptel-quick)
+(package! gptel-magit)
 #+end_src
 
-*** IVY-POSFRAME
+*** IVY
 #+begin_src emacs-lisp :tangle packages.el
+(package! ivy-hydra)
 (package! ivy-posframe)
+(package! ivy-prescient)
+(package! nerd-icons-ivy-rich)
 #+end_src
 
-*** IVY-PRESCIENT
+*** LANG
 #+begin_src emacs-lisp :tangle packages.el
-(package! ivy-prescient)
+(package! opencl-mode)
+(package! ccls)
+
+(package! flycheck-cask)
+
+(package! cdlatex)
+
+(package! grip-mode)
+(package! markdown-ts-mode)
+
+(package! org-fancy-priorities)
+(package! org-superstar)
+(package! org-contacts)
+(package! org-download)
+(package! gnuplot)
+(package! gnuplot-mode)
+(package! ox-hugo)
+(package! jupyter)
+(package! org-noter)
+(package! ox-pandoc)
+(package! org-passwords)
+(package! org-pomodoro)
+(package! centered-window)
+(package! org-tree-slide)
+(package! org-re-reveal)
+(package! org-appear)
+(package! org-modern)
+(package! org-roam)
+
+(package! restclient-jq)
+(package! jq-mode)
+
+(package! swift-ts-mode)
+(package! lsp-sourcekit)
+
+(package! counsel-css)
+(package! emmet-mode)
+(package! haml-mode)
+(package! pug-mode)
+(package! rainbow-mode)
+(package! sass-mode)
+(package! slim-mode)
+(package! stylus-mode)
+(package! sws-mode)
+(package! web-mode)
+(package! yaml-mode)
+#+end_src
+
+*** LOOKUP
+#+begin_src emacs-lisp :tangle packages.el
+(when (modulep! :tools lookup +docsets)
+  (package! dash-docs)
+  (package! counsel-dash))
+#+end_src
+
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "mac") "packages.el" "no")
+(package! osx-dictionary)
+#+end_src
+
+*** LSP
+#+begin_src emacs-lisp :tangle packages.el
+(package! lsp-mode)
+(package! lsp-ui)
+(package! lsp-ivy)
+#+end_src
+
+*** MAGIT
+#+begin_src emacs-lisp :tangle packages.el
+(package! evil-magit)
+(package! forge)
+(package! code-review)
+#+end_src
+
+*** MACOS
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "mac") "packages.el" "no")
+(package! osx-trash)
+#+end_src
+
+*** MULTIPLE-CURSORS
+#+begin_src emacs-lisp :tangle packages.el
+(package! multiple-cursors)
 #+end_src
 
 *** OLIVETTI
 #+begin_src emacs-lisp :tangle packages.el
 (package! olivetti)
+#+end_src
+
+*** ORDERLESS
+#+begin_src emacs-lisp :tangle packages.el
+(package! orderless)
 #+end_src
 
 *** ORG-AUTO-TANGLE
@@ -201,15 +412,19 @@ Default File Documentation:
 #+begin_src emacs-lisp :tangle packages.el
 (package! resize-window)
 #+end_src
+*** SYNTAX
+#+begin_src emacs-lisp :tangle packages.el
+(package! flycheck-posframe)
+#+end_src
 
 *** TLDR
 #+begin_src emacs-lisp :tangle packages.el
 (package! tldr)
 #+end_src
 
-*** ULTRA-SCROLL
+*** TREEMACS
 #+begin_src emacs-lisp :tangle packages.el
-(package! ultra-scroll)
+(package! lsp-treemacs)
 #+end_src
 
 *** WC-MODE
@@ -221,6 +436,15 @@ Default File Documentation:
 #+begin_src emacs-lisp :tangle packages.el
 (package! web-mode)
 #+end_src
+*** WINDOW-SELECT
+#+begin_src emacs-lisp :tangle packages.el
+(package! winum)
+#+end_src
+
+*** WORD-WRAP
+#+begin_src emacs-lisp :tangle packages.el
+(package! visual-fill-column)
+#+end_src
 
 *** ORG-ROAM-UI
 #+begin_src emacs-lisp :tangle packages.el
@@ -228,16 +452,9 @@ Default File Documentation:
 (package! org-roam-ui)
 #+end_src
 
-*** RUBY SET-UP
+*** YASNIPPETS
 #+begin_src emacs-lisp :tangle packages.el
-(package! harpoon)
-(package! robe :disable t)
-(package! rails-routes)
-(package! rails-i18n)
-(package! multi-line)
-(package! ruby-refactor)
-
-(package! string-inflection)
+(package! yasnippet-capf)
 #+end_src
 
 ** config.el
@@ -281,18 +498,27 @@ Enable the usage of ~editorconfig~ package. Consistency while develop [[https://
 
 (use-package editorconfig
   :ensure t
+  :hook (after-init . editorconfig-mode)
   :config
-  (editorconfig-mode 1))
+  (setq editorconfig-exclude-modes '(archive-mode
+                                     image-mode
+                                     pdf-view-mode))
+  (setq editorconfig-trim-whitespaces-mode 'ws-butler-mode)
+
+  ;; Espera a que cargue el major-mode antes de aplicar settings
+  (setq editorconfig-lazy-major-mode t)
+  (setq editorconfig-verbose nil))
 #+end_src
 
 **** FILE CODING SYSTEM
 Set the File Coding System always to unix, this configuration is tweaked to maintain consistency across OS, used just on ~windows~ setup.
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
-(set-buffer-file-coding-system 'utf-8-dos)
+(set-buffer-file-coding-system 'utf-8-unix)
 #+end_src
 
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
-(set-buffer-file-coding-system 'utf-8-unix)
+*Checker:*
+#+begin_src emacs-lisp :tangle no
+(message "%s" buffer-file-coding-system)
 #+end_src
 
 **** FONTs
@@ -340,15 +566,31 @@ Configure Melpa and enable the ~MELPA Stable~ packages repo. Comment the Stable 
 Setup the ~modeline~ package, this is the bottom status bar that appears in Emacs Windows. The Configuration is based on personal preferences to more information [[https://github.com/seagle0128/doom-modeline][Read More]].
 #+begin_src emacs-lisp :tangle config.el
 (use-package doom-modeline
+  :hook (after-init . doom-modeline-mode)
+  :init
+  (setq doom-modeline-height 33
+        doom-modeline-bar-width 6
+        doom-modeline-icon t
+        doom-modeline-major-mode-icon t
+        doom-modeline-major-mode-color-icon t
+        doom-modeline-buffer-file-name-style 'relative-to-project
+        doom-modeline-minor-modes nil
+        doom-modeline-enable-word-count nil
+        doom-modeline-buffer-encoding t
+        doom-modeline-indent-info t
+        doom-modeline-vcs-max-length 15
+        doom-modeline-persp-name t
+        doom-modeline-persp-icon t
+        doom-modeline-lsp t
+        doom-modeline-github t
+        doom-modeline-github-interval (* 15 60)
+        doom-modeline-env-version t
+        doom-modeline-mu4e nil
+        doom-modeline-irc nil)
   :config
-  (set-face-attribute 'mode-line nil :font "SpaceMono Nerd Font Mono")
-  (setq doom-modeline-support-imenu t
-      doom-modeline-buffer-state-icon t
-      doom-modeline-icon t
-      doom-modeline-height 33
-      doom-modeline-bar-width 6
-      doom-modeline-persp-name t
-      doom-modeline-persp-icon t))
+  (when (display-graphic-p)
+    (set-face-attribute 'mode-line nil :font "SpaceMono Nerd Font Mono"))
+  (doom-modeline-mode 1))
 #+end_src
 
 **** SERVER SOCKET
@@ -380,7 +622,7 @@ Setup the default ~shell~ to use for compilation. Create a toggle function for W
 
 **** STARTUP WINDOW
 Setup the ~doom-dashboard~ window to a customized one.
-#+begin_src emacs-lisp :tangle config.el
+#+begin_src emacs-lisp :tangle no
 (remove-hook '+doom-dashboard-functions #'doom-dashboard-widget-shortmenu)
 
 (add-hook! '+doom-dashboard-functions :append
@@ -427,14 +669,68 @@ Setup the ~doom-dashboard~ window to a customized one.
   '(doom-dashboard-loaded :foreground "#9FE573" :background "#000000" :weight bold))
 #+end_src
 
+#+begin_src emacs-lisp :tangle config.el
+(remove-hook '+doom-dashboard-functions #'doom-dashboard-widget-shortmenu)
+
+(add-hook! '+doom-dashboard-functions :append
+  (insert "\n" (+doom-dashboard--center +doom-dashboard--width "@kyonax_on_tech")))
+
+(defun kyo/my-shit-is-always-greater ()
+  (let* ((banner '(
+                   "                                                             "
+                   "                         ███████████      █████              "
+                   "                     █████████████████████████               "
+                   "                  ███████████████████████████                "
+                   "                █████████████████████████████                "
+                   "               ████████████       ████████████               "
+                   "              ██████████          █████████████              "
+                   "              █████████          ██████████████              "
+                   "             ██████████         █████ ██████████             "
+                   "             ██████████       ██████  ██████████             "
+                   "             ██████████      ██████   ██████████             "
+                   "             ██████████     █████     ██████████             "
+                   "             ██████████   ██████      ██████████             "
+                   "             ██████████  ██████       ██████████             "
+                   "             ██████████ █████         ██████████             "
+                   "              ██████████████         ██████████              "
+                   "              █████████████         ███████████              "
+                   "               ████████████       ████████████               "
+                   "                █████████████████████████████                "
+                   "                ███████████████████████████                  "
+                   "               █████████████████████████                     "
+                   "             ██████     ████████████                         "
+                   "                                                             "
+                   "                        zerønet labs                         "
+                   "                     Cristian D. Moreno                      "
+                   "                                                             "
+                   "                                                             "))
+         (longest-line (apply #'max (mapcar #'length banner))))
+    (put-text-property
+     (point)
+     (dolist (line banner (point))
+       (insert (+doom-dashboard--center
+                +doom-dashboard--width
+                (concat line
+                        (make-string (max 0 (- longest-line (length line))) 32)))
+               "\n"))
+     'face 'doom-dashboard-banner)))
+
+(setq +doom-dashboard-ascii-banner-fn #'kyo/my-shit-is-always-greater)
+
+(custom-set-faces!
+  '(doom-dashboard-banner :foreground "#9FE573" :background "#000000" :weight bold)
+  '(doom-dashboard-loaded :foreground "#9FE573" :background "#000000" :weight bold))
+#+end_src
+
 **** THEME
 Set the default theme of Emacs with the next elisp code. See some ~theme~ options:
 - *doom-monokai-pro*
+- *doom-monokai-spectrum*
 - *gruber-darker*
 
 Load a new Theme using the Keybinding ~"SPC h t"~ and select the Theme.
 #+begin_src emacs-lisp :tangle config.el
-(setq doom-theme 'gruber-darker)
+(setq doom-theme 'doom-monokai-spectrum)
 (map! :leader
       :desc "Load new theme" "h t" #'counsel-load-theme)
 #+end_src
@@ -449,14 +745,6 @@ Setup the ~treemacs~ package used as a File Manager.
         treemacs-width 39))
 #+end_src
 
-**** ULTRA-SCROLL
-Enable the ~scroll-margin~ of the package to 5.
-#+begin_src emacs-lisp :tangle config.el
-(use-package ultra-scroll
-  :config
-  (setq scroll-margin 0))
-#+end_src
-
 **** UI
 Set Default configuration for the UI of the Emacs Editor.
 #+begin_src emacs-lisp :tangle config.el
@@ -464,6 +752,7 @@ Set Default configuration for the UI of the Emacs Editor.
       display-line-numbers-mode t
       line-number-mode t)
 #+end_src
+
 **** LSP-UI
 LSP UI Defalts
 #+begin_src emacs-lisp :tangle config.el
@@ -536,26 +825,6 @@ Setup the ~json-mode~ package to use it on all the Json Files.
   :mode ("\\.json\\'" . json-mode))
 #+end_src
 
-**** RUBY-MODE
-Setup the ~ruby-mode~ package to use it on all Ruby files with LSP and linters.
-#+begin_src emacs-lisp :tangle config.el
-(use-package ruby-mode
-  :mode (("\\.rb\\'" . ruby-mode)
-         ("\\.rake\\'" . ruby-mode)
-         ("\\.gemspec\\'" . ruby-mode)
-         ("Rakefile\\'" . ruby-mode)
-         ("Gemfile\\'" . ruby-mode)
-         ("Guardfile\\'" . ruby-mode)
-         ("Capfile\\'" . ruby-mode))
-  :interpreter "ruby"
-  :hook ((ruby-mode . lsp-deferred)
-         (ruby-mode . flycheck-mode)
-         (ruby-mode . whitespace-mode))
-  :config
-  (setq ruby-indent-level 2
-        ruby-insert-encoding-magic-comment nil))
-#+end_src
-
 **** LSP-MODE
 Setting up the ccls (C/C++/Objective-C language server) to use with ~lsp~.
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
@@ -594,7 +863,8 @@ Setup the ~lsp-mode~ package to use it on the main languages that I work with.
          (typescript-mode . lsp-ui-mode)
          (web-mode . lsp-ui-mode)))
 #+end_src
-#+begin_src emacs-lisp :tangle config.el
+
+#+begin_src emacs-lisp :tangle no
 (setq lsp-solargraph-use-bundler t)
 
 (with-eval-after-load 'lsp-mode
@@ -608,7 +878,7 @@ Setup the ~lsp-mode~ package to use it on the main languages that I work with.
 
 **** ORG-MODE
 Setup the ~org-mode~ package to use the magick on my Org Files.
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
 (defvar my-org-todo-keywords
   '("TODO(t)"    ; A task that is ready to be tackled
     "CODE(m)"    ; Coding Tasks
@@ -624,32 +894,35 @@ Setup the ~org-mode~ package to use the magick on my Org Files.
   "List of Org todo keywords for the sequence.")
 #+end_src
 
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
 (defvar my-org-todo-keywords
-  '("TODO(t)"    ; A task that is ready to be tackled
-    "CODE(m)"    ; Coding Tasks
-    "TEST(c)"    ; Blog writing assignments
-    "DEVELOP(d)" ; Things to develop
-    "MEET(5)"    ; A Meeting
-    "PROYECT(p)" ; A project that contains other tasks
-    "REVIEW(r)"  ; A project that contains other tasks
-    "WAIT(w)"    ; Something is holding up this task
-    "|"          ; Separates active from inactive states
-    "DONE(d)"    ; Task has been completed
+  '("TODO(t)"        ; A task that is ready to be tackled
+    "CODE(m)"        ; Coding Tasks
+    "TEST(s)"        ; Blog writing assignments
+    "DEVELOP(o)"     ; Things to develop
+    "MEET(5)"        ; A Meeting
+    "PROYECT(p)"     ; A project that contains other tasks
+    "REVIEW(r)"      ; A project that contains other tasks
+    "WAIT(w)"        ; Something is holding up this task
+    "|"              ; Separates active from inactive states
+    "DONE(d)"        ; Task has been completed
     "CANCELLED(c)")  ; Task has been cancelled
   "List of Org todo keywords for the sequence.")
 #+end_src
 
 #+begin_src emacs-lisp :tangle config.el
 (after! org
-  (require 'org-bullets)
-  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
   (setq org-directory "~/org"
         org-ellipsis " ▼ "
-        org-superstar-headline-bullets-list '("" "" "" "󰺕" "󰻂" "󰪥" "󰻃")
-        org-superstar-itembullet-alist '((?+ . ?➤) (?- . ?✦)) ; changes +/- symbols in item lists
-        org-hide-emphasis-markers t
-        org-todo-keywords `((sequence ,@my-org-todo-keywords))))
+        org-hide-emphasis-markers t))
+
+(after! org-superstar
+  (setq org-superstar-headline-bullets-list '("" "" "" "󰺕" "󰻂" "󰪥" "󰻃")
+        org-superstar-itembullet-alist '((?+ . ?➤)
+                                         (?- . ?✦))))
+
+(after! org
+  (setq org-todo-keywords `((sequence ,@my-org-todo-keywords))))
 #+end_src
 
 ***** AGENDA
@@ -659,7 +932,7 @@ Setup the ~org-agenda~ package to use it with the Org Mode. The Agenda is a node
 #+end_src
 
 *Agenda File Linux Config:*
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
 (after! org
   (setq org-agenda-files '("~/.brain.d/roam-nodes/20240912084617-agenda.org")))
 
@@ -703,7 +976,7 @@ Setup the ~org-agenda~ package to use it with the Org Mode. The Agenda is a node
 #+end_src
 
 *Agenda File Windows Config:*
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
 (after! org
   (setq org-agenda-files '("~/.brain.d/roam-nodes/2025-02-13-$S-work_s_org_agenda_file.org")))
 
@@ -718,13 +991,13 @@ Setup the ~org-agenda~ package to use it with the Org Mode. The Agenda is a node
           (tags "PRIORITY=\"C\""
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
                  (org-agenda-overriding-header "Low-priority unfinished tasks:")))
-          (tags "maritz"
+          (tags "madison-reed"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
                  (org-agenda-overriding-header "Tasks for Maritz:")))
-          (tags "softtek"
+          (tags "agile-engine"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
                  (org-agenda-overriding-header "Tasks for Softtek:")))
-          (tags "shoptron"
+          (tags "dot-com"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
                  (org-agenda-overriding-header "Tasks for Shoptron:")))
           (tags "work"
@@ -790,6 +1063,7 @@ Setup the ~org-fancy-priorities~ package to stylize the priorities of the Org Fi
   :ensure t
   :hook
   (org-mode . org-fancy-priorities-mode)
+  (org-mode . org-superstar-mode)
   :config
   (setq org-fancy-priorities-list '("" "󱡞" "󰝨")
    org-priority-faces
@@ -799,7 +1073,7 @@ Setup the ~org-fancy-priorities~ package to stylize the priorities of the Org Fi
 #+end_src
 ***** ROAM
 Setup the ~org-roam~ package to use the ~brain~ notes.
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
 (defvar my-org-roam-capture-templates
   '(
     ("d" "default" plain "%?"
@@ -815,25 +1089,25 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
      :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
                         "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
      :unnarrowed t)
-    ("v" "New Invoice" plain
-     (file "~/.brain.d/roam-nodes/templates/NEWNodeInvoice.org")
-     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
-                        "#+TITLE: Invoice ${client-name}\n#+AUTHOR: ${author='Cristian D. Moreno - Kyonax'}\n")
-     :unnarrowed t)
     ("i" "New Sentinel Inspection" plain
      (file "~/.brain.d/roam-nodes/templates/NEWNodeSentinelInspection.org")
      :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
                         "#+TITLE: Kyonax's Daily Sentinel Inspection ~ %<%d/%m/%Y> \n")
+     :unnarrowed t)
+    ("v" "New Invoice" plain
+     (file "~/.brain.d/roam-nodes/templates/NEWNodeInvoice.org")
+     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
+                        "#+TITLE: Invoice ${Client Name}\n#+AUTHOR: %^{Author | Cristian D. Moreno - Kyonax}\n")
      :unnarrowed t)
     ("p" "New PBI Azure DevOps" plain
      (file "~/.brain.d/roam-nodes/templates/NEWNodeProject.org")
      :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
                         "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
      :unnarrowed t))
-  "My custom Org Roam capture templates for Windows/Work.")
+  "My custom Org Roam personal capture templates.")
 #+end_src
 
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
 (defvar my-org-roam-capture-templates
   '(
     ("d" "default" plain "%?"
@@ -999,18 +1273,15 @@ Disable LSP formatting and indentation to avoid conflicts.
 #+end_src
 
 *** USER DEFAULTs
-#+begin_src emacs-lisp :tangle config.el
-(let ((dir (expand-file-name default-directory)))  ;; get the current directory
-  (cond
-   ((string-match-p "/home/kyonax/Documents/github-penguin" dir)
-    (setq user-full-name "Cristian D. Moreno"
-          user-mail-address "kyonax.corp@gmail.com"))
-   ((string-match-p "/personal-projects/" dir)
-    (setq user-full-name "Cristian D. Moreno"
-          user-mail-address "kyonax.corp@gmail.com"))
-   (t
-    (setq user-full-name "Cristian D. Moreno - Kyonax"
-          user-mail-address "kyonax.corp@gmail.com"))))
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
+(setq user-full-name "Cristian D. Moreno - Kyonax"
+      user-mail-address "kyonax.corp@gmail.com")
+#+end_src
+
+
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
+(setq user-full-name "Cristian D. Moreno - Agile Engine"
+      user-mail-address "cristian.moreno@agileengine.com")
 #+end_src
 
 *** DIRED PACKAGE
@@ -1128,7 +1399,7 @@ Creation and usage of the Dired trash can. Don't forget to create a ~symlink~ to
   (dired dir))
 #+end_src
 
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "os") "config.el" "no")
 (defun shoptron ()
   "Open the Shoptron main Directory"
   (interactive)
@@ -1197,190 +1468,17 @@ Setup the ~gptel~ package to use LLMs on Emacs.
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
 (setq! gptel-directives '(
  (default . "Test 32")
- (studying .
-"I am working in Doom Emacs using Org Mode to document research in a `.org` file. My goal is to improve the quality of the file, making it more readable, accessible, and well-structured for learning and reference. Depending on my request, you will provide one of the following types of support:
-
-1. **Rewriting the Whole File**:
-   - If I ask to rewrite the entire `.org` file, provide **only the new structured `.org` file** as the output, without any explanations, documentation, or unrelated content. Follow these guidelines:
-     - Use clear and consistent title structures (all titles must be in UPPER CASE; plural words like CATs should have a lowercase 's').
-     - Apply Org Mode best practices for documenting research, such as logical hierarchy, tags, and metadata.
-     - Do not modify the existing configuration data (e.g., `:PROPERTIES:`, `#+title:`, `#+filetags:`, etc.).
-     - Organize content with sections, subsections, and bullet points.
-     - Include `.org` code blocks to demonstrate improvements and practical exercises (if applicable).
-
-2. **Support for Small Pieces of Research**:
-   - If I ask for help with a small piece of research or a specific point, focus on providing clear, concise, and well-structured support. Follow these strategies:
-     - Use human-readable and learning-friendly formats.
-     - Explain complex terms or concepts if necessary.
-     - Provide examples, references, or documentation if requested.
-     - Structure the response to make it easy to integrate into the `.org` file.
-
-3. **Improving Text Structure**:
-   - If I ask for help structuring text to make it more readable, focus on organizing the content logically. Use headings, bullet points, and clear formatting to enhance readability.
-
-4. **Providing Examples or References**:
-   - If I ask for examples, provide `.org` code blocks or practical demonstrations.
-   - If I ask for references or documentation, suggest reliable sources or links to further information.
-
-5. **Translation into Other Languages**:
-  - If I ask for translation support, provide an accurate and context-aware translation of the specified content into the requested language. Ensure the translation maintains the original meaning, tone, and structure while adapting to the target language's conventions.
-
-,**General Guidelines**:
-- Always prioritize clarity, readability, and usability.
-- Adapt your response to the specific type of support I request.
-- Do not include unnecessary explanations, documentation, or unrelated content unless explicitly requested.
-
-,**Deliverables**:
- - Provide only the requested output, whether it’s a rewritten .org file, support for a small piece of research, improved text structure, examples, references, or translations. Do not include additional explanations or unrelated content unless explicitly requested.
- ")
- (documentation .
-  "
-You are an expert developer specialized in refining code documentation. Your sole focus is improving the clarity and readability of the documentation without altering the code or structure. Follow these guidelines strictly:
-Description
-
-    Clearly and concisely explain the purpose of the function, class, or module.
-    Cross-check the description with the code to ensure accuracy. The explanation must fully align with what the code does.
-    Avoid jargon or buzzwords like scalable, intuitive, or robust.
-    Provide enough context for someone new to coding to understand, but donÔÇÖt oversimplify.
-
-Usage
-
-    If a usage example exists, ensure it reflects the most common and simplest use case for the code.
-    Verify that the usage aligns with the codeÔÇÖs behavior. Refine it to be precise, accurate, and functional out of the box.
-    Be precise. No room for vagueness.
-
-Parameters/Attributes
-
-    If parameters or attributes are documented, verify they match the code exactly. Ensure names, types, and purposes are accurate and specific.
-    Describe each parameter/attribute in a short, one-line summary that eliminates ambiguity.
-    Do not add parameter documentation if itÔÇÖs not already present in the code.
-
-Important Notes:
-
-    Do not modify the code itself.
-    Do not add new sections or alter the documentation structure.
-    Always verify the documentation matches the code, ensuring accuracy and relevance.
-    Keep explanations terse, professional, and focused. Skip pleasantries or unnecessary details.
-    Always return just the answer and only the answer. Do not enclose it in code blocks, as we are already in a code editor.
-")
- (manual .
- "
-Please use the data provided in the following list to fill out the detailed Org mode template below. As you generate the final output, restructure and rephrase the text with improved grammar and clarity. Ensure that the language is professional and straightforward—avoid buzzwords—but feel free to add a touch of techy netrunner style with subtle, clever expressions. The final result should maintain a clear, structured format that is easy to understand for any developer.
-
-Identifier Replacement:
-
-No matter whether the list refers to a FT (Feature) or a PBI (Product Backlog Item), adjust the identifiers accordingly. For example, if the list refers to an FT Feature, then the IDs should use the format ft-001 instead of pbi-001. This rule applies to all identifiers in the template.
-
-Word Enclosure Guidelines:
-
-- For any word related to code, variable names, file paths, or any similar technical identifiers, use the tilde enclosure. For example: ~example~
-- For important words or main ideas, use the asterisk enclosure. For example: *example*
-- For notes or specifications, use the slash enclosure. For example: /example/
-
-Label Formatting:
-For any label text in the Org Template that ends with a colon, enclose the label (excluding the colon) in asterisks. For example:
-
-- Change '- Criterion 1:' to '- *Criterion 1*:'.
-- Apply this formatting to all similar instances (e.g., Dependencies, Technical Challenges, etc.).
-
-Conditional Template Section Removal:
-
-If the provided list indicates 'Not information,' 'Not used,' or any similar phrasing that expresses the absence of information for a particular section, please remove that section from the final output.
-
-Dynamic CUSTOM_ID Suffixing:
-
-For all Org CUSTOM_ID fields, append the provided ID (whether it is FT or PBI) to the end of the CUSTOM_ID. For example, if the item is pbi-5676, then the CUSTOM_ID for the 'Additional Information' section should be :CUSTOM_ID: additional-information-pbi-5676. Similarly, if it is an FT Feature such as ft-1234, then the CUSTOM_ID should be :CUSTOM_ID: additional-information-ft-1234. Apply this pattern consistently for all CUSTOM_ID fields throughout the template.
-
-Cross-Reference Linking:
-
-Whenever the output text references another part of the template (e.g., 'Look at the References to know more'), generate an Org link using the corresponding CUSTOM_ID. For example, such a reference should be formatted as [[#references-pbi-001][References]] or [[#references-ft-1234][References]] (using the appropriate ID).
-
-Detailed Org Template:
-```org
-*[Feature Name] - [Feature ID]
-
-**Overview
-[Provide a clear and concise explanation of the feature and its development based on the Theme Plugin. Include the purpose, functionality, Important Development tasks or Functionalities, and any user-facing changes.]
-
-[Connection to business backlogs. Use the Bussiness Feature Description and Acceptance Criteria to Explain how the Development handled this requirements (e.g., how it supports business goals or requirements).]
-
-<#+begin_quote
-Business Description:
-
-[Add the Busines Description and highlight the important words.]
-#+end_quote
-
-***Acceptance Criteria
-[Provide a concise explanation about the Acceptance Criteria in just One Parragraph]
-
-[List detailed criteria that must be met for the feature to be considered complete and ready for release.]
-
-- [ ] [Description]
-- [ ] [Description]
-- [ ] [Description]
-- [ ] ...
-
-**PBIs
-[List of Product Backlog Items (PBIs) associated with this feature (e.g., PBI-123, PBI-456).]
-
-- [ ] [PBI Name and ID, Use this URL to create a direct Link to the PBI https://dev.azure.com/experient/Products/_workitems/edit/(The PBI ID) ]
-- [ ] [PBI Name and ID, Use this URL to create a direct Link to the PBI https://dev.azure.com/experient/Products/_workitems/edit/(The PBI ID) ]
-- [ ] [PBI Name and ID, Use this URL to create a direct Link to the PBI https://dev.azure.com/experient/Products/_workitems/edit/(The PBI ID) ]
-- [ ] ...
-
-**Technical Approach
-[Provide a clear and concise technical explanation about the Approach for the Feature Solution, what is the logic behind it and how this affect the Theme Plugin.]
-
-   *** Frontend
-     - *Twig templates*: [The Reason of why was necessary to add or override Twig Templates].
-     - *SCSS*: [The Reason of why was necessary to add or override SCSS].
-     - *Plugin JS Scripts*: [The Reason of why was necessary to add or override Plugin JS].
-   *** Backend
-     - *Symfony controllers*: [The Reason of why was necessary to add or override Symfony Controllers].
-     - *PageLoader classes*: [The Reason of why was necessary to add or override Page Loaders].
-     - *Store API integrations*: [The Reason of why was necessary to add or override API Integrations].
-
-**Development Workflow
-[Description of the request flow for this feature (e.g., how data moves from routes, controllers to templates).]
-
-**Deployment
-[Steps or considerations for deploying this feature (e.g., service registration, cache clearing, theme compilation, build-storefront, build-administration).]
-
-**Current Status
-[Current development status: Completed / In Progress / Pending. And explain the why of the Status]
-
-**Key Considerations
-[Important notes for development (e.g., adherence to Store API standards, cache management).]
-
-**Challenges
-[Known issues or potential obstacles (e.g., ensuring test coverage, deployment complexities).]
-
-**Modified Files
-[List all files that were modified, added, or deleted as part of this feature implementation.]
-
-| File Path         | Change Type (Added/Modified/Deleted) | Brief Description of Change                |
-|-------------------+--------------------------------------+--------------------------------------------|
-| ~path/to/file1.js~  | Modified                             | Updated function ~X~ to handle new feature ~Y~ |
-| ~path/to/file2.css~ | Added                                | New styles for feature ~Z~ UI                |
-| ~path/to/file3.py~  | Deleted                              | Removed deprecated function                |
-```
-")
- ))
+ (studying . "")
+ (documentation . "")
+ (manual . "")))
 #+end_src
 
 - *Directives Linux - Freelance*:
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
 (setq! gptel-directives '(
- (default .
-  "
-")
- (documentation .
-  "
-")
- (manual .
- "
-")
- ))
+ (default . "")
+ (documentation . "")
+ (manual . "")))
 #+end_src
 
 
@@ -1542,8 +1640,9 @@ Setup the ~tramp~ package to be used on Windows.
     (setenv "PATH" (concat putty-directory ";" (getenv "PATH")))
     (add-to-list 'exec-path putty-directory)))
 #+end_src
+
 *** RUBY SET-UP
-#+begin_src emacs-lisp :tangle config.el
+#+begin_src emacs-lisp :tangle no
 (load (expand-file-name "modules/editor.el" doom-user-dir))
 (load (expand-file-name "modules/misc.el" doom-user-dir))
 (load (expand-file-name "modules/ruby.el" doom-user-dir))
@@ -1555,9 +1654,256 @@ Setup the ~tramp~ package to be used on Windows.
 (load (expand-file-name "modules/autocomplete.el" doom-user-dir))
 #+end_src
 
+** init.el
+These are *Doom Emacs’ core modules*. I can enable or disable them simply by uncommenting them, and add custom flags when needed to fine-tune their behavior.
+
+#+begin_quote
+ℹ Press =SPC h d h= (or =C-h d h= for non-Vim users) to open Doom’s documentation. There, you’ll find a full index of available modules and the flags they support.
+️
+You can also hover over a module name or flag and press =K= (=C-c c k= for non-Vim users) to view its documentation, or =gd= (=C-c c d=) to jump directly to its source directory.
+#+end_quote
+
+*Header File:*
+#+begin_src emacs-lisp :tangle init.el
+;;; init.el -*- lexical-binding: t; -*-
+
+(doom! :input
+       ;;bidi              ; (tfel ot) thgir etirw uoy gnipleh
+       ;;chinese
+       ;;japanese
+       ;;layout            ; auie,ctsrnm is the superior home row
+#+end_src
+
+*** COMPLETION
+#+begin_src emacs-lisp :tangle init.el
+
+       :completion
+       ;;company                        ; the ultimate code completion backend
+       (corfu +orderless +icons)        ; complete with cap(f), cape and a flying feather!
+       ;;(helm +childframe +icons)      ; the *other* search engine for love and life
+       ;;ido                            ; the other *other* search engine...
+       (ivy +icons +fuzzy +childframe +prescient)  ; a search engine for love and life
+       ;;vertico                        ; the search engine of the future
+#+end_src
+
+*** UI
+#+begin_src emacs-lisp :tangle init.el
+
+       :ui
+       deft                ; notational velocity for Emacs
+       doom                ; what makes DOOM look the way it does
+       doom-dashboard      ; a nifty splash screen for Emacs
+       doom-quit           ; DOOM quit-message prompts when you quit Emacs
+       ;;(emoji +unicode)  ; 🙂
+       hl-todo             ; highlight TODO/FIXME/NOTE/DEPRECATED/HACK/REVIEW
+       indent-guides       ; highlighted indent columns
+       (ligatures +extras) ; ligatures and symbols to make your code pretty again
+       ;;minimap           ; show a map of the code on the side
+       modeline            ; snazzy, Atom-inspired modeline, plus API
+       ;;nav-flash         ; blink cursor line after big motions
+       ;;neotree           ; a project drawer, like NERDTree for vim
+       ophints             ; highlight the region an operation acts on
+       (popup +defaults)   ; tame sudden yet inevitable temporary windows
+       ;;smooth-scroll     ; So smooth you won't believe it's not butter
+       ;;tabs              ; a tab bar for Emacs
+       (treemacs +lsp)     ; a project drawer, like neotree but cooler
+       unicode             ; extended unicode support for various languages
+       (vc-gutter +pretty) ; vcs diff in the fringe
+       vi-tilde-fringe     ; fringe tildes to mark beyond EOB
+       (window-select +numbers)       ; visually switch windows
+       workspaces          ; tab emulation, persistence & separate workspaces
+       ;;zen               ; distraction-free coding or writing
+#+end_src
+
+*** EDITOR
+#+begin_src emacs-lisp :tangle init.el
+
+       :editor
+       (evil +everywhere)  ; come to the dark side, we have cookies
+       file-templates      ; auto-snippets for empty files
+       fold                ; (nigh) universal code folding
+       (format +onsave +lsp)    ; automated prettiness
+       ;;god               ; run Emacs commands without modifier keys
+       ;;lispy             ; vim for lisp, for people who don't like vim
+       multiple-cursors    ; editing in many places at once
+       ;;objed             ; text object editing for the innocent
+       ;;parinfer          ; turn lisp into python, sort of
+       rotate-text         ; cycle region at point between text candidates
+       snippets            ; my elves. They type so I don't have to
+       (whitespace +guess +trim)  ; a butler for your whitespace
+       word-wrap           ; soft wrapping with language-aware indent
+#+end_src
+
+*** EMACS
+#+begin_src emacs-lisp :tangle init.el
+
+       :emacs
+       (dired +dirvish +icons)      ; making dired pretty [functional]
+       electric            ; smarter, keyword-based electric-indent
+       ;;eww               ; the internet is gross
+       (ibuffer +icons)    ; interactive buffer management
+       undo       ; persistent, smarter undo for your inevitable mistakes
+       tramp               ; remote files at your arthritic fingertips
+       vc                  ; version-control and Emacs, sitting in a tree
+#+end_src
+
+*** TERM
+#+begin_src emacs-lisp :tangle init.el
+
+       :term
+       eshell              ; the elisp shell that works everywhere
+       ;;shell             ; simple shell REPL for Emacs
+       ;;term              ; basic terminal emulator for Emacs
+       vterm               ; the best terminal emulation in Emacs
+#+end_src
+
+*** CHECKERs
+#+begin_src emacs-lisp :tangle init.el
+
+       :checkers
+       (syntax +childframe +flymake +icons)  ; tasing you for every semicolon you forget
+       ;;(spell +flyspell) ; tasing you for misspelling mispelling
+       ;;grammar           ; tasing grammar mistake every you make
+#+end_src
+
+*** TOOLs
+#+begin_src emacs-lisp :tangle init.el
+
+       :tools
+       ;;ansible
+       biblio              ; Writes a PhD for you (citation needed)
+       ;;collab            ; buffers with friends
+       debugger            ; FIXME stepping through code, to help you add bugs
+       ;;direnv
+       (docker +lsp +tree-sitter)
+       editorconfig        ; let someone else argue about tabs vs spaces
+       ;;ein               ; tame Jupyter notebooks with emacs
+       (eval +overlay)     ; run code, run (also, repls)
+       (lookup +dictionary +docsets)              ; navigate your code and its documentation
+       llm                 ; when I said you needed friends, I didn't mean...
+       (lsp +peek)         ; M-x vscode
+       (magit +forge)      ; a git porcelain for Emacs
+       make                ; run make tasks from Emacs
+       pass                ; password manager for nerds
+       pdf                 ; pdf enhancements
+       ;;terraform         ; infrastructure as code
+       ;;tmux              ; an API for interacting with tmux
+       tree-sitter         ; syntax and parsing, sitting in a tree...
+       upload              ; map local to remote projects via ssh/ftp
+#+end_src
+
+*** OS
+#+begin_src emacs-lisp :tangle init.el
+
+       :os
+       tty                 ; improve the terminal Emacs experience
+#+end_src
+
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "mac") "init.el" "no")
+        (:if (featurep :system 'macos) macos)  ; improve compatibility with macOS
+#+end_src
+
+*** LANG
+#+begin_src emacs-lisp :tangle init.el
+
+       :lang
+       ;;ada               ; In strong typing we (blindly) trust
+       ;;agda              ; types of types of types of types...
+       ;;beancount         ; mind the GAAP
+       (cc +lsp)           ; C > C++ == 1
+       ;;clojure           ; java with a lisp
+       ;;common-lisp       ; if you've seen one lisp, you've seen them all
+       ;;coq               ; proofs-as-programs
+       ;;crystal           ; ruby at the speed of c
+       ;;csharp            ; unity, .NET, and mono shenanigans
+       data                ; config/data formats
+       ;;(dart +flutter)   ; paint ui and not much else
+       ;;dhall
+       ;;elixir            ; erlang done right
+       ;;elm               ; care for a cup of TEA?
+       (emacs-lisp +lsp)   ; drown in parentheses
+       ;;erlang            ; an elegant language for a more civilized age
+       ;;ess               ; emacs speaks statistics
+       ;;factor
+       ;;faust             ; dsp, but you get to keep your soul
+       ;;fortran           ; in FORTRAN, GOD is REAL (unless declared INTEGER)
+       ;;fsharp            ; ML stands for Microsoft's Language
+       ;;fstar             ; (dependent) types and (monadic) effects and Z3
+       ;;gdscript          ; the language you waited for
+       ;;(go +lsp)         ; the hipster dialect
+       ;;(graphql +lsp)    ; Give queries a REST
+       ;;(haskell +lsp)    ; a language that's lazier than I am
+       ;;hy                ; readability of scheme w/ speed of python
+       ;;idris             ; a language you can depend on
+       (json +lsp +tree-sitter)         ; At least it ain't XML
+       ;;janet             ; Fun fact: Janet is me!
+       ;;(java +lsp)       ; the poster child for carpal tunnel syndrome
+       (javascript +lsp +tree-sitter)   ; all(hope(abandon(ye(who(enter(here))))))
+       ;;julia             ; a better, faster MATLAB
+       ;;kotlin            ; a better, slicker Java(Script)
+       (latex +cdlatex +fold +lsp)               ; writing papers in Emacs has never been so fun
+       ;;lean              ; for folks with too much to prove
+       ;;ledger            ; be audit you can be
+       ;;lua               ; one-based indices? one-based indices
+       (markdown +grip +tree-sitter)            ; writing docs for people to ignore
+       ;;nim               ; python + lisp at the speed of c
+       ;;nix               ; I hereby declare "nix geht mehr!"
+       ;;ocaml             ; an objective camel
+       (org +crypt +gnuplot +hugo +journal +dragndrop +present)               ; organize your plain life in plain text
+       ;;php               ; perl's insecure younger brother
+       ;;plantuml          ; diagrams for confusing people more
+       ;;graphviz          ; diagrams for confusing yourself even more
+       ;;purescript        ; javascript, but functional
+       ;;python            ; beautiful is better than ugly
+       ;;qt                ; the 'cutest' gui framework ever
+       ;;racket            ; a DSL for DSLs
+       ;;raku              ; the artist formerly known as perl6
+       (rest +jq)                ; Emacs as a REST client
+       ;;rst               ; ReST in peace
+       ;;(ruby +rails)     ; 1.step {|i| p "Ruby is #{i.even? ? 'love' : 'life'}"}
+       ;;(rust +lsp)       ; Fe2O3.unwrap().unwrap().unwrap().unwrap()
+       ;;scala             ; java, but good
+       ;;(scheme +guile)   ; a fully conniving family of lisps
+       (sh +lsp)           ; she sells {ba,z,fi}sh shells on the C xor
+       ;;sml
+       ;;solidity          ; do you need a blockchain? No.
+       (swift +lsp +tree-sitter)               ; who asked for emoji variables?
+       ;;terra             ; Earth and Moon in alignment for performance.
+       (web +lsp +tree-sitter)               ; the tubes
+       (yaml +lsp +tree-sitter)              ; JSON, but readable
+       ;;zig               ; C, but simpler
+#+end_src
+
+*** EMAIL
+#+begin_src emacs-lisp :tangle init.el
+       :email
+       ;;(mu4e +org +gmail)
+       ;;notmuch
+       ;;(wanderlust +gmail)
+#+end_src
+
+*** APP
+#+begin_src emacs-lisp :tangle init.el
+
+       :app
+       calendar
+       ;;emms
+       everywhere          ; *leave* Emacs!? You must be joking
+       ;;irc               ; how neckbeards socialize
+       ;;(rss +org)          ; emacs as an RSS reader
+#+end_src
+
+*** CONFIG
+#+begin_src emacs-lisp :tangle init.el
+
+       :config
+       literate
+       (default +gnupg +bindings +smartparens))
+#+end_src
+
 * CUSTOM FUNCTIONs
 ** CREATE INVOICE NUMBER
-#+begin_src emacs-lisp :tangle config.el
+#+begin_src emacs-lisp :tangle no
 (defun kyo/create-invoice-number (&optional dir invoice-paths)
   "Search for invoice files in DIR or INVOICE-PATHS, count them,
    and return the next invoice number formatted with the current date.
@@ -1592,10 +1938,3 @@ Setup the ~tramp~ package to be used on Windows.
            (formatted-number (format "%02d" next-number)))
       (concat current-year current-month current-day "-" formatted-number))))
 #+end_src
-
-* BINARIES
-** emacs-client-no-eval
-** emacs-client
-** emacs-daemon-create
-** emacs-daemon-startup
-** emacs-kill

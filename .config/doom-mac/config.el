@@ -17,10 +17,16 @@
 
 (use-package editorconfig
   :ensure t
+  :hook (after-init . editorconfig-mode)
   :config
-  (editorconfig-mode 1))
+  (setq editorconfig-exclude-modes '(archive-mode
+                                     image-mode
+                                     pdf-view-mode))
+  (setq editorconfig-trim-whitespaces-mode 'ws-butler-mode)
 
-(set-buffer-file-coding-system 'utf-8-unix)
+  ;; Espera a que cargue el major-mode antes de aplicar settings
+  (setq editorconfig-lazy-major-mode t)
+  (setq editorconfig-verbose nil))
 
 (setq doom-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
       doom-variable-pitch-font (font-spec :family "SpaceMono Nerd Font Mono" :size 11)
@@ -43,52 +49,74 @@
   (package-initialize))
 
 (use-package doom-modeline
+  :hook (after-init . doom-modeline-mode)
+  :init
+  (setq doom-modeline-height 33
+        doom-modeline-bar-width 6
+        doom-modeline-icon t
+        doom-modeline-major-mode-icon t
+        doom-modeline-major-mode-color-icon t
+        doom-modeline-buffer-file-name-style 'relative-to-project
+        doom-modeline-minor-modes nil
+        doom-modeline-enable-word-count nil
+        doom-modeline-buffer-encoding t
+        doom-modeline-indent-info t
+        doom-modeline-vcs-max-length 15
+        doom-modeline-persp-name t
+        doom-modeline-persp-icon t
+        doom-modeline-lsp t
+        doom-modeline-github t
+        doom-modeline-github-interval (* 15 60)
+        doom-modeline-env-version t
+        doom-modeline-mu4e nil
+        doom-modeline-irc nil)
   :config
-  (set-face-attribute 'mode-line nil :font "SpaceMono Nerd Font Mono")
-  (setq doom-modeline-support-imenu t
-      doom-modeline-buffer-state-icon t
-      doom-modeline-icon t
-      doom-modeline-height 33
-      doom-modeline-bar-width 6
-      doom-modeline-persp-name t
-      doom-modeline-persp-icon t))
+  (when (display-graphic-p)
+    (set-face-attribute 'mode-line nil :font "SpaceMono Nerd Font Mono"))
+  (doom-modeline-mode 1))
 
 (remove-hook '+doom-dashboard-functions #'doom-dashboard-widget-shortmenu)
 
 (add-hook! '+doom-dashboard-functions :append
-  (insert "\n" (+doom-dashboard--center +doom-dashboard--width "I am Kyo")))
+  (insert "\n" (+doom-dashboard--center +doom-dashboard--width "@kyonax_on_tech")))
 
 (defun kyo/my-shit-is-always-greater ()
   (let* ((banner '(
-                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣧⡀⣿⣤⣀⣾⣅⠀⢀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠠⣤⣤⠲⠶⣦⡿⣿⣿⣿⣿⣿⣿⣿⣴⣴⠖⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⠀⠀⠀⢲⣦⣿⣟⠛⡓⣀⠐⠋⢽⠟⡿⢿⣿⣿⢛⢷⣤⣤⠄⠀⠀⠀⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⠀⠠⢤⣦⣤⡦⠆⢈⢋⣡⡔⠁⢀⡠⠐⢻⡿⢃⡄⠀⣿⣧⣤⣀⠀⠀⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⠀⣀⣴⣾⡿⠗⡪⢛⣿⣿⣷⢾⡟⠀⣊⣴⣷⣿⢧⣦⣿⣿⢿⣁⣀⠀⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⢈⡬⠟⠂⠀⠖⠀⠞⠉⡽⠃⢈⠡⢋⠏⡰⠀⡿⠈⠛⣿⡇⠸⢢⡀⠀⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⠀⠀⠊⠄⠁⠀⠐⣀⣪⢀⣔⡤⠂⣠⢀⡴⠀⣡⡀⠁⠈⠃⡢⠡⣄⠀⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⠀⠀⠀⠄⠀⢤⣜⣉⡛⠻⢿⣷⣿⣿⣾⣷⡾⠿⠷⠆⢁⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⠀⠀⠀⠈⠀⣾⠧⣬⣍⣑⠢⣽⣿⣿⣋⡤⠴⠒⢛⣳⣧⠀⠈⠀⢤⡄⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⠀⣤⣧⠀⡄⢿⣧⡙⠛⠻⣤⣿⣿⣿⣿⣠⣿⡿⠟⣹⡧⠐⠠⠠⣿⡧⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⣠⣾⣿⣿⣧⡀⠸⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣶⣶⣾⡿⠁⢋⡄⠐⣿⣿⠀⠀⠀⠀"
-                   "⠀⠀⢀⣼⣿⣿⣿⣿⣟⠀⠀⠻⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠃⠀⣿⡧⠀⣿⣿⡀⣧⠀⠀"
-                   "⠀⠀⣿⣿⣿⣿⣿⠛⢿⣷⡄⢢⠘⢿⣿⣿⣿⣿⣿⣿⣿⣿⠟⢁⠀⠀⢛⣩⣴⣿⡿⢃⡌⠀⠀"
-                   "⠀⠀⠙⣿⣿⣿⣿⣿⣶⣌⠻⢦⡁⠀⠻⣿⣿⣿⣿⠿⠋⠀⣘⣡⣶⣿⡿⠟⣛⣡⠶⢋⠄⠀⠀"
-                   "⠀⠀⠀⠈⠻⠿⡿⡿⣿⣿⣿⣦⣙⠢⠀⠀⠈⠈⣀⣤⣶⣿⣟⢛⡩⠔⣒⣩⣥⣤⣶⣿⠂⠀⠀"
-                   "⠀⠀⠀⠀⠀⠰⣶⣦⣦⣦⡙⢿⡿⠓⣀⣠⣴⣿⣿⣿⡿⢛⣩⣴⣾⣿⡿⠿⠛⠋⠉⠁⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⠀⠈⠙⠻⢿⣿⣦⣅⠘⠿⠋⠁⢈⠟⣫⣿⣿⠿⠛⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠃⠐⡄⠀⠁⡺⠛⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-                   "⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀"
-                   ))
+                   "                                                             "
+                   "                         ███████████      █████              "
+                   "                     █████████████████████████               "
+                   "                  ███████████████████████████                "
+                   "                █████████████████████████████                "
+                   "               ████████████       ████████████               "
+                   "              ██████████          █████████████              "
+                   "              █████████          ██████████████              "
+                   "             ██████████         █████ ██████████             "
+                   "             ██████████       ██████  ██████████             "
+                   "             ██████████      ██████   ██████████             "
+                   "             ██████████     █████     ██████████             "
+                   "             ██████████   ██████      ██████████             "
+                   "             ██████████  ██████       ██████████             "
+                   "             ██████████ █████         ██████████             "
+                   "              ██████████████         ██████████              "
+                   "              █████████████         ███████████              "
+                   "               ████████████       ████████████               "
+                   "                █████████████████████████████                "
+                   "                ███████████████████████████                  "
+                   "               █████████████████████████                     "
+                   "             ██████     ████████████                         "
+                   "                                                             "
+                   "                        zerønet labs                         "
+                   "                     Cristian D. Moreno                      "
+                   "                                                             "
+                   "                                                             "))
          (longest-line (apply #'max (mapcar #'length banner))))
     (put-text-property
      (point)
      (dolist (line banner (point))
        (insert (+doom-dashboard--center
                 +doom-dashboard--width
-                (concat line (make-string (max 0 (- longest-line (length line))) 32)))
+                (concat line
+                        (make-string (max 0 (- longest-line (length line))) 32)))
                "\n"))
      'face 'doom-dashboard-banner)))
 
@@ -98,7 +126,7 @@
   '(doom-dashboard-banner :foreground "#9FE573" :background "#000000" :weight bold)
   '(doom-dashboard-loaded :foreground "#9FE573" :background "#000000" :weight bold))
 
-(setq doom-theme 'gruber-darker)
+(setq doom-theme 'doom-monokai-spectrum)
 (map! :leader
       :desc "Load new theme" "h t" #'counsel-load-theme)
 
@@ -107,10 +135,6 @@
   (setq evil-treemacs-state-cursor t
         treemacs-show-cursor t
         treemacs-width 39))
-
-(use-package ultra-scroll
-  :config
-  (setq scroll-margin 0))
 
 (setq display-line-numbers-type 'relative
       display-line-numbers-mode t
@@ -163,22 +187,6 @@
 (use-package json-mode
   :mode ("\\.json\\'" . json-mode))
 
-(use-package ruby-mode
-  :mode (("\\.rb\\'" . ruby-mode)
-         ("\\.rake\\'" . ruby-mode)
-         ("\\.gemspec\\'" . ruby-mode)
-         ("Rakefile\\'" . ruby-mode)
-         ("Gemfile\\'" . ruby-mode)
-         ("Guardfile\\'" . ruby-mode)
-         ("Capfile\\'" . ruby-mode))
-  :interpreter "ruby"
-  :hook ((ruby-mode . lsp-deferred)
-         (ruby-mode . flycheck-mode)
-         (ruby-mode . whitespace-mode))
-  :config
-  (setq ruby-indent-level 2
-        ruby-insert-encoding-magic-comment nil))
-
 (defun kyo/lsp-mode-setup ()
   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
   (lsp-headerline-breadcrumb-mode))
@@ -200,44 +208,37 @@
          (typescript-mode . lsp-ui-mode)
          (web-mode . lsp-ui-mode)))
 
-(setq lsp-solargraph-use-bundler t)
-
-(with-eval-after-load 'lsp-mode
-  (add-to-list 'lsp-language-id-configuration '(ruby-mode . "ruby"))
-  (lsp-register-client
-   (make-lsp-client :new-connection (lsp-stdio-connection '("solargraph" "stdio"))
-                    :major-modes '(ruby-mode)
-                    :priority -1
-                    :server-id 'ruby-ls)))
-
 (defvar my-org-todo-keywords
-  '("TODO(t)"    ; A task that is ready to be tackled
-    "CODE(m)"    ; Coding Tasks
-    "TEST(c)"    ; Blog writing assignments
-    "DEVELOP(d)" ; Things to develop
-    "MEET(5)"    ; A Meeting
-    "PROYECT(p)" ; A project that contains other tasks
-    "REVIEW(r)"  ; A project that contains other tasks
-    "WAIT(w)"    ; Something is holding up this task
-    "|"          ; Separates active from inactive states
-    "DONE(d)"    ; Task has been completed
+  '("TODO(t)"        ; A task that is ready to be tackled
+    "CODE(m)"        ; Coding Tasks
+    "TEST(s)"        ; Blog writing assignments
+    "DEVELOP(o)"     ; Things to develop
+    "MEET(5)"        ; A Meeting
+    "PROYECT(p)"     ; A project that contains other tasks
+    "REVIEW(r)"      ; A project that contains other tasks
+    "WAIT(w)"        ; Something is holding up this task
+    "|"              ; Separates active from inactive states
+    "DONE(d)"        ; Task has been completed
     "CANCELLED(c)")  ; Task has been cancelled
   "List of Org todo keywords for the sequence.")
 
 (after! org
-  (require 'org-bullets)
-  (add-hook 'org-mode-hook (lambda () (org-bullets-mode 1)))
   (setq org-directory "~/org"
         org-ellipsis " ▼ "
-        org-superstar-headline-bullets-list '("" "" "" "󰺕" "󰻂" "󰪥" "󰻃")
-        org-superstar-itembullet-alist '((?+ . ?➤) (?- . ?✦)) ; changes +/- symbols in item lists
-        org-hide-emphasis-markers t
-        org-todo-keywords `((sequence ,@my-org-todo-keywords))))
+        org-hide-emphasis-markers t))
+
+(after! org-superstar
+  (setq org-superstar-headline-bullets-list '("" "" "" "󰺕" "󰻂" "󰪥" "󰻃")
+        org-superstar-itembullet-alist '((?+ . ?➤)
+                                         (?- . ?✦))))
+
+(after! org
+  (setq org-todo-keywords `((sequence ,@my-org-todo-keywords))))
 
 (setq org-agenda-block-separator 175)
 
 (after! org
-  (setq org-agenda-files '("~/.brain.d/roam-nodes/20240912084617-agenda.org")))
+  (setq org-agenda-files '("~/.brain.d/roam-nodes/2025-02-13-$S-work_s_org_agenda_file.org")))
 
 (setq org-agenda-custom-commands
       '(("v" "A better agenda view"
@@ -250,27 +251,18 @@
           (tags "PRIORITY=\"C\""
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
                  (org-agenda-overriding-header "Low-priority unfinished tasks:")))
-          (tags "homea"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "[#A] Home Daily Tasks:")))
-          (tags "homeb"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "[#B] Home Wed-Fri Day Tasks:")))
-          (tags "homec"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "[#C] Home Weekly Tasks:")))
-          (tags "health"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Family Health:")))
+          (tags "madison-reed"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Maritz:")))
+          (tags "agile-engine"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Softtek:")))
+          (tags "dot-com"
+                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
+                 (org-agenda-overriding-header "Tasks for Shoptron:")))
           (tags "work"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
                  (org-agenda-overriding-header "Work Tasks:")))
-          (tags "kyo"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Kyonax's Projects:")))
-          (tags "event"
-                ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
-                 (org-agenda-overriding-header "Important Events:")))
           (tags "meeting"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
                  (org-agenda-overriding-header "Important Meetings:")))
@@ -319,6 +311,7 @@
   :ensure t
   :hook
   (org-mode . org-fancy-priorities-mode)
+  (org-mode . org-superstar-mode)
   :config
   (setq org-fancy-priorities-list '("" "󱡞" "󰝨")
    org-priority-faces
@@ -449,17 +442,8 @@
                  (shell-quote-argument buffer-file-name)))
         (revert-buffer t t t)))))
 
-(let ((dir (expand-file-name default-directory)))  ;; get the current directory
-  (cond
-   ((string-match-p "/home/kyonax/Documents/github-penguin" dir)
-    (setq user-full-name "Cristian D. Moreno"
-          user-mail-address "kyonax.corp@gmail.com"))
-   ((string-match-p "/personal-projects/" dir)
-    (setq user-full-name "Cristian D. Moreno"
-          user-mail-address "kyonax.corp@gmail.com"))
-   (t
-    (setq user-full-name "Cristian D. Moreno - Kyonax"
-          user-mail-address "kyonax.corp@gmail.com"))))
+(setq user-full-name "Cristian D. Moreno - Agile Engine"
+      user-mail-address "cristian.moreno@agileengine.com")
 
 (map! :leader
       (:prefix ("d" . "dired")
@@ -517,39 +501,6 @@
   "Open the specified directory DIR in Dired mode."
   (interactive "DChoose directory: ") ; Prompt for directory
   (dired dir))
-
-(gptel-make-openai "xAI"
-  :host "api.x.ai"
-  :key (shell-command-to-string (format "pass show private_key/xai | tr -d '\n'"))
-  :endpoint "/v1/chat/completions"
-  :stream t
-  :models '(grok-3-latest))
-
-;; OPTIONAL configuration
-(setq
- gptel-model   'grok-3-latest
- gptel-backend
- (gptel-make-openai "xAI"           ;Any name you want
-   :host "api.x.ai"
-   :key (shell-command-to-string (format "pass show private_key/xai | tr -d '\n'"))              ;can be a function that returns the key
-   :endpoint "/v1/chat/completions"
-   :stream t
-   :models '(;; xAI now only offers `grok-beta` as of the time of this writing
-             grok-3-latest)))
-
-(add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
-
-(setq! gptel-directives '(
- (default .
-  "
-")
- (documentation .
-  "
-")
- (manual .
- "
-")
- ))
 
 (setq ivy-posframe-display-functions-alist
       '((swiper                     . ivy-posframe-display-at-point)
@@ -651,47 +602,3 @@
   (setq pdf-view-midnight-colors '("#888888" . "#111111")))
 
 (setq password-cache-expiry nil)
-
-(load (expand-file-name "modules/editor.el" doom-user-dir))
-(load (expand-file-name "modules/misc.el" doom-user-dir))
-(load (expand-file-name "modules/ruby.el" doom-user-dir))
-(load (expand-file-name "modules/ruby-autocomplete.el" doom-user-dir))
-(load (expand-file-name "modules/term.el" doom-user-dir))
-(load (expand-file-name "modules/git.el" doom-user-dir))
-(load (expand-file-name "modules/lsp.el" doom-user-dir))
-(load (expand-file-name "modules/org.el" doom-user-dir))
-(load (expand-file-name "modules/autocomplete.el" doom-user-dir))
-
-(defun kyo/create-invoice-number (&optional dir invoice-paths)
-  "Search for invoice files in DIR or INVOICE-PATHS, count them,
-   and return the next invoice number formatted with the current date.
-
-   DIR is the directory to search for invoice files. If not provided,
-   it defaults to the current directory.
-
-   INVOICE-PATHS is a list of file paths to check for invoice files.
-   If provided, it is used instead of searching a directory.
-
-   The next invoice number is based on the quantity of matched files
-   with 'invoice' in their names."
-  (let* ((current-year (format-time-string "%Y"))
-         (current-month (format-time-string "%m"))
-         (current-day (format-time-string "%d"))
-         (invoice-count 0))
-
-    ;; Count invoice files
-    (if invoice-paths
-        (dolist (path invoice-paths)
-          (when (and (stringp path)
-                     (string-match-p "invoice" (file-name-nondirectory path))
-                     (file-exists-p path))
-            (setq invoice-count (1+ invoice-count))))
-      (let ((files (directory-files (or dir default-directory) t "\\(invoice\\|-invoice\\)")))
-        (dolist (file files)
-          (when (string-match-p "invoice" (file-name-nondirectory file))
-            (setq invoice-count (1+ invoice-count))))))
-
-    ;; Calculate and format the next invoice number
-    (let* ((next-number (1+ invoice-count))
-           (formatted-number (format "%02d" next-number)))
-      (concat current-year current-month current-day "-" formatted-number))))
