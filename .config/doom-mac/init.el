@@ -9,9 +9,9 @@
 :completion
 ;;company                        ; the ultimate code completion backend
 (corfu +orderless +icons)        ; complete with cap(f), cape and a flying feather!
-;;(helm +childframe +icons)      ; the *other* search engine for love and life
+(helm +fuzzy +icons)      ; the *other* search engine for love and life
 ;;ido                            ; the other *other* search engine...
-(ivy +icons +fuzzy +childframe +prescient)  ; a search engine for love and life
+;;(ivy +icons +fuzzy +childframe +prescient)  ; a search engine for love and life
 ;;vertico                        ; the search engine of the future
 
 :ui

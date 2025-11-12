@@ -71,6 +71,9 @@ Example of Usage:
    (t "unknown-host")))
 #+end_src
 
+#+RESULTS: get-hostname
+: MacBook-Pro-de-COL-AE-052.local
+
 Example of Usage:
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "os") "config.el" "no")
 (message "This is my Username %s" (org-babel-ref-resolve "get-username"))
@@ -196,7 +199,7 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 #+begin_src emacs-lisp :tangle packages.el
 (package! bibtex-completion)
 (package! parsebib)
-(package! ivy-bibtex)
+;;(package! ivy-bibtex)
 #+end_src
 *** CALENDAR
 #+begin_src emacs-lisp :tangle packages.el
@@ -275,8 +278,24 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 (package! gptel-magit)
 #+end_src
 
-*** IVY
+*** HELM
 #+begin_src emacs-lisp :tangle packages.el
+(package! helm)
+(package! helm-company)
+(package! helm-c-yasnippet)
+(package! helm-descbinds)
+(package! helm-describe-modes)
+(package! helm-flx)
+(package! helm-icons)
+(package! helm-org)
+(package! helm-posframe)
+(package! helm-projectile)
+(package! helm-rg)
+(package! helm-swoop)
+#+end_src
+
+*** IVY
+#+begin_src emacs-lisp :tangle no
 (package! ivy-hydra)
 (package! ivy-posframe)
 (package! ivy-prescient)
@@ -348,7 +367,7 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 #+begin_src emacs-lisp :tangle packages.el
 (package! lsp-mode)
 (package! lsp-ui)
-(package! lsp-ivy)
+;;(package! lsp-ivy)
 #+end_src
 
 *** MAGIT
@@ -1481,6 +1500,55 @@ Setup the ~gptel~ package to use LLMs on Emacs.
  (manual . "")))
 #+end_src
 
+*** HELM PACKAGE
+#+begin_src emacs-lisp :tangle config.el
+;; -----------------------------
+;; Helm performance + behavior
+;; -----------------------------
+(after! helm
+  ;; ----- Performance tuning -----
+  ;; Limit candidates fetched from each source (default is 100). Lower it on big projects.
+  (setq helm-candidate-number-limit 50)  ; try 50, raise if you want more results shown. :contentReference[oaicite:2]{index=2}
+
+  ;; Don't update candidate lists on every keystroke — waits after typing stops.
+  ;; Default historically has been very low (0.01). Increase to reduce CPU / lag when typing fast.
+  (setq helm-input-idle-delay 0.2)       ; try 0.15-0.4 — larger = less CPU, more "laggy" feel. :contentReference[oaicite:3]{index=3}
+
+  ;; Auto-resize helm window to a reasonable size (less flicker).
+  (setq helm-autoresize-max-height 40
+        helm-autoresize-min-height 10)
+  (helm-autoresize-mode 1)              ; enable autoresize. :contentReference[oaicite:4]{index=4}
+
+  ;; Skip "boring" files (e.g. .o, backups)
+  (setq helm-ff-skip-boring-files t)
+  ;; Optionally also skip git-ignored files — NOTE: can make some searches slower because git needs to be consulted.
+  (setq helm-ff-skip-git-ignored-files t) ; may slow some operations — see notes below. :contentReference[oaicite:5]{index=5}
+
+  ;; Add project dirs/patterns you always want hidden (tweak to taste)
+  (setq helm-boring-file-regexp-list
+        '("\\.git$" "node_modules" "dist/" "build/" "\\.class$" "\\.o$"))
+
+  ;; ---- Fuzzy / Ranking ----
+  ;; If you're using doom module +fuzzy (helm-flx), disabling it can sometimes improve perf on very large candidate sets.
+  (setq helm-flx-for-helm nil) ; disable flx if you notice slowness with fuzzy matching
+  )
+
+;; -----------------------------
+;; Keybindings: make Helm feel like your Ivy setup
+;; -----------------------------
+;; Map your Ivy keys (SPC v p / SPC v s) to Helm equivalents.
+(map! :leader
+      (:prefix ("v" . "Views/Completion")
+       :desc "Helm resume" "p" #'helm-resume
+       :desc "Helm mini (buffers+recentf)" "s" #'helm-mini))
+
+(map! :leader
+      :desc "M-x (helm)"      ":" #'helm-M-x
+      :desc "find file (helm)" "f f" #'helm-find-files
+      :desc "project files (helm)" "p f" #'helm-projectile-find-file
+      :desc "search buffer (helm-swoop)" "s s" #'helm-swoop) ;; if you use helm-swoop / helm-swiper
+
+#+end_src
 
 *** IVY PACKAGE
 Setup the ~ivy~ package for Emacs, generic completion mechanism. Implementing posframe for ivy, and the configuration documentation.
@@ -1499,7 +1567,7 @@ Available positions for the posframe implementation ~ivy-posframe-display-functi
 
 =NOTE:= If the setting for ~ivy-posframe-display~ is set to ~nil~ (false), anything that is set to ~ivy-display-function-fallback~ will just default to their normal position in Doom Emacs (usually a bottom split).  However, if this is set to ~t~ (true), then the fallback position will be centered in the window.
 
-#+begin_src emacs-lisp :tangle config.el
+#+begin_src emacs-lisp :tangle no
 (setq ivy-posframe-display-functions-alist
       '((swiper                     . ivy-posframe-display-at-point)
         (complete-symbol            . ivy-posframe-display-at-point)
@@ -1525,7 +1593,7 @@ Available positions for the posframe implementation ~ivy-posframe-display-functi
 | ivy-push-view   | /Push the Ivy view/   | SPC v p    |
 | ivy-switch-view | /Switch the Ivy view/ | SPC v s    |
 
-#+begin_src emacs-lisp :tangle config.el
+#+begin_src emacs-lisp :tangle no
 (map! :leader
       (:prefix ("v" . "Ivy")
        :desc "Ivy push view" "p" #'ivy-push-view
@@ -1680,9 +1748,9 @@ You can also hover over a module name or flag and press =K= (=C-c c k= for non-V
        :completion
        ;;company                        ; the ultimate code completion backend
        (corfu +orderless +icons)        ; complete with cap(f), cape and a flying feather!
-       ;;(helm +childframe +icons)      ; the *other* search engine for love and life
+       (helm +fuzzy +icons)      ; the *other* search engine for love and life
        ;;ido                            ; the other *other* search engine...
-       (ivy +icons +fuzzy +childframe +prescient)  ; a search engine for love and life
+       ;;(ivy +icons +fuzzy +childframe +prescient)  ; a search engine for love and life
        ;;vertico                        ; the search engine of the future
 #+end_src
 

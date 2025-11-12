@@ -52,7 +52,7 @@
 
 (package! bibtex-completion)
 (package! parsebib)
-(package! ivy-bibtex)
+;;(package! ivy-bibtex)
 
 (package! calfw)
 (package! calfw-org)
@@ -90,10 +90,18 @@
 (package! gptel-quick)
 (package! gptel-magit)
 
-(package! ivy-hydra)
-(package! ivy-posframe)
-(package! ivy-prescient)
-(package! nerd-icons-ivy-rich)
+(package! helm)
+(package! helm-company)
+(package! helm-c-yasnippet)
+(package! helm-descbinds)
+(package! helm-describe-modes)
+(package! helm-flx)
+(package! helm-icons)
+(package! helm-org)
+(package! helm-posframe)
+(package! helm-projectile)
+(package! helm-rg)
+(package! helm-swoop)
 
 (package! opencl-mode)
 (package! ccls)
@@ -150,7 +158,7 @@
 
 (package! lsp-mode)
 (package! lsp-ui)
-(package! lsp-ivy)
+;;(package! lsp-ivy)
 
 (package! evil-magit)
 (package! forge)

@@ -502,28 +502,51 @@
   (interactive "DChoose directory: ") ; Prompt for directory
   (dired dir))
 
-(setq ivy-posframe-display-functions-alist
-      '((swiper                     . ivy-posframe-display-at-point)
-        (complete-symbol            . ivy-posframe-display-at-point)
-        (counsel-M-x                . ivy-display-function-fallback)
-        (counsel-esh-history        . ivy-posframe-display-at-window-center)
-        (counsel-describe-function  . ivy-display-function-fallback)
-        (counsel-describe-variable  . ivy-display-function-fallback)
-        (counsel-find-file          . ivy-display-function-fallback)
-        (counsel-recentf            . ivy-display-function-fallback)
-        (counsel-register           . ivy-posframe-display-at-frame-bottom-window-center)
-        (dmenu                      . ivy-posframe-display-at-frame-top-center)
-        (nil                        . ivy-posframe-display))
-      ivy-posframe-height-alist
-      '((swiper . 20)
-        (dmenu . 20)
-        (t . 10)))
-(ivy-posframe-mode 1) ; 1 enables posframe-mode, 0 disables it.
+;; -----------------------------
+;; Helm performance + behavior
+;; -----------------------------
+(after! helm
+  ;; ----- Performance tuning -----
+  ;; Limit candidates fetched from each source (default is 100). Lower it on big projects.
+  (setq helm-candidate-number-limit 50)  ; try 50, raise if you want more results shown. :contentReference[oaicite:2]{index=2}
+
+  ;; Don't update candidate lists on every keystroke — waits after typing stops.
+  ;; Default historically has been very low (0.01). Increase to reduce CPU / lag when typing fast.
+  (setq helm-input-idle-delay 0.2)       ; try 0.15-0.4 — larger = less CPU, more "laggy" feel. :contentReference[oaicite:3]{index=3}
+
+  ;; Auto-resize helm window to a reasonable size (less flicker).
+  (setq helm-autoresize-max-height 40
+        helm-autoresize-min-height 10)
+  (helm-autoresize-mode 1)              ; enable autoresize. :contentReference[oaicite:4]{index=4}
+
+  ;; Skip "boring" files (e.g. .o, backups)
+  (setq helm-ff-skip-boring-files t)
+  ;; Optionally also skip git-ignored files — NOTE: can make some searches slower because git needs to be consulted.
+  (setq helm-ff-skip-git-ignored-files t) ; may slow some operations — see notes below. :contentReference[oaicite:5]{index=5}
+
+  ;; Add project dirs/patterns you always want hidden (tweak to taste)
+  (setq helm-boring-file-regexp-list
+        '("\\.git$" "node_modules" "dist/" "build/" "\\.class$" "\\.o$"))
+
+  ;; ---- Fuzzy / Ranking ----
+  ;; If you're using doom module +fuzzy (helm-flx), disabling it can sometimes improve perf on very large candidate sets.
+  (setq helm-flx-for-helm nil) ; disable flx if you notice slowness with fuzzy matching
+  )
+
+;; -----------------------------
+;; Keybindings: make Helm feel like your Ivy setup
+;; -----------------------------
+;; Map your Ivy keys (SPC v p / SPC v s) to Helm equivalents.
+(map! :leader
+      (:prefix ("v" . "Views/Completion")
+       :desc "Helm resume" "p" #'helm-resume
+       :desc "Helm mini (buffers+recentf)" "s" #'helm-mini))
 
 (map! :leader
-      (:prefix ("v" . "Ivy")
-       :desc "Ivy push view" "p" #'ivy-push-view
-       :desc "Ivy switch view" "s" #'ivy-switch-view))
+      :desc "M-x (helm)"      ":" #'helm-M-x
+      :desc "find file (helm)" "f f" #'helm-find-files
+      :desc "project files (helm)" "p f" #'helm-projectile-find-file
+      :desc "search buffer (helm-swoop)" "s s" #'helm-swoop) ;; if you use helm-swoop / helm-swiper
 
 (with-eval-after-load 'ox-latex
   (add-to-list 'org-latex-classes
