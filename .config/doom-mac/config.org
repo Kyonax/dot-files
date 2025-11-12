@@ -3,7 +3,7 @@
 #+AUTHOR: Cristian D. Moreno - Kyonax
 #+EMAIL: kyonax.corp@gmail.com
 #+DATE: June 20, 2025
-#+LAST_UPDATE: November 07, 2025
+#+LAST_UPDATE: November 12, 2025
 #+PROJECT: dot-files
 #+VERSION: v1.0
 #+KEYWORDS: emacs, docs, doom config
@@ -64,15 +64,15 @@ Example of Usage:
 #+begin_src emacs-lisp :tangle no :exports results :results value
 (let ((os (org-babel-ref-resolve "get-os-type")))
   (cond
-   ((member os '("linux" "mac"))
+   ((member os '("mac"))
     (string-trim (shell-command-to-string "hostname")))
+   ((member os '("linux"))
+    (string-trim
+     (shell-command-to-string "hostnamectl --static")))
    ((member os '("windows" "cygwin"))
     (or (getenv "COMPUTERNAME") "unknown-host"))
    (t "unknown-host")))
 #+end_src
-
-#+RESULTS: get-hostname
-: MacBook-Pro-de-COL-AE-052.local
 
 Example of Usage:
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "os") "config.el" "no")
@@ -952,6 +952,7 @@ Setup the ~org-agenda~ package to use it with the Org Mode. The Agenda is a node
 
 *Agenda File Linux Config:*
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
+(setq org-agenda-block-separator 175)
 (after! org
   (setq org-agenda-files '("~/.brain.d/roam-nodes/20240912084617-agenda.org")))
 
@@ -1090,6 +1091,7 @@ Setup the ~org-fancy-priorities~ package to stylize the priorities of the Org Fi
      (?B :foreground "#98be65" :weight regular)
      (?C :foreground "#c678dd" :weight regular))))
 #+end_src
+
 ***** ROAM
 Setup the ~org-roam~ package to use the ~brain~ notes.
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
@@ -1843,7 +1845,6 @@ You can also hover over a module name or flag and press =K= (=C-c c k= for non-V
        ;;collab            ; buffers with friends
        debugger            ; FIXME stepping through code, to help you add bugs
        ;;direnv
-       (docker +lsp +tree-sitter)
        editorconfig        ; let someone else argue about tabs vs spaces
        ;;ein               ; tame Jupyter notebooks with emacs
        (eval +overlay)     ; run code, run (also, repls)
@@ -1858,6 +1859,10 @@ You can also hover over a module name or flag and press =K= (=C-c c k= for non-V
        ;;tmux              ; an API for interacting with tmux
        tree-sitter         ; syntax and parsing, sitting in a tree...
        upload              ; map local to remote projects via ssh/ftp
+#+end_src
+
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
+       (docker +lsp +tree-sitter)
 #+end_src
 
 *** OS
@@ -1935,11 +1940,14 @@ You can also hover over a module name or flag and press =K= (=C-c c k= for non-V
        (sh +lsp)           ; she sells {ba,z,fi}sh shells on the C xor
        ;;sml
        ;;solidity          ; do you need a blockchain? No.
-       (swift +lsp +tree-sitter)               ; who asked for emoji variables?
        ;;terra             ; Earth and Moon in alignment for performance.
        (web +lsp +tree-sitter)               ; the tubes
        (yaml +lsp +tree-sitter)              ; JSON, but readable
        ;;zig               ; C, but simpler
+#+end_src
+
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
+       (swift +lsp +tree-sitter)               ; who asked for emoji variables?
 #+end_src
 
 *** EMAIL
