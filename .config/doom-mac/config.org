@@ -1460,7 +1460,7 @@ Setup the ~gptel~ package to use LLMs on Emacs.
              grok-3-latest)))
 #+end_src
 
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "not") "config.el" "no")
 (gptel-make-openai "xAI"
   :host "api.x.ai"
   :key (shell-command-to-string (format "pass show private_key/xai | tr -d '\n'"))
@@ -1481,6 +1481,49 @@ Setup the ~gptel~ package to use LLMs on Emacs.
              grok-3-latest)))
 
 (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
+#+end_src
+
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
+(setq gptel-backend
+      (gptel-make-openai
+       "Github Copilot Models"
+       :host "models.inference.ai.azure.com"
+       :key (string-trim (shell-command-to-string
+                          "pass show private_key/github-gpetel-editor"))
+       :endpoint "/chat/completions?api-version=2024-05-01-preview"
+       :stream t
+       :models '(codestral-2501
+                 grok-3
+                 phi-4-reasoning
+                 phi-4
+                 phi-4-mini-instruct
+                 mai-ds-r1
+                 gpt-4.1
+                 gpt-5)))
+
+;; Default model, e.g., OpenAI GPT-5
+(setq gptel-model 'openai-gpt-5)
+
+(defun my-gptel-switch-model (model-name)
+  "Switch GPTel model dynamically based on `model-name`."
+  (interactive
+   (list
+    (completing-read "Select model: " '(codestral-2501
+                                        grok-3
+                                        phi-4-reasoning
+                                        phi-4
+                                        phi-4-mini-instruct
+                                        mai-ds-r1
+                                        gpt-4.1
+                                        gpt-5))))
+  (setq gptel-model (intern model-name))
+  (message "Switched to model: %s" model-name))
+
+;; Optional key binding for quick model switching
+(global-set-key (kbd "C-c m") #'my-gptel-switch-model)
+
+;; Auto-scroll responses
+(add-hook 'gptel-post-stream-hook #'gptel-auto-scroll)
 #+end_src
 
 **** DIRECTIVEs CONFIG
