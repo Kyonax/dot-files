@@ -1185,7 +1185,7 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
 
 #+begin_src emacs-lisp :tangle config.el
 (map! :leader
-      (:prefix ("n D" . "Create Roam Nodes")
+      (:prefix ("n D" . "Create Roam Dailies")
        :desc "Daily Nodes - Yesterday" "Y" #'org-roam-dailies-capture-yesterday
        :desc "Daily Nodes - Today" "H" #'org-roam-dailies-capture-today
        :desc "Daily Nodes - Calendar" "C" #'org-roam-dailies-capture-date
@@ -1194,11 +1194,16 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
 
 #+begin_src emacs-lisp :tangle config.el
 (map! :leader
-      (:prefix ("n e" . "Find Roam Nodes")
+      (:prefix ("n e" . "Find Roam Dailies")
        :desc "Daily Nodes - Date" "d" #'org-roam-dailies-goto-date
        :desc "Daily Nodes - Yesterday" "Y" #'org-roam-dailies-goto-yesterday
        :desc "Daily Nodes - Today" "H" #'org-roam-dailies-goto-today
        :desc "Daily Nodes - Tomorrow" "T" #'org-roam-dailies-goto-tomorrow))
+
+(map! :leader
+      (:prefix ("n r" . "Find Roam Nodes")
+       :desc "Find Node in Brain" "f" #'org-roam-node-find
+       :desc "Refresh Nodes DB" "s" #'org-roam-db-sync))
 #+end_src
 
 - *Websocket Config:*
@@ -1502,7 +1507,7 @@ Setup the ~gptel~ package to use LLMs on Emacs.
                  gpt-5)))
 
 ;; Default model, e.g., OpenAI GPT-5
-(setq gptel-model 'openai-gpt-5)
+(setq gptel-model 'gpt-5)
 
 (defun my-gptel-switch-model (model-name)
   "Switch GPTel model dynamically based on `model-name`."
