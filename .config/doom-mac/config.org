@@ -954,7 +954,7 @@ Setup the ~org-agenda~ package to use it with the Org Mode. The Agenda is a node
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
 (setq org-agenda-block-separator 175)
 (after! org
-  (setq org-agenda-files '("~/.brain.d/roam-nodes/20240912084617-agenda.org")))
+  (setq org-agenda-files '("~/.brain.d/agenda/agenda.org")))
 
 (setq org-agenda-custom-commands
       '(("v" "A better agenda view"
@@ -998,7 +998,7 @@ Setup the ~org-agenda~ package to use it with the Org Mode. The Agenda is a node
 *Agenda File Windows Config:*
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
 (after! org
-  (setq org-agenda-files '("~/.brain.d/roam-nodes/2025-02-13-$S-work_s_org_agenda_file.org")))
+  (setq org-agenda-files '("~/.brain.d/agenda/agenda.org")))
 
 (setq org-agenda-custom-commands
       '(("v" "A better agenda view"
@@ -1097,81 +1097,88 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
 (defvar my-org-roam-capture-templates
   '(
-    ("d" "default" plain "%?"
-     :if-new (file+head "%<%Y-%m-%d-$S>-${slug}.org"
-                        "#+title: ${title}\n")
+    ("d" "Default" plain "%?"
+     :target (file+head kyo/org-roam-prompted-file "#+title: ${title}\n")
      :unnarrowed t)
-    ("s" "Not Time Stamp File" plain "%?"
-     :if-new (file+head "${slug}.org"
-                        "#+title: ${title}\n")
+
+    ("d" "New Index" plain "%?"
+     :target (file+head "#+title: ${title}\n")
      :unnarrowed t)
-    ("f" "New Feature Azure DevOps" plain
-     (file "~/.brain.d/roam-nodes/templates/NEWNodeTemplate.org")
-     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
-                        "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
+
+    ("f" "New Feature Azure DevOps" plain "%[~/.brain.d/templates/NEWNodeTemplate.org]"
+     :target (file+head kyo/org-roam-prompted-file "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
      :unnarrowed t)
-    ("i" "New Sentinel Inspection" plain
-     (file "~/.brain.d/roam-nodes/templates/NEWNodeSentinelInspection.org")
-     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
-                        "#+TITLE: Kyonax's Daily Sentinel Inspection ~ %<%d/%m/%Y> \n")
+
+    ("i" "New Sentinel Inspection" plain "%[~/.brain.d/templates/NEWNodeSentinelInspection.org]"
+     :target (file+head kyo/org-roam-prompted-file "#+TITLE: Kyonax's Daily Sentinel Inspection ~ %<%d/%m/%Y> \n")
      :unnarrowed t)
-    ("v" "New Invoice" plain
-     (file "~/.brain.d/roam-nodes/templates/NEWNodeInvoice.org")
-     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
-                        "#+TITLE: Invoice ${Client Name}\n#+AUTHOR: %^{Author | Cristian D. Moreno - Kyonax}\n")
+
+    ("v" "New Invoice" plain "%[~/.brain.d/templates/NEWNodeInvoice.org]"
+     :target (file+head kyo/org-roam-prompted-file "#+TITLE: Invoice ${Client Name}\n#+AUTHOR: %^{Author | Cristian D. Moreno - Kyonax}\n")
      :unnarrowed t)
-    ("p" "New PBI Azure DevOps" plain
-     (file "~/.brain.d/roam-nodes/templates/NEWNodeProject.org")
-     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
-                        "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
-     :unnarrowed t))
+
+    ("p" "New PBI Azure DevOps" plain "%[~/.brain.d/templates/NEWNodeProject.org]"
+     :target (file+head kyo/org-roam-prompted-file "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
+     :unnarrowed t)
+    )
   "My custom Org Roam personal capture templates.")
 #+end_src
 
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
 (defvar my-org-roam-capture-templates
   '(
-    ("d" "default" plain "%?"
-     :if-new (file+head "%<%Y-%m-%d-$S>-${slug}.org"
-                        "#+title: ${title}\n")
+    ("d" "Default" plain "%?"
+     :target (file+head kyo/org-roam-prompted-file "#+title: ${title}\n")
      :unnarrowed t)
-    ("s" "Not Time Stamp File" plain "%?"
-     :if-new (file+head "${slug}.org"
-                        "#+title: ${title}\n")
+
+    ("d" "New Index" plain "%?"
+     :target (file+head "#+title: ${title}\n")
      :unnarrowed t)
-    ("f" "New Feature Azure DevOps" plain
-     (file "~/.brain.d/roam-nodes/templates/NEWNodeTemplate.org")
-     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
-                        "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
+
+    ("f" "New Feature Azure DevOps" plain "%[~/.brain.d/templates/NEWNodeTemplate.org]"
+     :target (file+head kyo/org-roam-prompted-file "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
      :unnarrowed t)
-    ("i" "New Sentinel Inspection" plain
-     (file "~/.brain.d/roam-nodes/templates/NEWNodeSentinelInspection.org")
-     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
-                        "#+TITLE: Kyonax's Daily Sentinel Inspection ~ %<%d/%m/%Y> \n")
+
+    ("i" "New Sentinel Inspection" plain "%[~/.brain.d/templates/NEWNodeSentinelInspection.org]"
+     :target (file+head kyo/org-roam-prompted-file "#+TITLE: Kyonax's Daily Sentinel Inspection ~ %<%d/%m/%Y> \n")
      :unnarrowed t)
-    ("v" "New Invoice" plain
-     (file "~/.brain.d/roam-nodes/templates/NEWNodeInvoice.org")
-     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
-                        "#+TITLE: Invoice ${Client Name}\n#+AUTHOR: %^{Author | Cristian D. Moreno - Kyonax}\n")
+
+    ("v" "New Invoice" plain "%[~/.brain.d/templates/NEWNodeInvoice.org]"
+     :target (file+head kyo/org-roam-prompted-file "#+TITLE: Invoice ${Client Name}\n#+AUTHOR: %^{Author | Cristian D. Moreno - Kyonax}\n")
      :unnarrowed t)
-    ("p" "New PBI Azure DevOps" plain
-     (file "~/.brain.d/roam-nodes/templates/NEWNodeProject.org")
-     :if-new (file+head "%<%Y-%m-%d-%S>-${slug}.org"
-                        "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
-     :unnarrowed t))
+
+    ("p" "New PBI Azure DevOps" plain "%[~/.brain.d/templates/NEWNodeProject.org]"
+     :target (file+head kyo/org-roam-prompted-file "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
+     :unnarrowed t)
+    )
   "My custom Org Roam personal capture templates.")
 #+end_src
 
 #+begin_src emacs-lisp :tangle config.el
 (after! org-roam
-  :ensure t
-  :init
   (setq org-roam-v2-ack t)
-  :custom
   (setq org-roam-directory "~/.brain.d/roam-nodes")
   (setq org-roam-dailies-directory "~/.brain.d/agenda")
   (setq org-roam-completion-everywhere t)
-  (setq org-roam-capture-templates `,my-org-roam-capture-templates))
+  (setq org-roam-capture-templates my-org-roam-capture-templates))
+
+(defun kyo/org-roam-prompted-file ()
+  "Prompt for a subdirectory and title, return file path for a new Org-roam node."
+  (let* ((base-dir (expand-file-name "~/.brain.d/roam-nodes"))
+         (subdirs (seq-filter #'file-directory-p
+                              (directory-files base-dir t "^[^.]")))
+         (folder-names (mapcar #'file-name-nondirectory subdirs)))
+    (if folder-names
+        (let* ((selected (completing-read
+                          "Choose destination folder for new Org-roam node: "
+                          folder-names nil t))
+               (title (read-string "Node Title: "))
+               (slug (org-roam-node-slug
+                      (org-roam-node-create :title title)))
+               (date-str (format-time-string "%Y-%m-%d-%H%M%S"))
+               (filename (format "%s-%s.org" date-str slug)))
+          (expand-file-name filename (expand-file-name selected base-dir)))
+      (user-error "No folders found in %s. Create a subfolder first!" base-dir))))
 #+end_src
 
 - *Keybindings Org Roam Dailies*
@@ -1203,6 +1210,7 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
 (map! :leader
       (:prefix ("n r" . "Find Roam Nodes")
        :desc "Find Node in Brain" "f" #'org-roam-node-find
+       :desc "Update brain destination" "d" #'kyo/org-roam-node-directory
        :desc "Refresh Nodes DB" "s" #'org-roam-db-sync))
 #+end_src
 
@@ -1218,6 +1226,14 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
           org-roam-ui-follow t
           org-roam-ui-update-on-save t
           org-roam-ui-open-on-start t))
+#+end_src
+
+- *Org Contacts:*
+#+begin_src emacs-lisp :tangle config.el
+(use-package org-contacts
+  :after org
+  :config
+  (setq org-contacts-files '("~/.config/doom/contacts.org")))
 #+end_src
 
 **** RAINBOW-MODE
@@ -1507,7 +1523,7 @@ Setup the ~gptel~ package to use LLMs on Emacs.
                  gpt-5)))
 
 ;; Default model, e.g., OpenAI GPT-5
-(setq gptel-model 'gpt-5)
+(setq gptel-model 'gpt-4.1)
 
 (defun my-gptel-switch-model (model-name)
   "Switch GPTel model dynamically based on `model-name`."
