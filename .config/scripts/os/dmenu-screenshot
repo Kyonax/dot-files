@@ -1,0 +1,124 @@
+#!/bin/bash
+
+# === CONFIG ===
+SAVE_DIR="$HOME/Pictures/Screenshots"
+DMENU_CMD=(dmenu -c -l 10 -i \
+    -p "Screenshot mode:")
+SHUTTER_SOUND="/usr/share/sounds/freedesktop/stereo/camera-shutter.oga"
+ICON_PATH="/home/kyonax/.config/dunst/fontawesome/svg/camera.svg"
+
+# Dunst notification configuration for screenshot
+DUNST_CONFIG=(
+    "-a" "screenshot"           # Application name
+    "-u" "low"                   # Urgency level
+    "-r" "9992"                  # Replacement ID
+    "-I" "$ICON_PATH"            # Icon path
+    "-t" "3000"                  # Timeout in ms
+    "-h" "string:bgcolor:#000000" # Background color
+    "-h" "string:fgcolor:#f9cd26" # Text color
+    "-h" "string:frcolor:#4d4d4d" # Frame color
+)
+
+# Ensure save directory exists
+mkdir -p "$SAVE_DIR"
+
+# Function to play shutter sound
+play_shutter() {
+    if [ -f "$SHUTTER_SOUND" ]; then
+        paplay "$SHUTTER_SOUND" &
+    fi
+}
+
+# Function for notification
+notify_screenshot() {
+    local title="$1"
+    local message="$2"
+
+    dunstify "${DUNST_CONFIG[@]}" "$title" "$message"
+}
+
+# === SCREENSHOT FUNCTIONS ===
+
+# Capture full screen
+full_capture() {
+    local file="$SAVE_DIR/$(date +'%Y-%m-%d-%H-%M-%S-full.png')"
+    if scrot "$file"; then
+        play_shutter
+        notify_screenshot "Screenshot saved" "Full screen: ${file##*/}"
+        echo "$file"
+    else
+        notify_screenshot "Screenshot failed" "Could not capture full screen"
+        return 1
+    fi
+}
+
+# Capture selected area
+select_capture() {
+    local file="$SAVE_DIR/$(date +'%Y-%m-%d-%H-%M-%S-selected.png')"
+    if scrot -s "$file"; then
+        play_shutter
+        notify_screenshot "Screenshot saved" "Selected area: ${file##*/}"
+        echo "$file"
+    else
+        notify_screenshot "Selection canceled" "Area selection aborted"
+        return 1
+    fi
+}
+
+# Capture active window
+window_capture() {
+    local file="$SAVE_DIR/$(date +'%Y-%m-%d-%H-%M-%S-window.png')"
+    if scrot -u "$file"; then
+        play_shutter
+        notify_screenshot "Screenshot saved" "Active window: ${file##*/}"
+        echo "$file"
+    else
+        notify_screenshot "Screenshot failed" "Could not capture active window"
+        return 1
+    fi
+}
+
+# Capture full screen with delay
+delayed_capture() {
+    local file="$SAVE_DIR/$(date +'%Y-%m-%d-%H-%M-%S-delayed.png')"
+    if scrot -d 5 "$file"; then
+        play_shutter
+        notify_screenshot "Screenshot saved" "Full screen (5s delay): ${file##*/}"
+        echo "$file"
+    else
+        notify_screenshot "Screenshot failed" "Could not capture delayed screenshot"
+        return 1
+    fi
+}
+
+# === MAIN ===
+
+# Options for dmenu
+options=(
+    "Full screen capture"
+    "Select area to capture"
+    "Capture active window"
+    "Full screen with 5s delay"
+)
+
+# Show menu and get selection
+choice=$(printf "%s\n" "${options[@]}" | "${DMENU_CMD[@]}")
+
+# Execute based on choice
+case "$choice" in
+    "Full screen capture")
+        full_capture
+        ;;
+    "Select area to capture")
+        select_capture
+        ;;
+    "Capture active window")
+        window_capture
+        ;;
+    "Full screen with 5s delay")
+        delayed_capture
+        ;;
+    *)
+        exit 1
+        ;;
+esac

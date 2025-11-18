@@ -1,0 +1,68 @@
+#!/bin/bash
+## Bluetooth Device - bluez
+## USB Device - USB
+## KZ Device - analog
+
+SINKS=$(pactl list short sinks)
+ICONS_PATH="/home/kyonax/.config/dunst/fontawesome/svg/"
+
+# Common Dunst styling options
+COMMON_DUNST_OPTS=(
+    "-h" "string:bgcolor:#000000"   # Background color (black)
+    "-h" "string:fgcolor:#f9cd26"   # Text color (golden yellow)
+    "-h" "string:frcolor:#4d4d4d"   # Frame color (dark gray)
+    "-h" "string:hlcolor:#f9cd26"   # Progress bar color (golden yellow)
+)
+
+if echo "$SINKS" | grep -q "USB"; then
+    SINK=$(pactl list short sinks | grep "USB" | sed -e 's,^\([1-9][0-9]*\)[^0-9].*,\1,' | head -n 1)
+elif echo "$SINKS" | grep -q "analog"; then
+    SINK=$(pactl list short sinks | grep "analog" | sed -e 's,^\([1-9][0-9]*\)[^0-9].*,\1,' | head -n 1)
+elif echo "$SINKS" | grep -q "bluez"; then
+    SINK=$(pactl list short sinks | grep "bluez" | sed -e 's,^\([1-9][0-9]*\)[^0-9].*,\1,' | head -n 1)
+else
+    SINK=$(pactl list short sinks | grep "USB" | sed -e 's,^\([1-9][0-9]*\)[^0-9].*,\1,' | head -n 1)
+    dunstify -a "changevolume" -u low -r 9992 -t 3000 "${COMMON_DUNST_OPTS[@]}" \
+        "None of the specified device types (USB, analog, bluez) are in use. Using 'USB' by default."
+fi
+
+if [ "$SINK" ]; then
+    function send_notification() {
+        CURRENT_VOLUME=$(pactl get-sink-volume "$SINK" | grep -oE '[0-9]+%' | head -n1 | sed 's/%//')
+        dunstify -a "changevolume" -u low -r 9991 -t 2000 "${COMMON_DUNST_OPTS[@]}" \
+            -h "int:value:$CURRENT_VOLUME" \
+            -I "${ICONS_PATH}volume-$1.svg" \
+            "Volume: ${CURRENT_VOLUME}%"
+    }
+
+    case $1 in
+    up)
+        pactl set-sink-volume "$SINK" +5%
+        send_notification "up"
+        ;;
+    down)
+        pactl set-sink-volume "$SINK" -5%
+        send_notification "down"
+        ;;
+    mute)
+        pactl set-sink-mute "$SINK" toggle
+        IS_MUTE=$(pactl get-sink-mute "$SINK" | sed -e 's/^Mute: //')
+
+        if [ "$IS_MUTE" = 'yes' ]; then
+            dunstify -a "changevolume" -u low -r 9991 -t 2000 "${COMMON_DUNST_OPTS[@]}" \
+                -I "${ICONS_PATH}volume-mute.svg" \
+                "Device is now Muted"
+        else
+            send_notification "up"
+        fi
+        ;;
+    esac
+else
+    # Critical error styling (override common colors)
+    dunstify -a "system_error" -u critical -r 9993 -t 4000 \
+        -h "string:bgcolor:#2d1a1a" \
+        -h "string:fgcolor:#ff5555" \
+        -h "string:frcolor:#ff0000" \
+        -h "string:hlcolor:#ff5555" \
+        "The Output Device does not exist!"
+fi

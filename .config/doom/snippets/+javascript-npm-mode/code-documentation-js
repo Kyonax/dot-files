@@ -1,0 +1,67 @@
+# -*- mode: snippet -*-
+# name: js-file-documentation
+# key: _jsfd
+# group: Documentation
+# --
+/**
+ * @file `(file-name-nondirectory (buffer-file-name))` - ${2:TitleOfFile}
+ *
+ * ${3:DescriptionOfFile}
+ *
+ * node.js-`(string-trim(shell-command-to-string "node --version | head -n 1"))`
+ *
+ * @author ${4:Cristian Moreno (Kyonax)}
+ * @contact ${5:iamkyo@kyo.wtf}
+ * @date `(format-time-string "%Y-%m-%d")`
+ *
+ * Code Guidelines :: @CCSv0.1
+ * More details: https://code-guidelines.cybercodesyndicate.org
+ * - Tabs only—no spaces.
+ * - Naming:
+ *   - snake_case for variables/methods.
+ *   - _private_method() for private methods (underscore prefix).
+ *   - UPPER_SNAKE_CASE for constants (in constant files).
+ *   - kebab-case for file names (e.g., file-example.js).
+ * - Meaningful names—fetch_user_data() over doThing().
+ *
+ * `(let* ((repo-root (string-trim (shell-command-to-string "git rev-parse --show-toplevel")))
+         (repo-url (when (not (string-empty-p repo-root))
+                   (shell-command-to-string (format "git -C %s config --get remote.origin.url" repo-root)))))
+    (if (string-empty-p repo-root)
+        (message "Not inside a Git repository")
+    (if (string-empty-p (string-trim repo-url))
+        (message "No remote URL set for the repository")
+    (message "Repository-URL\n* %s" (string-trim repo-url)))))
+ `
+`(let ((import-text yas-selected-text)
+      (lines)
+      (formatted-text '()))
+  (if (not import-text)
+      "*"
+    (setq lines (split-string import-text "\n"))
+    (push "*\n* @dependencies" formatted-text)
+    (dolist (line lines)
+      (cond
+       ((string-match "import \\(?:{ \\([^}]+\\) }\\|\\([^ ]+\\)\\) from \"\\([^\"]+\\)\";" line)
+        (let ((variables (match-string 1 line))
+              (path (match-string 3 line)))
+          (if variables
+              (dolist (var (split-string variables ","))
+                (push (format " * - %s from \"%s\"" (string-trim var) path) formatted-text))
+            (push (format " * - %s from \"%s\"" (match-string 2 line) path) formatted-text))))
+       ((string-match "\\(const\\|let\\|var\\) {\\([^}]+\\)} = require(\"\\([^\"]+\\)\");" line)
+        (let ((variables (match-string 2 line))
+              (path (match-string 3 line)))
+          (dolist (var (split-string variables ","))
+            (push (format " * - %s from \"%s\"" (string-trim var) path) formatted-text))))
+       ((string-match "\\(const\\|let\\|var\\) \\([^ ]+\\) = require(\"\\([^\"]+\\)\");" line)
+        (let ((variable (match-string 2 line))
+              (path (match-string 3 line)))
+          (push (format " * - %s from \"%s\"" variable path) formatted-text)))))
+    (push "*" formatted-text)
+    (mapconcat 'identity (nreverse formatted-text) "\n")))`
+ * @usage
+ * ${6:UsageOfThisFile}
+ */
+`(yas-selected-text)`
+$0

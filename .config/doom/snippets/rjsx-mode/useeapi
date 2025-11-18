@@ -1,0 +1,18 @@
+# -*- mode: snippet -*-
+# name: useEffect (fetch API endpoint)
+# key: useEffectApi
+# --
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const response = await fetch('${1:/api/endpoint}');
+      const data = await response.json();
+      console.log(data);
+    } catch (error) {
+      console.error(":: FETCH ERROR:", error);
+    }
+  };
+
+  fetchData();
+}, []);
+$0

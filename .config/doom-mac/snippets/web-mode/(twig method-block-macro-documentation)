@@ -1,0 +1,15 @@
+# -*- mode: snippet -*-
+# name: (twig method-block-macro documentation)
+# key: tmethoddoc
+# group: Documentation
+# --
+{#
+    ${1:Method?}: ${2:NameOf}
+  -------------------------------------------------------
+    Purpose: ${3:SmallDescription}
+
+    Params:
+        - ${4:- nameOf \{Type\} Description}
+
+    Returns: ${5:ReturnDescription}
+    Usage: ${6:ExampleUsage} #}

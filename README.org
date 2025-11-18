@@ -1,0 +1,15 @@
+#+TITLE: DOT FILES REPO
+#+SUBTITLE: My Config Files
+#+AUTHOR: Cristian D. Moreno - Kyonax
+#+DATE: 2025-02-12
+#+AUTO_TANGLE: nil
+#+LAST_UPDATE: Feb 12, 2025
+#+VERSION: v0.1
+
+This DotFiles are based on my custom and personal Configuration Files, focused on be used on all the OS Devices that I ussually use.
+
+* TABLE OF CONTENTs :toc:
+- [[#config][CONFIG]]
+
+* CONFIG
+Still Working on this.

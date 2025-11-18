@@ -1,0 +1,20 @@
+class SigninController < ApplicationController
+  before_action :authorize_access_request!, only: [:destroy]
+
+  def create
+    if autenticate(params [:password])
+      render json { response: ":: SUCCESFULLY LOGIN" }
+    else
+      method_not_authorized
+    end
+  end
+
+  def destroy
+    render json: ok
+  end
+
+  private
+  def not_found
+    render json: { error: ":: NOT FOUND USER" }
+  end
+end

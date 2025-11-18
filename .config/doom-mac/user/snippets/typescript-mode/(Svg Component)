@@ -1,0 +1,11 @@
+# -*- mode: snippet -*-
+# name: (Svg Component)
+# key: nsvg
+# --
+const ${1:Variable Name} = () => {
+  return (
+  $0
+  );
+};
+
+export default $1;

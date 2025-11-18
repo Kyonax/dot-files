@@ -1,0 +1,13 @@
+# -*- mode: snippet -*-
+# name: (axios endpoint)
+# key: axiosEndpoint
+# --
+const ${1:endpoint} = axios.create({
+  baseURL: "${2:path_url}",
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+});
+
+export default $1;

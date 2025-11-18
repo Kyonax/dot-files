@@ -1,0 +1,18 @@
+# -*- mode: snippet -*-
+# name: (org default init)
+# key: org-doc
+# --
+#+TITLE: $1
+#+SUBTITLE: $2
+#+AUTHOR: ${3:Cristian D. Moreno - Kyonax}
+#+DATE: `(format-time-string "%Y-%m-%d")`
+${4:#+PROPERTY: header-args :tangle config.el}
+#+AUTO_TANGLE: ${5:t}
+#+LAST_UPDATE: `(format-time-string "%b %d, %Y")`
+#+VERSION: ${6:v0.1}
+
+${7:Description Of File}
+
+* TABLE OF CONTENTs :toc:
+
+* $0

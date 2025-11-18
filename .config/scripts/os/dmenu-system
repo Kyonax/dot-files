@@ -1,0 +1,101 @@
+#!/bin/bash
+
+# === CONFIG ===
+DMENU_CMD=(dmenu -c -l 10 -i \
+    -p "System action:")
+
+# Dunst notification configuration
+DUNST_CONFIG=(
+    "-a" "system-menu"         # Application name
+    "-u" "normal"              # Urgency level
+    "-r" "9993"                # Replacement ID
+    "-t" "3000"                # Timeout in ms
+    "-h" "string:bgcolor:#000000" # Background color
+    "-h" "string:fgcolor:#f9cd26" # Text color
+    "-h" "string:frcolor:#4d4d4d" # Frame color
+)
+
+# Icons path
+ICON_PATH="/home/kyonax/.config/dunst/fontawesome/svg"
+
+# Function for notification
+notify_action() {
+    local title="$1"
+    local message="$2"
+    local icon="$3"
+
+    dunstify "${DUNST_CONFIG[@]}" -I "$icon" "$title" "$message"
+}
+
+# Function to confirm action
+confirm_action() {
+    local action="$1"
+    local message="$2"
+    local icon="$3"
+
+    # Ask for confirmation
+    confirm=$(printf "No\nYes" | dmenu -c -i -fn "SpaceMono Nerd Font Mono-12" \
+        -nb "#000000" -nf "#4d4d4d" -sb "#f9cd26" -sf "#000000" \
+        -p "Confirm $action?")
+
+    if [ "$confirm" = "Yes" ]; then
+        notify_action "$action initiated" "$message" "$icon"
+        return 0
+    else
+        notify_action "Action canceled" "$action was not performed" "$ICON_PATH/times-circle.svg"
+        return 1
+    fi
+}
+
+# === MAIN ===
+
+# Options for dmenu
+options=(
+    "Lock screen"
+    "Suspend"
+    "Hibernate"
+    "Logout"
+    "Reboot"
+    "Shutdown"
+)
+
+# Show menu and get selection
+choice=$(printf "%s\n" "${options[@]}" | "${DMENU_CMD[@]}")
+
+# Execute based on choice
+case "$choice" in
+    "Lock screen")
+        notify_action "Locking screen" "Screen will be locked" "$ICON_PATH/lock.svg"
+        # Replace with your locker command (e.g., i3lock, swaylock)
+        i3lock -c 000000 &
+        ;;
+    "Suspend")
+        if confirm_action "suspend" "System will go to sleep" "$ICON_PATH/bed.svg"; then
+            systemctl suspend
+        fi
+        ;;
+    "Hibernate")
+        if confirm_action "hibernate" "System will hibernate" "$ICON_PATH/snowflake.svg"; then
+            systemctl hibernate
+        fi
+        ;;
+    "Logout")
+        if confirm_action "logout" "You will be logged out" "$ICON_PATH/sign-out-alt.svg"; then
+            # Replace with your desktop environment's logout command
+            pkill -u "$USER"
+        fi
+        ;;
+    "Reboot")
+        if confirm_action "reboot" "System will restart" "$ICON_PATH/redo.svg"; then
+            systemctl reboot
+        fi
+        ;;
+    "Shutdown")
+        if confirm_action "shutdown" "System will power off" "$ICON_PATH/power-off.svg"; then
+            systemctl poweroff
+        fi
+        ;;
+    *)
+        exit 1
+        ;;
+esac

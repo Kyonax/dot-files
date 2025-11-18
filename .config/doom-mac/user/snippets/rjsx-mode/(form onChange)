@@ -1,0 +1,5 @@
+# -*- mode: snippet -*-
+# name: (form onChange)
+# key: formOnChange
+# --
+onChange={(e) => ${1:name_of_set}({ ...form, ${2:parameter}: e.target.value })}

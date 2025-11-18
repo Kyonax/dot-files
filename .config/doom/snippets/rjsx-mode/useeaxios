@@ -1,0 +1,20 @@
+# -*- mode: snippet -*-
+# name: useEffect (axios API call)
+# key: useEffectAxios
+# --
+useEffect(() => {
+  const fetchData = async () => {
+    try {
+      const response = await axios.get('${1:/api/endpoint}'${2:, {
+        headers: {}
+      }});
+      const data = response.data;
+      console.log(data);
+    } catch (error) {
+      console.error(":: AXIOS ERROR:", error);
+    }
+  };
+
+  fetchData();
+}, []);
+$0

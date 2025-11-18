@@ -1,0 +1,25 @@
+#+AUTHOR: Cristian D. Moreno - Kyonax
+#+TITLE: My Contacts Details
+
+* Cristian D. Moreno :personal:
+:PROPERTIES:
+:EMAIL: kyonax.corp@gmail.com
+:PHONE: +573022539479
+:MOBILE: +573022539479
+:ADDRESS: Calle 8 Sur #41-100, Torre 6 Apt 301, Hacienda Rosablanca
+:BIRTHDAY: 2000-07-31
+:COMPANY: Agile Engine
+:POSITION: Senior Full-Stack Engineer
+:TWITTER: @kyonax_on_tech
+:GITHUB: https://github.com/kyonax
+:LINKEDIN: https://linkedin.com/in/kyonax
+:WEBSITE: https://kyonax.github.io
+:END:
+* Paula A. Cruz :personal:
+:PROPERTIES:
+:EMAIL: pcruzg@gmail.com
+:PHONE: +573148780886
+:MOBILE: +57348780886
+:ADDRESS: Calle 8 Sur #41-100, Torre 6 Apt 301, Hacienda Rosablanca
+:BIRTHDAY: 2000-07-30
+:END:

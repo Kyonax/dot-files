@@ -1,0 +1,54 @@
+# ~/.config/starship.toml
+
+# Prompt format
+format = 'kyo@madison-reed $all$directory$character:: '
+
+[character]
+success_symbol = "ø "
+error_symbol   = "ø "
+vicmd_symbol   = "ø "
+
+[directory]
+truncation_length = 3
+truncation_symbol = "…/"
+read_only = "🔒"
+
+[git_branch]
+symbol = "🌱 "
+format = "[$symbol$branch]($style) "
+truncation_length = 12
+
+[git_status]
+conflicted = "≠"
+ahead     = "↑"
+behind    = "↓"
+staged    = "●"
+modified  = "✚"    # <-- was 'not_staged' before (use 'modified')
+untracked = "…"
+stashed   = "💾"
+renamed   = "»"
+deleted   = "✖"
+
+[nodejs]
+symbol = "⬢ "
+format = "[$symbol$version]($style) "
+style = "bold green"
+
+[python]
+symbol = "🐍 "
+format = "[$symbol$version]($style) "
+style = "bold yellow"
+
+[time]
+disabled = false
+format = "[$time]($style) "
+style = "bold blue"
+time_format = "%H:%M:%S"
+# If you want to display UTC or a fixed offset use utc_time_offset.
+# For local time, remove the line below or set it to "local".
+# utc_time_offset = "local"   # or e.g. "-5"
+
+[status]
+format = "[$status]($style) "
+success_style = "green"   # <-- renamed from your old 'style_success'
+failure_style = "red"     # <-- renamed from your old 'style_failure'

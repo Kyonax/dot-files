@@ -1,0 +1,68 @@
+#!/bin/bash
+
+# === CONFIG ===
+FOLDER="$HOME/.brain.d/roam-nodes"
+SOCKET_NAME="local"
+DMENU_CMD=(dmenu -c -l 10 -i \
+    -p "Choose note or create new:")
+
+# === FUNCTIONS ===
+
+# Check if Emacs server is running, if not start it
+check_emacs() {
+    if ! emacsclient --socket-name="$SOCKET_NAME" --eval "t" >/dev/null 2>&1; then
+        echo "Emacs server '$SOCKET_NAME' not found — starting it..."
+        emacs --daemon="$SOCKET_NAME"
+        sleep 1
+    fi
+}
+
+# Ensure notes folder exists
+init_folder() {
+    mkdir -p "$FOLDER"
+}
+
+# Check if GUI frames exist for the server
+gui_frames_exist() {
+    emacsclient --socket-name="$SOCKET_NAME" --eval \
+        '(length (filter (lambda (f) (not (eq (framep f) t)) (frame-list)))' \
+        2>/dev/null | grep -qv '^0$'
+}
+
+# === MAIN ===
+
+init_folder
+check_emacs
+
+# Get note list sorted by most recent first
+note_list=$(find "$FOLDER" -maxdepth 1 -type f -name "*.org" \
+    -printf "%T@ %f\n" 2>/dev/null | sort -nr | cut -d' ' -f2-)
+
+choice=$(printf "New\n%s" "$note_list" | "${DMENU_CMD[@]}")
+
+case "$choice" in
+    New)
+        if gui_frames_exist; then
+            # Focus existing GUI frame and open new node
+            emacsclient --socket-name="$SOCKET_NAME" \
+                --eval "(select-frame-set-input-focus (selected-frame))" \
+                --eval "(org-roam-node-find)" >/dev/null 2>&1 &
+        else
+            # Create new GUI frame
+            emacsclient --socket-name="$SOCKET_NAME" -c \
+                --eval "(org-roam-node-find)" >/dev/null 2>&1 &
+        fi
+        ;;
+    *.org)
+        if gui_frames_exist; then
+            # Focus existing GUI frame and open file
+            emacsclient --socket-name="$SOCKET_NAME" \
+                --eval "(select-frame-set-input-focus (selected-frame))" \
+                --eval "(find-file \"$FOLDER/$choice\")" >/dev/null 2>&1 &
+        else
+            # Create new GUI frame
+            emacsclient --socket-name="$SOCKET_NAME" -c "$FOLDER/$choice" >/dev/null 2>&1 &
+        fi
+        ;;
+    *) exit ;;
+esac

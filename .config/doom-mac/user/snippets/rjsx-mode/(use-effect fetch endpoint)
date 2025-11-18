@@ -1,0 +1,12 @@
+# -*- mode: snippet -*-
+# name: (use-effect fetch endpoint)
+# key: useeapi
+# --
+useEffect(() => {
+  fetch($1{"Endpoint Api"})
+    .then((res) => res.json())
+    .then((data) => {
+      console.log(data); $0
+    })
+    .catch((error) => console.error(":: ERROR:", error));
+}, []);
