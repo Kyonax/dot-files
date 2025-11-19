@@ -261,6 +261,11 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 (package! evil-nerd-commenter)
 #+end_src
 
+*** EXEC PATH FROM SHELL
+#+begin_src emacs-lisp :tangle packages.el
+(package! exec-path-from-shell)
+#+end_src
+
 *** FLX
 #+begin_src emacs-lisp :tangle packages.el
 (package! flx)
@@ -514,6 +519,15 @@ Setup the ~bookmarks~ for the editor.
 Enable the usage of ~editorconfig~ package. Consistency while develop [[https://github.com/editorconfig/editorconfig-emacs#readme][Read More]].
 #+begin_src emacs-lisp :tangle config.el
 (setq +file-templates-dir (expand-file-name "templates" doom-user-dir))
+(setq require-final-newline t)
+(setq mode-require-final-newline t)
+(setq +format-with 'prettier)
+
+(when (memq window-system '(mac ns x))
+  (exec-path-from-shell-initialize)
+  (exec-path-from-shell-copy-envs '("PATH")))
+
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
 
 (use-package editorconfig
   :ensure t
