@@ -1,0 +1,21 @@
+BEGIN:VCARD
+VERSION:3.0
+N:D. Moreno;Cristian;;;
+FN:Cristian D. Moreno
+EMAIL:kyonax.corp@gmail.com
+ADR:;;Calle 8 Sur #41-100;Torre 6 Apt 301;Hacienda Rosablanca
+TEL:+573022539479
+BDAY:2000-07-31
+CATEGORIES:personal
+END:VCARD
+
+BEGIN:VCARD
+VERSION:3.0
+N:A. Cruz;Paula;;;
+FN:Paula A. Cruz
+EMAIL:pcruzg@gmail.com
+ADR:;;Calle 8 Sur #41-100;Torre 6 Apt 301;Hacienda Rosablanca
+TEL:+573148780886
+BDAY:2000-07-30
+CATEGORIES:personal
+END:VCARD

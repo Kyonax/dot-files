@@ -6,6 +6,7 @@
 :EMAIL: kyonax.corp@gmail.com
 :PHONE: +573022539479
 :MOBILE: +573022539479
+:NICK: Kyonax
 :ADDRESS: Calle 8 Sur #41-100, Torre 6 Apt 301, Hacienda Rosablanca
 :BIRTHDAY: 2000-07-31
 :COMPANY: Agile Engine

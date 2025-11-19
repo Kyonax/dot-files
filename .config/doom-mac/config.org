@@ -1094,63 +1094,32 @@ Setup the ~org-fancy-priorities~ package to stylize the priorities of the Org Fi
 
 ***** ROAM
 Setup the ~org-roam~ package to use the ~brain~ notes.
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
+#+begin_src emacs-lisp :tangle config.el
 (defvar my-org-roam-capture-templates
   '(
     ("d" "Default" plain "%?"
-     :target (file+head kyo/org-roam-prompted-file "#+title: ${title}\n")
+     :target (file+head kyo/org-roam-prompted-file "#+TITLE: ${title}\n")
      :unnarrowed t)
 
-    ("d" "New Index" plain "%?"
-     :target (file+head "#+title: ${title}\n")
+    ("x" "New Index" plain "%?"
+     :target (file+head "%<%Y-%m-%d>-${slug}.org" "#+TITLE: ${The Index Title}\n#+AUTHOR: %(user-full-name)\n#+EMAIL: %(eval user-mail-address)\n#+FILETAGS: %^{Filetags}")
      :unnarrowed t)
 
-    ("f" "New Feature Azure DevOps" plain "%[~/.brain.d/templates/NEWNodeTemplate.org]"
-     :target (file+head kyo/org-roam-prompted-file "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
+    ("i" "New Sentinel Inspection" plain "%[~/.brain.d/templates/new-node-sentinel-inspection.org]"
+     :target (file kyo/org-roam-prompted-file)
      :unnarrowed t)
 
-    ("i" "New Sentinel Inspection" plain "%[~/.brain.d/templates/NEWNodeSentinelInspection.org]"
-     :target (file+head kyo/org-roam-prompted-file "#+TITLE: Kyonax's Daily Sentinel Inspection ~ %<%d/%m/%Y> \n")
+    ("v" "New Invoice" plain "%[~/.brain.d/templates/new-node-invoice.org]"
+     :target (file kyo/org-roam-prompted-file)
      :unnarrowed t)
 
-    ("v" "New Invoice" plain "%[~/.brain.d/templates/NEWNodeInvoice.org]"
-     :target (file+head kyo/org-roam-prompted-file "#+TITLE: Invoice ${Client Name}\n#+AUTHOR: %^{Author | Cristian D. Moreno - Kyonax}\n")
+    ("p" "New Jira Ticket" plain "%[~/.brain.d/templates/new-node-project.org]"
+     :target (file kyo/org-roam-prompted-file)
      :unnarrowed t)
 
-    ("p" "New PBI Azure DevOps" plain "%[~/.brain.d/templates/NEWNodeProject.org]"
-     :target (file+head kyo/org-roam-prompted-file "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
-     :unnarrowed t)
-    )
-  "My custom Org Roam personal capture templates.")
-#+end_src
-
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
-(defvar my-org-roam-capture-templates
-  '(
-    ("d" "Default" plain "%?"
-     :target (file+head kyo/org-roam-prompted-file "#+title: ${title}\n")
-     :unnarrowed t)
-
-    ("d" "New Index" plain "%?"
-     :target (file+head "#+title: ${title}\n")
-     :unnarrowed t)
-
-    ("f" "New Feature Azure DevOps" plain "%[~/.brain.d/templates/NEWNodeTemplate.org]"
-     :target (file+head kyo/org-roam-prompted-file "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
-     :unnarrowed t)
-
-    ("i" "New Sentinel Inspection" plain "%[~/.brain.d/templates/NEWNodeSentinelInspection.org]"
-     :target (file+head kyo/org-roam-prompted-file "#+TITLE: Kyonax's Daily Sentinel Inspection ~ %<%d/%m/%Y> \n")
-     :unnarrowed t)
-
-    ("v" "New Invoice" plain "%[~/.brain.d/templates/NEWNodeInvoice.org]"
-     :target (file+head kyo/org-roam-prompted-file "#+TITLE: Invoice ${Client Name}\n#+AUTHOR: %^{Author | Cristian D. Moreno - Kyonax}\n")
-     :unnarrowed t)
-
-    ("p" "New PBI Azure DevOps" plain "%[~/.brain.d/templates/NEWNodeProject.org]"
-     :target (file+head kyo/org-roam-prompted-file "#+TITLE: ${title}\n#+DESCRIPTION: %^{Description}\n#+FILETAGS: %^{File Tags}\n#+AUTHOR: %^{Author}\n")
-     :unnarrowed t)
-    )
+    ("c" "New Doc" plain "%[~/.brain.d/templates/new-node-doc.org]"
+     :target (file kyo/org-roam-prompted-file)
+     :unnarrowed t))
   "My custom Org Roam personal capture templates.")
 #+end_src
 
@@ -2037,38 +2006,28 @@ You can also hover over a module name or flag and press =K= (=C-c c k= for non-V
 
 * CUSTOM FUNCTIONs
 ** CREATE INVOICE NUMBER
-#+begin_src emacs-lisp :tangle no
-(defun kyo/create-invoice-number (&optional dir invoice-paths)
-  "Search for invoice files in DIR or INVOICE-PATHS, count them,
-   and return the next invoice number formatted with the current date.
-
-   DIR is the directory to search for invoice files. If not provided,
-   it defaults to the current directory.
-
-   INVOICE-PATHS is a list of file paths to check for invoice files.
-   If provided, it is used instead of searching a directory.
-
-   The next invoice number is based on the quantity of matched files
-   with 'invoice' in their names."
-  (let* ((current-year (format-time-string "%Y"))
+#+begin_src emacs-lisp :tangle config.el
+(defun kyo/create-invoice-number ()
+  "Return the next invoice number based on how many 'invoice' files
+exist in the current Org file's directory (recursively)."
+  (let* ((base-dir (if buffer-file-name
+                       (file-name-directory buffer-file-name)
+                     default-directory))
+         (current-year  (format-time-string "%Y"))
          (current-month (format-time-string "%m"))
-         (current-day (format-time-string "%d"))
-         (invoice-count 0))
+         (current-day   (format-time-string "%d"))
 
-    ;; Count invoice files
-    (if invoice-paths
-        (dolist (path invoice-paths)
-          (when (and (stringp path)
-                     (string-match-p "invoice" (file-name-nondirectory path))
-                     (file-exists-p path))
-            (setq invoice-count (1+ invoice-count))))
-      (let ((files (directory-files (or dir default-directory) t "\\(invoice\\|-invoice\\)")))
-        (dolist (file files)
-          (when (string-match-p "invoice" (file-name-nondirectory file))
-            (setq invoice-count (1+ invoice-count))))))
+         ;; Recursively find any file with 'invoice' in the filename
+         (invoice-files
+          (directory-files-recursively
+           base-dir
+           "invoice"
+           ;; Exclude directories and .git
+           nil))
 
-    ;; Calculate and format the next invoice number
-    (let* ((next-number (1+ invoice-count))
-           (formatted-number (format "%02d" next-number)))
-      (concat current-year current-month current-day "-" formatted-number))))
+         (invoice-count (length invoice-files))
+         (next-number   (1+ invoice-count)))
+    (format "%s%s%s-%02d"
+            current-year current-month current-day
+            next-number)))
 #+end_src
