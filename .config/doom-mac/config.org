@@ -483,6 +483,19 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 
 ** config.el
 *** EDITOR DEFAULTs
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
+(doom-load-envvars-file "~/.config/doom/env-extra")
+#+end_src
+
+#+begin_src emacs-lisp :tangle config.el
+(setq +file-templates-dir (expand-file-name "templates" doom-user-dir))
+(setq require-final-newline t)
+(setq mode-require-final-newline t)
+(setq +format-with 'prettier)
+
+(add-hook 'before-save-hook 'delete-trailing-whitespace)
+#+end_src
+
 **** BEACON PACKAGE
 Setup the ~beacon~ package to never lose the cursor. Shiny cursor interaction when moving.
 #+begin_src emacs-lisp :tangle config.el
@@ -518,17 +531,6 @@ Setup the ~bookmarks~ for the editor.
 **** EDITORCONFIG PACKAGE
 Enable the usage of ~editorconfig~ package. Consistency while develop [[https://github.com/editorconfig/editorconfig-emacs#readme][Read More]].
 #+begin_src emacs-lisp :tangle config.el
-(setq +file-templates-dir (expand-file-name "templates" doom-user-dir))
-(setq require-final-newline t)
-(setq mode-require-final-newline t)
-(setq +format-with 'prettier)
-
-(when (memq window-system '(mac ns x))
-  (exec-path-from-shell-initialize)
-  (exec-path-from-shell-copy-envs '("PATH")))
-
-(add-hook 'before-save-hook 'delete-trailing-whitespace)
-
 (use-package editorconfig
   :ensure t
   :hook (after-init . editorconfig-mode)
@@ -1487,7 +1489,7 @@ Setup the ~gptel~ package to use LLMs on Emacs.
 (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
 #+end_src
 
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
+#+begin_src emacs-lisp :tangle config.el
 (setq gptel-backend
       (gptel-make-openai
        "Github Copilot Models"
@@ -1502,10 +1504,8 @@ Setup the ~gptel~ package to use LLMs on Emacs.
                  phi-4
                  phi-4-mini-instruct
                  mai-ds-r1
-                 gpt-4.1
-                 gpt-5)))
+                 gpt-4.1)))
 
-;; Default model, e.g., OpenAI GPT-5
 (setq gptel-model 'gpt-4.1)
 
 (defun my-gptel-switch-model (model-name)
@@ -1518,8 +1518,7 @@ Setup the ~gptel~ package to use LLMs on Emacs.
                                         phi-4
                                         phi-4-mini-instruct
                                         mai-ds-r1
-                                        gpt-4.1
-                                        gpt-5))))
+                                        gpt-4.1))))
   (setq gptel-model (intern model-name))
   (message "Switched to model: %s" model-name))
 
@@ -1531,22 +1530,30 @@ Setup the ~gptel~ package to use LLMs on Emacs.
 #+end_src
 
 **** DIRECTIVEs CONFIG
-
-- *Default Work - OLD:*
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
-(setq! gptel-directives '(
- (default . "Test 32")
- (studying . "")
- (documentation . "")
- (manual . "")))
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
+(setq my-gptel-directives
+      `((default . ,(with-temp-buffer
+                (insert-file-contents "~/.config/doom/gptel-directives/default.md")
+                (buffer-string)))
+        (studying . ,(with-temp-buffer
+                (insert-file-contents "~/.config/doom/gptel-directives/studying.md")
+                (buffer-string)))
+        (documentation . ,(with-temp-buffer
+                (insert-file-contents "~/.config/doom/gptel-directives/documentation.md")
+                (buffer-string)))))
 #+end_src
 
-- *Directives Linux - Freelance*:
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "linux") "config.el" "no")
-(setq! gptel-directives '(
- (default . "")
- (documentation . "")
- (manual . "")))
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
+(setq my-gptel-directives
+      `((default . ,(with-temp-buffer
+                (insert-file-contents "~/.config/doom/gptel-directives/default.md")
+                (buffer-string)))
+        (studying . ,(with-temp-buffer
+                (insert-file-contents "~/.config/doom/gptel-directives/studying.md")
+                (buffer-string)))
+        (documentation . ,(with-temp-buffer
+                (insert-file-contents "~/.config/doom/gptel-directives/documentation.md")
+                (buffer-string)))))
 #+end_src
 
 *** HELM PACKAGE
