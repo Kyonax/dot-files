@@ -2,10 +2,10 @@ super + ctrl + {d, e, a, f}
       { emacs --fg-daemon=local, emacsclient -c --socket-name=local, alacritty, firefox } &
 
 super + shift + r
-      killtify sxhkd "Config reloaded" && sxhkd &
+      killtify sxhkd "Config reloaded"
 
 super + ctrl + {Left, Right, m}
-      changevolume { down, up, mute } &
+      changevolume { down, up, mute }
 
 super + alt + {e, n, s, Delete}
-      { changekblayout , dmenu-roamnotes, dmenu-screenshot, dmenu-system  } &
+      { changekblayout , dmenu-roamnotes, dmenu-screenshot, dmenu-system  }
