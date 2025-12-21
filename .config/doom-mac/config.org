@@ -1804,7 +1804,7 @@ You can also hover over a module name or flag and press =K= (=C-c c k= for non-V
        :completion
        ;;company                        ; the ultimate code completion backend
        (corfu +orderless +icons)        ; complete with cap(f), cape and a flying feather!
-       (helm +fuzzy +icons)      ; the *other* search engine for love and life
+       (helm +childframe +fuzzy +icons)      ; the *other* search engine for love and life
        ;;ido                            ; the other *other* search engine...
        ;;(ivy +icons +fuzzy +childframe +prescient)  ; a search engine for love and life
        ;;vertico                        ; the search engine of the future
