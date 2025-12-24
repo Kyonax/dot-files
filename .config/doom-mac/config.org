@@ -312,6 +312,7 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 (package! opencl-mode)
 (package! ccls)
 
+(disable-packages! apheleia)
 (package! flycheck-cask)
 
 (package! cdlatex)
@@ -345,6 +346,8 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 (package! lsp-sourcekit)
 
 (package! counsel-css)
+(package! scss-mode)
+(package! prettier-js)
 (package! emmet-mode)
 (package! haml-mode)
 (package! pug-mode)
@@ -491,9 +494,16 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 (setq +file-templates-dir (expand-file-name "templates" doom-user-dir))
 (setq require-final-newline t)
 (setq mode-require-final-newline t)
-(setq +format-with 'prettier)
+(when (boundp '+format-with)
+  (setq +format-with nil))
 
 (add-hook 'before-save-hook 'delete-trailing-whitespace)
+
+;; Compatibility: define legacy flymake variables to avoid void-variable errors
+(defvar flymake-allowed-file-name-masks nil
+  "Legacy compatibility: defined to avoid errors from packages referencing old Flymake variables.")
+(defvar flymake-proc-allowed-file-name-masks nil
+  "Legacy compatibility: defined to avoid errors from packages referencing old Flymake variables.")
 #+end_src
 
 **** BEACON PACKAGE
@@ -807,10 +817,9 @@ Setup the ~scss-mode~ package to use it on all SCSS files with LSP and linters.
   :mode ("\\.scss\\'" . scss-mode)
   :hook ((scss-mode . lsp-deferred)
          (scss-mode . flycheck-mode)
-         (scss-mode . whitespace-mode)
-         (scss-mode . prettier-js-mode))
+         (scss-mode . whitespace-mode))
   :config
-  (setq css-indent-offset 2))
+  (setq csss-indent-offset 2))
 #+end_src
 
 **** CSS-MODE
@@ -820,8 +829,7 @@ Setup the ~css-mode~ package to use it on all CSS files with LSP and linters.
   :mode ("\\.css\\'" . css-mode)
   :hook ((css-mode . lsp-deferred)
          (css-mode . flycheck-mode)
-         (css-mode . whitespace-mode)
-         (css-mode . prettier-js-mode))
+         (css-mode . whitespace-mode))
   :config
   (setq css-indent-offset 2))
 #+end_src
@@ -834,11 +842,11 @@ Setup the ~js2-mode~ package to use it on all the Javascript Files.
 
 (use-package js2-mode
   :mode (("\\.plugin\\.js\\'" . js2-mode)
-         ("\\.js\\'" . js2-mode)
-         ("\\.jsx\\'" . js2-mode)
-         ("\\.mjs\\'" . js2-mode)
-         ("\\.cjs\\'" . js2-mode)
-         ("\\.es6\\'" . js2-mode))
+         ("\\.js\\'"        . js2-mode)
+         ("\\.jsx\\'"       . js2-mode)
+         ("\\.mjs\\'"       . js2-mode)
+         ("\\.cjs\\'"       . js2-mode)
+         ("\\.es6\\'"       . js2-mode))
   :interpreter ("javascript" . js2-mode)
   :hook ((js2-mode . lsp-deferred)
          (js2-mode . kyo/js2-mode-setup)))
@@ -861,21 +869,7 @@ Setup the ~json-mode~ package to use it on all the Json Files.
 #+end_src
 
 **** LSP-MODE
-Setting up the ccls (C/C++/Objective-C language server) to use with ~lsp~.
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
-(after! ccls
-  (setq ccls-executable "C:/ProgramData/chocolatey/bin/ccls.exe")
-  (set-lsp-priority! 'ccls 0))
-#+end_src
-
 Setup the ~lsp-mode~ package to use it on the main languages that I work with.
-#+begin_src emacs-lisp :tangle no
-(defun kyo/lsp-mode-setup ()
-  (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
-  (lsp-headerline-breadcrumb-mode)
-  (lsp-ui-sideline-toggle-symbols-info))
-#+end_src
-
 #+begin_src emacs-lisp :tangle config.el
 (defun kyo/lsp-mode-setup ()
   (setq lsp-headerline-breadcrumb-segments '(path-up-to-project file symbols))
@@ -883,15 +877,15 @@ Setup the ~lsp-mode~ package to use it on the main languages that I work with.
 
 (use-package lsp-mode
   :commands (lsp lsp-deferred)
-  :hook ((js2-mode . lsp-mode)
-         (typescript-mode . lsp-mode)
-         (web-mode . lsp-mode)
+  :hook ((js2-mode . lsp-deferred)
+         (typescript-mode . lsp-deferred)
+         (web-mode . lsp-deferred)
          (lsp-mode . kyo/lsp-mode-setup))
-
   :init
   (setq lsp-keymap-prefix "C-c l")
   :config
   (lsp-enable-which-key-integration t))
+
 
 (use-package lsp-ui
   :hook ((js2-mode . lsp-ui-mode)
@@ -909,6 +903,30 @@ Setup the ~lsp-mode~ package to use it on the main languages that I work with.
                     :major-modes '(ruby-mode)
                     :priority -1
                     :server-id 'ruby-ls)))
+#+end_src
+
+**** WEB-MODE
+Setup the ~web-mode~ package to use it on all html template files.
+#+begin_src emacs-lisp :tangle config.el
+(defun kyo/web-mode-setup ()
+  (setq web-mode-enable-current-element-highlight t)
+  (setq web-mode-enable-current-column-highlight t)
+  (setq web-mode-enable-engine-detection t)
+  (setq web-mode-markup-indent-offset 2)
+  (setq web-mode-code-indent-offset 2)
+  (setq web-mode-css-indent-offset 2)
+  (setq web-mode-engines-alist
+        '(("pug" . "\\.vue\\'")
+          ("stylus" . "\\.vue\\'")))
+  (setq web-mode-block-padding 2))
+
+(use-package web-mode
+  :mode (("\\.html\\'" . web-mode)
+         ("\\.vue\\'" . web-mode)
+         ("\\.html\\.twig\\'" . web-mode))
+  :hook ((web-mode . kyo/web-mode-setup)
+         (web-mode . flycheck-mode)
+         (web-mode . whitespace-mode)))
 #+end_src
 
 **** ORG-MODE
@@ -1235,27 +1253,94 @@ Set the ~rainbow-mode~ package to displays the actual color for any hex value co
   (hl-line-mode (if rainbow-mode -1 +1)))
 #+end_src
 
-**** WEB-MODE
-Setup the ~web-mode~ package to use it on all html template files.
-#+begin_src emacs-lisp :tangle config.el
-(defun kyo/web-mode-setup ()
-  (setq web-mode-enable-current-element-highlight t)
-  (setq web-mode-enable-current-column-highlight t)
-  (setq web-mode-block-padding 2))
+**** FLYCHECK
+Add =flycheck= with eslint for JSX/TSX/VUE/AND SO ON...
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
+(after! flycheck
+  (setq flycheck-checker-error-threshold 2000)
+  (flycheck-define-checker eslint-d-strict
+    "Run eslint_d_strict (a strict eslint_d wrapper)."
+    :command ("eslint_d_strict" "--format" "unix" source-inplace)
+    :standard-input (eval (not (buffer-file-name)))
+    :error-patterns ((error line-start (file-name) ":" line ":" column ": "
+                            (message (one-or-more not-newline)) " [Error" (* not-newline) "]" line-end)
+                     (warning line-start (file-name) ":" line ":" column ": "
+                              (message (one-or-more not-newline)) " [Warning" (* not-newline) "]" line-end))
+    :modes (js-mode js2-mode typescript-mode web-mode pug-mode stylus-mode)
+    :predicate (lambda ()
+                 (and (buffer-file-name)
+                      (executable-find "eslint_d_strict"))))
 
-(use-package web-mode
-  :mode (("\\.html\\'" . web-mode)
-         ("\\.html\\.twig\\'" . web-mode))
-  :hook (web-mode . kyo/web-mode-setup))
+  (add-to-list 'flycheck-checkers 'eslint-d-strict)
+  (setq-default flycheck-disabled-checkers
+                '(javascript-eslint javascript-jshint javascript-standard typescript-tslint vue-eslint))
+  (add-hook 'flycheck-mode-hook (lambda ()
+                                  (when (derived-mode-p 'js-mode 'js2-mode 'typescript-mode 'web-mode)
+                                    (flycheck-select-checker 'eslint-d-strict)))))
 #+end_src
 
-**** FLYCHECK
-Add =flycheck= with eslint for JSX/TSX.
-#+begin_src emacs-lisp :tangle config.el
-(use-package flycheck
-  :init (global-flycheck-mode)
-  :hook ((js2-mode . flycheck-mode)
-         (typescript-mode . flycheck-mode)))
+
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
+(after! flycheck
+  (setq flycheck-checker-error-threshold 2000)
+  (flycheck-define-checker eslint
+    "Run eslint (a strict eslint_d wrapper)."
+    :command ("eslint" "--format" "unix" source-inplace)
+    :standard-input (eval (not (buffer-file-name)))
+    :error-patterns ((error line-start (file-name) ":" line ":" column ": "
+                            (message (one-or-more not-newline)) " [Error" (* not-newline) "]" line-end)
+                     (warning line-start (file-name) ":" line ":" column ": "
+                              (message (one-or-more not-newline)) " [Warning" (* not-newline) "]" line-end))
+    :modes (js-mode js2-mode typescript-mode web-mode pug-mode stylus-mode)
+    :predicate (lambda ()
+                 (and (buffer-file-name)
+                      (executable-find "eslint"))))
+
+  (add-to-list 'flycheck-checkers 'eslint)
+  (setq-default flycheck-disabled-checkers
+                '(javascript-eslint javascript-jshint javascript-standard typescript-tslint vue-eslint))
+  (add-hook 'flycheck-mode-hook (lambda ()
+                                  (when (derived-mode-p 'js-mode 'js2-mode 'typescript-mode 'web-mode)
+                                    (flycheck-select-checker 'eslint)))))
+#+end_src
+
+**** ESLINTD FIX
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
+(defun kyo/eslint-strict-fix-file ()
+  "Run eslint_d_strict --fix on the current file and reload the buffer."
+  (interactive)
+  (let* ((file (buffer-file-name))
+         (quoted (shell-quote-argument file))
+         (cmd (format "%s --fix %s"
+                      "~/bin/eslint_d_strict"
+                      quoted)))
+    (message "Running eslint_d_strict --fix on %s" file)
+
+    (shell-command cmd)
+
+    (revert-buffer :ignore-auto :noconfirm)
+    (message "eslint --fix applied and buffer reloaded.")))
+
+(global-set-key (kbd "C-c f") #'kyo/eslint-strict-fix-file)
+#+end_src
+
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
+(defun kyo/eslint-strict-fix-file ()
+  "Run eslint --fix on the current file and reload the buffer."
+  (interactive)
+  (let* ((file (buffer-file-name))
+         (quoted (shell-quote-argument file))
+         (cmd (format "%s --fix %s"
+                      "eslint"
+                      quoted)))
+    (message "Running eslint --fix on %s" file)
+
+    (shell-command cmd)
+
+    (revert-buffer :ignore-auto :noconfirm)
+    (message "eslint --fix applied and buffer reloaded.")))
+
+(global-set-key (kbd "C-c f") #'kyo/eslint-strict-fix-file)
 #+end_src
 
 **** WHITESPACE-MODE
@@ -1269,34 +1354,125 @@ Setup the ~whitespace-mode~ package to use it on the main languages that I work 
          (json-mode . whitespace-mode)))
 #+end_src
 
+**** FORMATTER TRACER
+#+begin_src emacs-lisp :tangle config.el
+(defvar kyo/format-trace-buffer "*format-trace*"
+  "Buffer where format-trace logs external formatter invocations.")
+
+(defun kyo/format-trace--log (args)
+  "Append ARGS (list form) to the trace buffer with timestamp."
+  (with-current-buffer (get-buffer-create kyo/format-trace-buffer)
+    (goto-char (point-max))
+    (insert (format "[%s] %s\n" (format-time-string "%Y-%m-%d %T") args))))
+
+(defun kyo/format-trace-advice (orig-fn &rest args)
+  "Advice wrapper to catch external process invocations that look like formatters.
+Covers `start-process`, `call-process', and `call-process-region'."
+  ;; args for start-process: (name buffer program &rest program-args)
+  ;; args for call-process: (program infile destination display &rest args)
+  (let* ((prog (cond
+                ;; start-process: program is 3rd arg
+                ((and (symbolp orig-fn) (memq orig-fn '(start-process))) (nth 2 args))
+                ;; call-process: program is 1st arg
+                ((and (symbolp orig-fn) (memq orig-fn '(call-process call-process-region))) (nth 0 args))
+                (t nil)))
+         (joined (when args (mapconcat (lambda (x) (format "%S" x)) args " "))))
+    (when (and prog
+               (stringp prog)
+               (string-match-p "\\(prettier\\|prettiercc\\|eslint\\|eslint_d\\|eslint_d_strict\\)" prog))
+      (kyo/format-trace--log (list orig-fn prog joined))))
+  (apply orig-fn args))
+
+(defun kyo/start-format-trace ()
+  "Start tracing external formatter invocations (Prettier / eslint / eslint_d).
+Call this, then save your file or run `kyo/run-eslint-strict`, then call
+`kyo/stop-format-trace` and inspect the buffer *format-trace*."
+  (interactive)
+  (with-current-buffer (get-buffer-create kyo/format-trace-buffer)
+    (erase-buffer))
+  (advice-add 'start-process :around #'kyo/format-trace-advice)
+  (advice-add 'call-process :around #'kyo/format-trace-advice)
+  (advice-add 'call-process-region :around #'kyo/format-trace-advice)
+  (message "Format trace started; next save/run will be logged to %s" kyo/format-trace-buffer))
+
+(defun kyo/stop-format-trace ()
+  "Stop tracing external formatter invocations and show the trace buffer."
+  (interactive)
+  (advice-remove 'start-process #'kyo/format-trace-advice)
+  (advice-remove 'call-process #'kyo/format-trace-advice)
+  (advice-remove 'call-process-region #'kyo/format-trace-advice)
+  (when (get-buffer kyo/format-trace-buffer)
+    (display-buffer kyo/format-trace-buffer))
+  (message "Format trace stopped."))
+
+
+(defun kyo/list-save-hooks ()
+  "Show functions in `before-save-hook' and `after-save-hook' that may format."
+  (interactive)
+  (let ((before (seq-filter (lambda (f)
+                              (when f (string-match-p "\\(prettier\\|format\\|eslint\\|lsp\\|format-all\\|reformatter\\|+format\\)" (prin1-to-string f))))
+                            before-save-hook))
+        (after (seq-filter (lambda (f)
+                             (when f (string-match-p "\\(prettier\\|format\\|eslint\\|lsp\\|format-all\\|reformatter\\|+format\\)" (prin1-to-string f))))
+                           after-save-hook)))
+    (with-help-window "*save-hooks*"
+      (princ "Functions in before-save-hook that match likely formatters:\n\n")
+      (dolist (f before) (princ (format "%S\n" f)))
+      (princ "\nFunctions in after-save-hook that match likely formatters:\n\n")
+      (dolist (f after) (princ (format "%S\n" f))))))
+
+;; ------------------------------
+;; LSP utilities
+;; ------------------------------
+(defun kyo/restart-lsp-workspaces ()
+  "Restart all active LSP workspaces for the current project."
+  (interactive)
+  (if (not (fboundp 'lsp-workspaces))
+      (message "lsp not loaded")
+    (dolist (w (lsp-workspaces))
+      (condition-case _err
+          (lsp-workspace-restart w)
+        (error (message "Failed to restart one workspace: %s" _err))))
+    (message "Requested restart for %d LSP workspace(s)" (length (lsp-workspaces)))))
+
+(defun kyo/show-project-root ()
+  "Show the project root that LSP/Emacs sees for the current buffer."
+  (interactive)
+  (let ((proj (or (when (fboundp 'project-current) (project-root (project-current)))
+                  (locate-dominating-file default-directory "package.json")
+                  (locate-dominating-file default-directory "pnpm-lock.yaml")
+                  (locate-dominating-file default-directory "yarn.lock")
+                  (locate-dominating-file default-directory "package-lock.json")
+                  (locate-dominating-file default-directory ".git"))))
+    (message "Project root: %s" (or proj "none found"))))
+#+end_src
+
+
 **** PRETTIER (CLI)
 Setup Prettier CLI to format ~js2-mode~, ~typescript-mode~, ~web-mode~, and ~json-mode~ files before saving.
 Disable LSP formatting and indentation to avoid conflicts.
 
 #+begin_src emacs-lisp :tangle config.el
+(when (featurep 'prettier-js)
+  (with-eval-after-load 'prettier-js
+    (remove-hook 'js2-mode-hook #'prettier-js-mode)
+    (remove-hook 'typescript-mode-hook #'prettier-js-mode)
+    (remove-hook 'web-mode-hook #'prettier-js-mode)
+    (remove-hook 'json-mode-hook #'prettier-js-mode)))
+;; Also make sure the symbol exists but does nothing if called:
+(when (not (fboundp 'prettier-js-mode))
+  (defalias 'prettier-js-mode #'ignore))
+#+end_src
+
+#+begin_src emacs-lisp :tangle no
 (use-package prettier-js
   :hook ((js2-mode . prettier-js-mode)
          (typescript-mode . prettier-js-mode)
          (json-mode . prettier-js-mode)
-         (web-mode . prettier-js-mode)))
-
-(defun kyo/run-prettier ()
-  "Format the current file using the Prettier CLI if available."
-  (interactive)
-  (when (and buffer-file-name
-             (string-match-p
-              "\\.\\(js\\|jsx\\|ts\\|tsx\\|mjs\\|cjs\\|es6\\|json\\|html?\\)\\'"
-              buffer-file-name))
-    (let* ((project-root (locate-dominating-file buffer-file-name "node_modules"))
-           (local-prettier (and project-root (expand-file-name "node_modules/.bin/prettier" project-root)))
-           (prettier-bin (or (and local-prettier (file-executable-p local-prettier) local-prettier)
-                             (executable-find "prettier"))))
-      (when prettier-bin
-        (shell-command-to-string
-         (format "%s --write %s"
-                 (shell-quote-argument prettier-bin)
-                 (shell-quote-argument buffer-file-name)))
-        (revert-buffer t t t)))))
+         (web-mode . prettier-js-mode)
+         (vue-mode . prettier-js-mode)) ; Add vue-mode hook
+  :config
+  (setq prettier-js-executable-args '("--config" "/Volumes/dev-partition/github-kyonax/the_eslint/.prettierrc")))
 #+end_src
 
 *** USER DEFAULTs
@@ -1445,27 +1621,6 @@ Creation and usage of the Dired trash can. Don't forget to create a ~symlink~ to
 
 *** GPTEL
 Setup the ~gptel~ package to use LLMs on Emacs.
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "windows") "config.el" "no")
-(gptel-make-openai "xAI"
-  :host "api.x.ai"
-  :key (shell-command-to-string (format "gopass show sub/private_key/xai"))
-  :endpoint "/v1/chat/completions"
-  :stream t
-  :models '(grok-3-latest))
-
-;; OPTIONAL configuration
-(setq
- gptel-model   'grok-3-latest
- gptel-backend
- (gptel-make-openai "xAI"
-   :host "api.x.ai"
-   :key (shell-command-to-string (format "gopass show sub/private_key/xai"))
-   :endpoint "/v1/chat/completions"
-   :stream t
-   :models '(;; xAI now only offers `grok-beta` as of the time of this writing
-             grok-3-latest)))
-#+end_src
-
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-os-type") "not") "config.el" "no")
 (gptel-make-openai "xAI"
   :host "api.x.ai"
@@ -1530,80 +1685,131 @@ Setup the ~gptel~ package to use LLMs on Emacs.
 #+end_src
 
 **** DIRECTIVEs CONFIG
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
+#+begin_src emacs-lisp :tangle config.el
 (setq my-gptel-directives
       `((default . ,(with-temp-buffer
                 (insert-file-contents "~/.config/doom/gptel-directives/default.md")
                 (buffer-string)))
         (studying . ,(with-temp-buffer
                 (insert-file-contents "~/.config/doom/gptel-directives/studying.md")
+                (buffer-string)))
+        (ambiguous-variables-vue . ,(with-temp-buffer
+                (insert-file-contents "~/.config/doom/gptel-directives/ambiguous-variables-vue.md")
+                (buffer-string)))
+        (code-style-vue . ,(with-temp-buffer
+                (insert-file-contents "~/.config/doom/gptel-directives/code-style-vue.md")
                 (buffer-string)))
         (documentation . ,(with-temp-buffer
                 (insert-file-contents "~/.config/doom/gptel-directives/documentation.md")
                 (buffer-string)))))
 #+end_src
 
-#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
-(setq my-gptel-directives
-      `((default . ,(with-temp-buffer
-                (insert-file-contents "~/.config/doom/gptel-directives/default.md")
-                (buffer-string)))
-        (studying . ,(with-temp-buffer
-                (insert-file-contents "~/.config/doom/gptel-directives/studying.md")
-                (buffer-string)))
-        (documentation . ,(with-temp-buffer
-                (insert-file-contents "~/.config/doom/gptel-directives/documentation.md")
-                (buffer-string)))))
+**** FUNCTIONs & AGENTs
+#+begin_src emacs-lisp :tangle config.el
+(defun my/gptel-eval-buffer-helm-directive ()
+  "Send current buffer content to GPTel using a directive chosen via Helm.
+Shows only first line of each directive. Writes response into a new .md buffer."
+  (interactive)
+  (require 'helm)
+  (require 'gptel)
+
+  ;; Build candidate list with preview only
+  (let* ((cand-list
+          (mapcar (lambda (entry)
+                    (let* ((key (car entry))
+                           (value (cdr entry))
+                           (preview (car (split-string value "\n"))))
+                      (cons (format "%s — %s" key preview) key)))
+                  my-gptel-directives))
+         (selected-key
+          (helm :sources (helm-build-sync-source "GPTel Directives"
+                           :candidates cand-list
+                           :fuzzy-match t)
+                :buffer "*helm gptel directives*")))
+
+    (when selected-key
+      (let* ((directive-text (cdr (assoc selected-key my-gptel-directives)))
+             (evaluation-text (concat directive-text "\n\n" (buffer-string)))
+             ;; Create dedicated response buffer
+             (response-buffer-name
+              (format "*gptel-response-%s.md"
+                      (format-time-string "%Y%m%d-%H%M%S")))
+             (response-buffer (get-buffer-create response-buffer-name)))
+
+        ;; Prepare output buffer
+        (with-current-buffer response-buffer
+          (erase-buffer)
+          (markdown-mode)
+          ;; Progress indicator: start with “sending…”
+          (setq-local header-line-format "gptel: sending…"))
+
+;; Replace the "Prepare the buffer for output" -> "Run request" part with this:
+
+(with-current-buffer response-buffer
+  (erase-buffer)
+  (markdown-mode) ;; or (org-mode)
+
+  ;; small UI indicator in the header line
+  (setq-local header-line-format "gptel: sending...")
+
+  ;; define local handlers (works if your file has lexical-binding)
+  (let* ((on-request (lambda ()
+                       (setq-local header-line-format "gptel: request dispatched...")))
+         (on-stream  (lambda (&rest _args)
+                       ;; runs after each streamed chunk is inserted
+                       (setq-local header-line-format "gptel: streaming...")))
+         (on-done    (lambda (beg end)
+                       ;; runs after full response inserted (called with beg/end)
+                       (setq-local header-line-format nil)
+                       (message "gptel: done — inserted %d chars" (- end beg))
+                       ;; remove the buffer-local hooks we added
+                       (remove-hook 'gptel-post-request-hook on-request t)
+                       (remove-hook 'gptel-post-stream-hook on-stream t)
+                       (remove-hook 'gptel-post-response-functions on-done t))))
+
+    ;; add buffer-local hooks so only this response buffer shows the indicator
+    (add-hook 'gptel-post-request-hook on-request nil t)
+    (add-hook 'gptel-post-stream-hook on-stream nil t)
+    ;; gptel-post-response-functions is called with (beg end).
+    (add-hook 'gptel-post-response-functions on-done nil t)
+
+    ;; show buffer and start request (gptel will stream into current buffer)
+    (pop-to-buffer response-buffer)
+    (gptel-request evaluation-text :context 'buffer)))
+
+        ;; Display the response buffer
+        (pop-to-buffer response-buffer)))))
+
+(map! :leader
+      :desc "Send buffer to GPTel, choose directive"
+      "g e" #'my/gptel-eval-buffer-helm-directive)
 #+end_src
+
 
 *** HELM PACKAGE
 #+begin_src emacs-lisp :tangle config.el
-;; -----------------------------
-;; Helm performance + behavior
-;; -----------------------------
 (after! helm
-  ;; ----- Performance tuning -----
-  ;; Limit candidates fetched from each source (default is 100). Lower it on big projects.
-  (setq helm-candidate-number-limit 50)  ; try 50, raise if you want more results shown. :contentReference[oaicite:2]{index=2}
+  (setq helm-candidate-number-limit 50)
+  (setq helm-input-idle-delay 0.3)
+  (setq helm-autoresize-max-height 60 helm-autoresize-min-height 10)
+  (helm-autoresize-mode 1)
 
-  ;; Don't update candidate lists on every keystroke — waits after typing stops.
-  ;; Default historically has been very low (0.01). Increase to reduce CPU / lag when typing fast.
-  (setq helm-input-idle-delay 0.2)       ; try 0.15-0.4 — larger = less CPU, more "laggy" feel. :contentReference[oaicite:3]{index=3}
+(setq helm-ff-skip-boring-files t)
+(setq helm-ff-skip-git-ignored-files t)
+(setq helm-flx-for-helm t))
 
-  ;; Auto-resize helm window to a reasonable size (less flicker).
-  (setq helm-autoresize-max-height 40
-        helm-autoresize-min-height 10)
-  (helm-autoresize-mode 1)              ; enable autoresize. :contentReference[oaicite:4]{index=4}
+(after! helm-posframe (setq helm-posframe-width 150))
 
-  ;; Skip "boring" files (e.g. .o, backups)
-  (setq helm-ff-skip-boring-files t)
-  ;; Optionally also skip git-ignored files — NOTE: can make some searches slower because git needs to be consulted.
-  (setq helm-ff-skip-git-ignored-files t) ; may slow some operations — see notes below. :contentReference[oaicite:5]{index=5}
-
-  ;; Add project dirs/patterns you always want hidden (tweak to taste)
-  (setq helm-boring-file-regexp-list
-        '("\\.git$" "node_modules" "dist/" "build/" "\\.class$" "\\.o$"))
-
-  ;; ---- Fuzzy / Ranking ----
-  ;; If you're using doom module +fuzzy (helm-flx), disabling it can sometimes improve perf on very large candidate sets.
-  (setq helm-flx-for-helm nil) ; disable flx if you notice slowness with fuzzy matching
-  )
-
-;; -----------------------------
-;; Keybindings: make Helm feel like your Ivy setup
-;; -----------------------------
-;; Map your Ivy keys (SPC v p / SPC v s) to Helm equivalents.
 (map! :leader
       (:prefix ("v" . "Views/Completion")
        :desc "Helm resume" "p" #'helm-resume
        :desc "Helm mini (buffers+recentf)" "s" #'helm-mini))
 
 (map! :leader
-      :desc "M-x (helm)"      ":" #'helm-M-x
+      :desc "M-x (helm)" ":" #'helm-M-x
       :desc "find file (helm)" "f f" #'helm-find-files
       :desc "project files (helm)" "p f" #'helm-projectile-find-file
-      :desc "search buffer (helm-swoop)" "s s" #'helm-swoop) ;; if you use helm-swoop / helm-swiper
-
+      :desc "search buffer (helm-swoop)" "s s" #'helm-swoop)
 #+end_src
 
 *** IVY PACKAGE
@@ -1810,6 +2016,13 @@ You can also hover over a module name or flag and press =K= (=C-c c k= for non-V
        ;;vertico                        ; the search engine of the future
 #+end_src
 
+#+begin_src emacs-lisp
+#+end_src
+
+#+RESULTS:
+: 150
+
+
 *** UI
 #+begin_src emacs-lisp :tangle init.el
 
@@ -1885,7 +2098,7 @@ You can also hover over a module name or flag and press =K= (=C-c c k= for non-V
 #+begin_src emacs-lisp :tangle init.el
 
        :checkers
-       (syntax +childframe +flymake +icons)  ; tasing you for every semicolon you forget
+       (syntax +childframe +icons)  ; tasing you for every semicolon you forget
        ;;(spell +flyspell) ; tasing you for misspelling mispelling
        ;;grammar           ; tasing grammar mistake every you make
 #+end_src

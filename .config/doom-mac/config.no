@@ -1,0 +1,54 @@
+(use-package flycheck
+  :defer t
+  :hook ((js-mode . flycheck-mode)
+         (js2-mode . flycheck-mode)
+         (typescript-mode . flycheck-mode)
+         (web-mode . flycheck-mode)
+         (pug-mode . flycheck-mode)
+         (stylus-mode . flycheck-mode))
+  :init
+  ;; disable default eslint checker
+  (setq flycheck-disabled-checkers '(javascript-eslint))
+  :config
+  ;; define custom checker
+  (flycheck-define-checker eslint-strict
+    "Run eslint_d_strict with external config."
+    :command ("eslint_d_strict" source)
+  :error-patterns
+  (
+   ;; Explicitly match diagnostics that include "[Warning/..]" or "[Error/..]" at the end.
+   ;; This captures the format shown by your wrapper: file:line:col: message [Warning/...]
+   (warning line-start (file-name) ":" line ":" column ":" (zero-or-more " ")
+            (message) (zero-or-more " ") "[" (zero-or-more not-newline) "Warning" (zero-or-more not-newline) "]" line-end)
+   (error   line-start (file-name) ":" line ":" column ":" (zero-or-more " ")
+            (message) (zero-or-more " ") "[" (zero-or-more not-newline) "Error" (zero-or-more not-newline) "]" line-end)
+   ;; Fallback: match a generic unix-style single-line diag (no bracketed severity).
+   (warning line-start (file-name) ":" line ":" column ":" (zero-or-more " ") (message) line-end)
+   )
+    :modes (js-mode js2-mode typescript-mode web-mode pug-mode stylus-mode)
+    :predicate (lambda () buffer-file-name))
+
+  ;; register checker
+  (add-to-list 'flycheck-checkers 'eslint-strict)
+
+  ;; enforce using your wrapper
+  (setq-default flycheck-checker 'eslint-strict)
+
+  ;; run lint on save safely
+  (add-hook 'before-save-hook
+            (lambda ()
+              (when (and buffer-file-name
+                         (derived-mode-p 'js-mode 'js2-mode 'typescript-mode 'web-mode 'pug-mode 'stylus-mode)
+                         (flycheck-may-check-automatically 'save))
+                (flycheck-buffer))))
+
+  ;; ✅ callable command
+  (defun kyo/run-eslint-strict ()
+    "Run eslint_d_strict Flycheck checker manually."
+    (interactive)
+    (setq-local flycheck-checker 'eslint-strict)
+    (message "Running eslint-strict…")
+    (flycheck-buffer))
+
+  ;; ✅ keybinding
+  (define-key flycheck-mode-map (kbd "C-c e") #'kyo/run-eslint-strict))
