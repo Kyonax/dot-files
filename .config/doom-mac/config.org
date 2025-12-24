@@ -487,6 +487,15 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 ** config.el
 *** EDITOR DEFAULTs
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
+;; --- Tree-sitter grammar sources (fix TypeScript layout) ---
+(setq treesit-language-source-alist
+      '((typescript "https://github.com/tree-sitter/tree-sitter-typescript"
+                    "master"
+                    "typescript/src")
+        (tsx        "https://github.com/tree-sitter/tree-sitter-typescript"
+                    "master"
+                    "tsx/src")))
+
 (doom-load-envvars-file "~/.config/doom/env-extra")
 #+end_src
 
