@@ -1337,17 +1337,23 @@ Add =flycheck= with eslint for JSX/TSX/VUE/AND SO ON...
 (defun kyo/eslint-strict-fix-file ()
   "Run eslint --fix on the current file and reload the buffer."
   (interactive)
-  (let* ((file (buffer-file-name))
+  (unless buffer-file-name
+    (user-error "Current buffer is not visiting a file"))
+
+  (let* ((project-root
+          (or (locate-dominating-file buffer-file-name "eslint.config.mjs")
+              (locate-dominating-file buffer-file-name "package.json")
+              (user-error "Not inside an ESLint project")))
+         (default-directory project-root)
+         (file (file-relative-name buffer-file-name project-root))
          (quoted (shell-quote-argument file))
-         (cmd (format "%s --fix %s"
-                      "eslint"
-                      quoted)))
-    (message "Running eslint --fix on %s" file)
-
-    (shell-command cmd)
-
+         (cmd (format "eslint --fix --debug --no-ignore %s" quoted)))
+    (message "Running: %s" cmd)
+    (let ((output (shell-command-to-string cmd)))
+      (when (and output (not (string-empty-p output)))
+        (message "%s" output)))
     (revert-buffer :ignore-auto :noconfirm)
-    (message "eslint --fix applied and buffer reloaded.")))
+    (message "eslint --fix --debug applied and buffer reloaded.")))
 
 (global-set-key (kbd "C-c f") #'kyo/eslint-strict-fix-file)
 #+end_src
@@ -1794,7 +1800,6 @@ Shows only first line of each directive. Writes response into a new .md buffer."
       "g e" #'my/gptel-eval-buffer-helm-directive)
 #+end_src
 
-
 *** HELM PACKAGE
 #+begin_src emacs-lisp :tangle config.el
 (after! helm
@@ -1943,6 +1948,22 @@ Setup the ~latext~ package to use with org.
 ;; Add the custom filter to the export process
 (add-hook 'org-export-filter-final-output-functions
           'my-org-latex-checklist-filter)
+#+end_src
+*** MULTIPLE CURSORs
+Configure the ~multiple-cursors~ package keybindings.
+| Keybinding  | Function                   | Description                         |
+|-------------+----------------------------+-------------------------------------|
+| C-S-c C-S-c | mc/edit-lines              | Edit all lines in a selected region |
+| C->         | mc/mark-next-like-this     | Mark the next occurrence            |
+| C-<         | mc/mark-previous-like-this | Mark the previous occurrence        |
+| C-c C-<     | mc/mark-all-like-this      | Mark all occurrences in the buffer  |
+
+#+begin_src emacs-lisp :tangle config.el
+   (use-package! multiple-cursors
+     :bind (("C-S-c C-S-c" . mc/edit-lines)
+            ("C->" . mc/mark-next-like-this)
+            ("C-<" . mc/mark-previous-like-this)
+            ("C-c C-<" . mc/mark-all-like-this)))
 #+end_src
 
 *** PDF VIEWER
