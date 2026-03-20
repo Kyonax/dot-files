@@ -1,7 +1,7 @@
 #+TITLE: THE DOOM CONFIG
 #+SUBTITLE: All my Doom Emacs Configuration Files
 #+AUTHOR: Cristian D. Moreno - Kyonax
-#+EMAIL: kyonax.corp@gmail.com
+#+EMAIL: iam@kyonax.com
 #+DATE: June 20, 2025
 #+LAST_UPDATE: November 12, 2025
 #+PROJECT: dot-files
@@ -119,10 +119,10 @@ Example of Usage:
 (let* ((profile (org-babel-ref-resolve "get-profile")))
   (cond
    ((string= profile "personal-linux")
-    "kyonax.corp@gmail.com")
+    "iam@kyonax.com")
    ((string= profile "work-mac")
     "cristian.moreno@agileengine.com")
-   (t "kyonax.corp@gmail.com")))
+   (t "iam@kyonax.com")))
 #+end_src
 
 *Example of Usage:*
@@ -515,6 +515,17 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
   "Legacy compatibility: defined to avoid errors from packages referencing old Flymake variables.")
 #+end_src
 
+**** ACE JUMP PACKAGE
+Setup the ~ace-jump-package~ package to never lose the cursor. Shiny cursor interaction when moving.
+#+begin_src emacs-lisp :tangle config.el
+(map! :leader
+      :prefix ("j" . "jump")
+      :desc "Ace Jump Mode" "m" #'ace-jump-mode
+      :desc "Ace Jump Char Mode" "a" #'ace-jump-char-mode
+      :desc "Ace Jump Word Mode" "w" #'ace-jump-word-mode
+      :desc "Ace Jump Line Mode" "l" #'ace-jump-line-mode)
+#+end_src
+
 **** BEACON PACKAGE
 Setup the ~beacon~ package to never lose the cursor. Shiny cursor interaction when moving.
 #+begin_src emacs-lisp :tangle config.el
@@ -545,6 +556,13 @@ Setup the ~bookmarks~ for the editor.
        :desc "Set bookmark"                            "m" #'bookmark-set
        :desc "Delete bookmark"                         "M" #'bookmark-set
        :desc "Save current bookmarks to bookmark file" "w" #'bookmark-save))
+#+end_src
+
+**** CRYSTAL POINT
+Enable the usage of ~crystal-point~ package.
+#+begin_src emacs-lisp :tangle config.el
+(use-package! crystal-point
+  :hook (prog-mode . crystal-point-enable))
 #+end_src
 
 **** EDITORCONFIG PACKAGE
@@ -1222,6 +1240,7 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
 (map! :leader
       (:prefix ("n r" . "Find Roam Nodes")
        :desc "Find Node in Brain" "f" #'org-roam-node-find
+       :desc "Insert Node in Place" "i" #'org-roam-node-insert
        :desc "Update brain destination" "d" #'kyo/org-roam-node-directory
        :desc "Refresh Nodes DB" "s" #'org-roam-db-sync))
 #+end_src
@@ -1267,10 +1286,18 @@ Add =flycheck= with eslint for JSX/TSX/VUE/AND SO ON...
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
 (after! flycheck
   (setq flycheck-checker-error-threshold 2000)
+
+  ;; Define the checker to use STDIN, which is more robust
   (flycheck-define-checker eslint-d-strict
     "Run eslint_d_strict (a strict eslint_d wrapper)."
-    :command ("eslint_d_strict" "--format" "unix" source-inplace)
-    :standard-input (eval (not (buffer-file-name)))
+    ;; OLD WAY: :command ("eslint_d_strict" "--format" "unix" source-inplace)
+    ;; NEW WAY: Pipe content via stdin to avoid temp file and .eslintignore issues.
+    :command ("eslint_d_strict"
+              "--format" "unix"
+              "--stdin" ;; Explicitly tell ESLint to read from stdin
+              "--stdin-filename" (eval (buffer-file-name)) ;; Provide original filename for context
+              source) ;; 'source' pipes buffer content to stdin
+    :standard-input t ;; Required when using 'source'
     :error-patterns ((error line-start (file-name) ":" line ":" column ": "
                             (message (one-or-more not-newline)) " [Error" (* not-newline) "]" line-end)
                      (warning line-start (file-name) ":" line ":" column ": "
@@ -1280,6 +1307,7 @@ Add =flycheck= with eslint for JSX/TSX/VUE/AND SO ON...
                  (and (buffer-file-name)
                       (executable-find "eslint_d_strict"))))
 
+  ;; The rest of your configuration remains the same
   (add-to-list 'flycheck-checkers 'eslint-d-strict)
   (setq-default flycheck-disabled-checkers
                 '(javascript-eslint javascript-jshint javascript-standard typescript-tslint vue-eslint))
@@ -1287,7 +1315,6 @@ Add =flycheck= with eslint for JSX/TSX/VUE/AND SO ON...
                                   (when (derived-mode-p 'js-mode 'js2-mode 'typescript-mode 'web-mode)
                                     (flycheck-select-checker 'eslint-d-strict)))))
 #+end_src
-
 
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
 (after! flycheck
@@ -1337,23 +1364,17 @@ Add =flycheck= with eslint for JSX/TSX/VUE/AND SO ON...
 (defun kyo/eslint-strict-fix-file ()
   "Run eslint --fix on the current file and reload the buffer."
   (interactive)
-  (unless buffer-file-name
-    (user-error "Current buffer is not visiting a file"))
-
-  (let* ((project-root
-          (or (locate-dominating-file buffer-file-name "eslint.config.mjs")
-              (locate-dominating-file buffer-file-name "package.json")
-              (user-error "Not inside an ESLint project")))
-         (default-directory project-root)
-         (file (file-relative-name buffer-file-name project-root))
+  (let* ((file (buffer-file-name))
          (quoted (shell-quote-argument file))
-         (cmd (format "eslint --fix --debug --no-ignore %s" quoted)))
-    (message "Running: %s" cmd)
-    (let ((output (shell-command-to-string cmd)))
-      (when (and output (not (string-empty-p output)))
-        (message "%s" output)))
+         (cmd (format "%s --fix %s"
+                      "eslint"
+                      quoted)))
+    (message "Running eslint --fix on %s" file)
+
+    (shell-command cmd)
+
     (revert-buffer :ignore-auto :noconfirm)
-    (message "eslint --fix --debug applied and buffer reloaded.")))
+    (message "eslint --fix applied and buffer reloaded.")))
 
 (global-set-key (kbd "C-c f") #'kyo/eslint-strict-fix-file)
 #+end_src
@@ -1493,7 +1514,7 @@ Disable LSP formatting and indentation to avoid conflicts.
 *** USER DEFAULTs
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
 (setq user-full-name "Cristian D. Moreno - Kyonax"
-      user-mail-address "kyonax.corp@gmail.com")
+      user-mail-address "iam@kyonax.com")
 #+end_src
 
 
@@ -1659,7 +1680,7 @@ Setup the ~gptel~ package to use LLMs on Emacs.
 (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
 #+end_src
 
-#+begin_src emacs-lisp :tangle config.el
+#+begin_src emacs-lisp :tangle no
 (setq gptel-backend
       (gptel-make-openai
        "Github Copilot Models"
@@ -1699,24 +1720,342 @@ Setup the ~gptel~ package to use LLMs on Emacs.
 (add-hook 'gptel-post-stream-hook #'gptel-auto-scroll)
 #+end_src
 
-**** DIRECTIVEs CONFIG
 #+begin_src emacs-lisp :tangle config.el
-(setq my-gptel-directives
-      `((default . ,(with-temp-buffer
-                (insert-file-contents "~/.config/doom/gptel-directives/default.md")
-                (buffer-string)))
-        (studying . ,(with-temp-buffer
-                (insert-file-contents "~/.config/doom/gptel-directives/studying.md")
-                (buffer-string)))
-        (ambiguous-variables-vue . ,(with-temp-buffer
-                (insert-file-contents "~/.config/doom/gptel-directives/ambiguous-variables-vue.md")
-                (buffer-string)))
-        (code-style-vue . ,(with-temp-buffer
-                (insert-file-contents "~/.config/doom/gptel-directives/code-style-vue.md")
-                (buffer-string)))
-        (documentation . ,(with-temp-buffer
-                (insert-file-contents "~/.config/doom/gptel-directives/documentation.md")
-                (buffer-string)))))
+(use-package! gptel
+  :config
+  ;; -------------------------------------------------------------------------
+  ;; 1. DEFINE THE BACKENDS
+  ;; -------------------------------------------------------------------------
+
+  ;; Backend A: Azure / Github Copilot (Existing)
+  (setq gptel-backend-azure
+        (gptel-make-openai "Github Copilot"
+          :host "models.inference.ai.azure.com"
+          :key (string-trim (shell-command-to-string "pass show private_key/github-gpetel-editor"))
+          :endpoint "/chat/completions?api-version=2024-05-01-preview"
+          :stream t
+          :models '(codestral-2501
+                    grok-3
+                    phi-4-reasoning
+                    phi-4
+                    phi-4-mini-instruct
+                    mai-ds-r1
+                    gpt-4.1)))
+
+  ;; Backend B: Local Gemini Switcher (Points to LiteLLM)
+  (setq gptel-backend-local
+        (gptel-make-openai "Gemini Local"
+          :host "localhost:4100"
+          :protocol "http"
+          :stream t
+          :models '(gemini-gemma-free   ;; The Free->Paid Auto-Switcher
+                    gemini-backup-flash
+                    gemini-pro-paid)   ;; The "Force Pro" option
+          :key "sk-1234"))             ;; Dummy key (LiteLLM handles the real ones)
+
+  ;; -------------------------------------------------------------------------
+  ;; 2. INTELLIGENT MODEL SWITCHING
+  ;; -------------------------------------------------------------------------
+
+  ;; Create a map: Model Name -> Backend to use
+  (defvar my-gptel-model-map
+    `((codestral-2501      . ,gptel-backend-azure)
+      (grok-3              . ,gptel-backend-azure)
+      (phi-4-reasoning     . ,gptel-backend-azure)
+      (phi-4               . ,gptel-backend-azure)
+      (phi-4-mini-instruct . ,gptel-backend-azure)
+      (mai-ds-r1           . ,gptel-backend-azure)
+      (gpt-4.1             . ,gptel-backend-azure)
+      ;; Gemini models map to the Local backend
+      (gemini-gemma-free    . ,gptel-backend-local)
+      (gemini-backup-flash    . ,gptel-backend-local)
+      (gemini-pro-paid     . ,gptel-backend-local)))
+
+  (defun my-gptel-switch-model (model-name)
+    "Switch the gptel backend and model in one go."
+    (interactive
+     (list (completing-read "Select model: " (mapcar #'car my-gptel-model-map))))
+
+    (let* ((model-sym (intern model-name))
+           (target-backend (alist-get model-sym my-gptel-model-map)))
+
+      (if target-backend
+          (progn
+            (setq gptel-backend target-backend)
+            (setq gptel-model model-sym)
+            (message "Switched to: %s (via %s)"
+                     model-name (gptel-backend-name target-backend)))
+        (user-error "Model configuration not found for: %s" model-name))))
+
+  ;; -------------------------------------------------------------------------
+  ;; 3. DEFAULTS
+  ;; -------------------------------------------------------------------------
+
+  ;; Bind the switcher to C-c m
+  (global-set-key (kbd "C-c m") #'my-gptel-switch-model)
+
+  ;; Optional: Set default startup model
+  (setq gptel-backend gptel-backend-local
+        gptel-model 'gemini-gemma-free)
+
+  (add-hook 'gptel-post-stream-hook #'gptel-auto-scroll))
+#+end_src
+
+**** DIRECTIVEs CONFIG
+
+*Analyzer Model:*
+#+begin_src emacs-lisp :tangle config.el
+(defvar kyo/gptel-analyzer-model "gemini-backup-flash"
+  "The model to use for the fast, pre-flight skill analysis.")
+#+end_src
+
+*Pre-Check Logs Folder:*
+#+begin_src emacs-lisp :tangle config.el
+(defvar kyo/gptel-log-dir (expand-file-name "gptel-directives/logs/" doom-user-dir)
+  "The directory where agentic request logs are stored.")
+
+(defun kyo/gptel-log-payload (payload)
+  "Log the provided payload to a timestamped file in the log directory."
+  (unless (file-directory-p kyo/gptel-log-dir) (make-directory kyo/gptel-log-dir t))
+  (let* ((timestamp (format-time-string "%Y-%m-%d_%H%M%S"))
+         (log-file (expand-file-name (format "%s_payload.log" timestamp) kyo/gptel-log-dir)))
+    (with-temp-buffer
+      (insert payload)
+      (write-file log-file))
+    (message "NexCipher: Logged final payload to %s" (file-name-nondirectory log-file))))
+
+;; --- NEW: Enhanced logging for the analysis step ---
+(defun kyo/gptel-log-analysis-step (request-prompt response-content)
+  "Log the analysis request and response for debugging."
+  (let* ((analysis-log-dir (expand-file-name "analysis/" kyo/gptel-log-dir))
+         (timestamp (format-time-string "%Y-%m-%d_%H%M%S"))
+         (log-file (expand-file-name (format "%s_analysis.log" timestamp) analysis-log-dir))
+         ;; [FIX 2] SAFEGUARD INPUTS
+         (safe-request (or request-prompt "ERR: NO REQUEST PROMPT CAPTURED"))
+         (safe-response (or response-content "ERR: NO RESPONSE CONTENT")))
+    (unless (file-directory-p analysis-log-dir) (make-directory analysis-log-dir t))
+    (with-temp-buffer
+      (insert (format "--- ANALYSIS REQUEST [%s] ---\n\n" timestamp))
+      (insert safe-request)
+      (insert (format "\n\n--- ANALYSIS RESPONSE [%s] ---\n\n" timestamp))
+      (insert safe-response)
+      (write-file log-file))))
+#+end_src
+
+*Pre-Check Pipeline:*
+#+begin_src emacs-lisp :tangle config.el
+(defun kyo/gptel-build-skill-summaries ()
+  "Scan all skills, read the YAML frontmatter from each rule, and build a detailed summary for the analysis AI."
+  (when (file-directory-p kyo/gptel-skills-dir)
+    (with-temp-buffer
+      (dolist (skill-dir (directory-files kyo/gptel-skills-dir t "^[^.]"))
+        (when (file-directory-p skill-dir)
+          (let* ((skill-name (file-name-nondirectory skill-dir))
+                 (summary-file (expand-file-name "SKILL.md" skill-dir))
+                 (rules-dir (expand-file-name "rules" skill-dir)))
+
+            (when (file-exists-p summary-file)
+              (insert (format "SKILL: %s\nSUMMARY:\n" skill-name))
+              (insert-file-contents summary-file)
+              (insert "\n\n")
+              (when (file-directory-p rules-dir)
+                (insert "AVAILABLE RULES:\n")
+                (dolist (rule-file (directory-files rules-dir t "\\.md$"))
+                  (let* ((rule-name (file-name-base rule-file))
+                         (content (f-read-text rule-file 'utf-8))
+                         (title "")
+                         (description ""))
+                    (when (string-match "title: \\(.*\\)" content)
+                      (setq title (match-string 1 content)))
+                    (when (string-match "impactDescription: \\(.*\\)" content)
+                      (setq description (match-string 1 content)))
+                    (insert (format "- RULE: %s/%s\n" skill-name rule-name))
+                    (insert (format "  TITLE: %s\n" title))
+                    (insert (format "  DESCRIPTION: %s\n" description))))
+                (insert "\n---\n"))))))
+      (buffer-string))))
+
+;;;###autoload
+(defun kyo/gptel-send-agentic (&optional arg)
+  "An intelligent gptel-send that uses a gptel pre-flight check and logs the final payload."
+  (interactive "P")
+  (if (and arg (require 'gptel-transient nil t))
+      (call-interactively #'gptel-menu)
+
+    (let* ((prompt-text (if (use-region-p)
+                            (buffer-substring-no-properties (region-beginning) (region-end))
+                          (buffer-substring-no-properties (point-min) (point))))
+           (current-directive-name (if (bound-and-true-p gptel-directive) gptel-directive 'default))
+           (base-payload (cdr (assoc current-directive-name gptel-directives)))
+           (original-user-model gptel-model)
+           (analyzer-prompt-template (with-temp-buffer
+                                       (insert-file-contents (expand-file-name "gptel-directives/context/system/skill-analyzer.md" doom-user-dir))
+                                       (buffer-string)))
+           (skill-summaries (kyo/gptel-build-skill-summaries))
+
+           ;; --- DEFINITIVE FIX: Use chained string replacement instead of format ---
+           ;; --- SAFE literal replacement (no backslash explosions) ---
+           (analysis-prompt
+            (replace-regexp-in-string
+             "{{PROMPT_TEXT}}" (or prompt-text "")
+             (replace-regexp-in-string
+              "{{SKILL_SUMMARIES}}" (or skill-summaries "")
+              analyzer-prompt-template
+              t t)
+             t t))
+           (callback-context (list :base-payload base-payload
+                                   :prompt-text prompt-text
+                                   :original-user-model original-user-model
+                                   :analysis-prompt analysis-prompt)))
+
+      (message "NexCipher: Analyzing prompt for dynamic skills using '%s'..." kyo/gptel-analyzer-model)
+
+      (let ((gptel-model (intern kyo/gptel-analyzer-model)))
+        (gptel-request analysis-prompt
+          :system "You are a semantic analysis engine. Your task is to identify relevant skills based on the provided manifest. Return output exactly as requested."
+          :stream nil
+          :context callback-context
+          :callback
+          (lambda (response info)
+            (let* ((context (plist-get info :context))
+                   (base-payload (plist-get context :base-payload))
+                   (prompt-text (plist-get context :prompt-text))
+                   (original-user-model (plist-get context :original-user-model))
+                   (analysis-prompt (plist-get context :analysis-prompt)))
+              (kyo/gptel-log-analysis-step analysis-prompt (if (stringp response) response "ERROR: NO RESPONSE"))
+              (if (not (stringp response))
+                  (message "NexCipher ERROR: Skill analysis failed. Status: %s. See logs/analysis/ for details."
+                           (plist-get info :status))
+                (message "NexCipher: Analysis complete. Building final payload...")
+                (let* (;; --- UNIFIED SKILL LOGIC ---
+                       (static-skills (kyo/gptel-parse-skill-declarations base-payload))
+                       (dynamic-skills (kyo/gptel-parse-skill-declarations response))
+                       (all-skills (seq-uniq (append static-skills dynamic-skills)))
+                       (skills-context (kyo/gptel-build-skills-context all-skills))
+                       (final-payload base-payload))
+
+                  (message "NexCipher: Loading skills: %s" (string-join all-skills ", "))
+
+                  (let ((insertion-point (string-match "<!--DIRECTIVE START SECTION-->" final-payload)))
+                    (when insertion-point
+                      (setq final-payload (concat (substring final-payload 0 insertion-point)
+                                                  skills-context
+                                                  (substring final-payload insertion-point)))))
+
+                  (let ((full-request-payload (concat final-payload prompt-text)))
+                    (kyo/gptel-log-payload full-request-payload)
+                    (message "NexCipher: Sending main query to '%s'..." (or original-user-model (gptel-backend-default-model)))
+                    (let ((gptel-model original-user-model))
+                      (let ((main-fsm (gptel-make-fsm :handlers gptel-send--handlers)))
+                        (gptel-request full-request-payload
+                          :stream gptel-stream
+                          :transforms nil
+                          :fsm main-fsm)))))))))))))
+#+end_src
+
+*Keybindings:*
+#+begin_src emacs-lisp :tangle config.el
+(map! :leader
+      :prefix ("o" . "Open")
+      :desc "GPTel Send (Agentic)" "l t" #'kyo/gptel-send-agentic)
+#+end_src
+
+#+begin_src emacs-lisp :tangle config.el
+(defvar kyo/gptel-skills-dir
+  (expand-file-name "gptel-directives/skills/" doom-user-dir))
+
+(defvar kyo/gptel-context-folders
+  (mapcar (lambda (path) (expand-file-name path doom-user-dir))
+          '("gptel-directives/context/agent"
+            "gptel-directives/context/memory"
+            "gptel-directives/context/user")))
+
+(defun kyo/gptel-build-context (folders)
+  (with-temp-buffer
+    (dolist (dir folders)
+      (if (file-directory-p dir)
+          (let ((files (directory-files-recursively dir "\\.md$\\|\\.org$")))
+            (dolist (file files)
+              (unless (string-prefix-p "." (file-name-nondirectory file))
+                (insert (format "\n<!--START OF CONTEXT-FILE: %s-->\n" (file-relative-name file dir)))
+                (insert-file-contents file)
+                (goto-char (point-max))
+                (insert (format "\n<!--END OF CONTEXT-FILE: %s-->" (file-relative-name file dir))))))
+        (message "GPTEL Warning: Context directory not found: %s" dir)))
+    (buffer-string)))
+
+(defun kyo/gptel-parse-skill-declarations (directive-content)
+  "Parse skill declarations from '// SKILLS: ...' syntax.
+Robustly handles nil or non-string inputs."
+  (when (stringp directive-content)
+    (when-let ((matches (string-match "^// SKILLS: \\(.*\\)" directive-content)))
+      (let ((skills-string (match-string 1 directive-content)))
+        (mapcar #'string-trim (split-string skills-string ","))))))
+
+
+(defun kyo/gptel-build-skills-context (skill-declarations)
+  "Build the context string from a list of hierarchical skill declarations."
+  (if (not skill-declarations)
+      ""
+    (let ((loaded-cores (make-hash-table :test 'equal))
+          (content-parts '()))
+      (dolist (decl skill-declarations)
+        (let* ((parts (split-string decl "/"))
+               (skill-name (car parts))
+               (rule-name (cadr parts))
+               (skill-dir (expand-file-name skill-name kyo/gptel-skills-dir)))
+          (unless (gethash skill-name loaded-cores)
+            (if (file-directory-p skill-dir)
+                (progn
+                  (dolist (core-file '("SKILL.md" "AGENTS.md"))
+                    (let ((file-path (expand-file-name core-file skill-dir)))
+                      (when (file-exists-p file-path)
+                        (push (format "\n<!--START OF SKILL-FILE: %s/%s.md-->\n%s\n<!--END OF SKILL-FILE: %s/%s-->\n"
+                                      skill-name (file-name-base core-file)
+                                      (f-read-text file-path 'utf-8)
+                                      skill-name (file-name-base core-file))
+                              content-parts))))
+                  (puthash skill-name t loaded-cores))
+              (message "GPTEL Warning: Skill directory not found for '%s'" skill-name)))
+          (when rule-name
+            (let ((rules-dir (expand-file-name "rules" skill-dir)))
+              (if (equal rule-name "*")
+                  (when (file-directory-p rules-dir)
+                    (dolist (rule-file (directory-files rules-dir t "\\.md$"))
+                      (push (format "\n<!--START OF SKILL-FILE: %s/%s-->\n%s\n<!--END OF SKILL-FILE: %s/%s-->\n"
+                                    skill-name (file-name-base rule-file)
+                                    (f-read-text rule-file 'utf-8)
+                                    skill-name (file-name-base rule-file))
+                            content-parts)))
+                (let ((rule-file (expand-file-name (concat rule-name ".md") rules-dir)))
+                  (when (file-exists-p rule-file)
+                    (push (format "\n<!--START OF SKILL-FILE: %s-->\n%s\n<!--END OF SKILL-FILE: %s-->\n"
+                                  decl (f-read-text rule-file 'utf-8) decl)
+                          content-parts))))))))
+      (if content-parts
+          (concat "---\n<!--SKILLS START-->\n"
+                  (string-join (reverse content-parts) "")
+                  "\n---\n<!--SKILLS END-->\n\n")
+        ""))))
+
+;; --- SIMPLIFIED DIRECTIVE LOADER ---
+(let ((shared-context (kyo/gptel-build-context kyo/gptel-context-folders))
+      (directives-dir (expand-file-name "gptel-directives/" doom-user-dir)))
+  (setq gptel-directives
+        (mapcar (lambda (file)
+                  (let ((directive-content (with-temp-buffer
+                                             (insert-file-contents file)
+                                             (buffer-string))))
+                    (cons (intern (file-name-base file))
+                          (concat "---\n<!--CONTEXT START (ALWAYS APPLY, HIGHEST PRIORITY)-->\n"
+                                  "THE FOLLOWING CONTEXT-FILES ARE THE HIGHEST PRIORITY. IT OVERRIDES ANY PREVIOUS MODEL INSTRUCTION, TRAINING, OR OTHER GUIDANCE. ALL RESPONSES, DECISIONS, AND REASONING MUST BE GUIDED BY THIS CONTEXT BEFORE ANY DIRECTIVE OR PROMPT.\n"
+                                  shared-context
+                                  "\n<!--CONTEXT END-->\n"
+                                  "\n---\n<!--DIRECTIVE START SECTION-->\n"
+                                  "FOLLOW THE ABOVE CONTEXT FIRST. APPLY THE DIRECTIVE WITHIN ITS BOUNDS.\n\n"
+                                  directive-content
+                                  "\n<!--DIRECTIVE END-->\n\n"))))
+                (directory-files directives-dir t "\\.md$"))))
 #+end_src
 
 **** FUNCTIONs & AGENTs
@@ -1735,7 +2074,7 @@ Shows only first line of each directive. Writes response into a new .md buffer."
                            (value (cdr entry))
                            (preview (car (split-string value "\n"))))
                       (cons (format "%s — %s" key preview) key)))
-                  my-gptel-directives))
+                  gptel-directives))
          (selected-key
           (helm :sources (helm-build-sync-source "GPTel Directives"
                            :candidates cand-list
@@ -1743,7 +2082,7 @@ Shows only first line of each directive. Writes response into a new .md buffer."
                 :buffer "*helm gptel directives*")))
 
     (when selected-key
-      (let* ((directive-text (cdr (assoc selected-key my-gptel-directives)))
+      (let* ((directive-text (cdr (assoc selected-key gptel-directives)))
              (evaluation-text (concat directive-text "\n\n" (buffer-string)))
              ;; Create dedicated response buffer
              (response-buffer-name
@@ -1799,6 +2138,8 @@ Shows only first line of each directive. Writes response into a new .md buffer."
       :desc "Send buffer to GPTel, choose directive"
       "g e" #'my/gptel-eval-buffer-helm-directive)
 #+end_src
+
+
 
 *** HELM PACKAGE
 #+begin_src emacs-lisp :tangle config.el
@@ -1948,22 +2289,6 @@ Setup the ~latext~ package to use with org.
 ;; Add the custom filter to the export process
 (add-hook 'org-export-filter-final-output-functions
           'my-org-latex-checklist-filter)
-#+end_src
-*** MULTIPLE CURSORs
-Configure the ~multiple-cursors~ package keybindings.
-| Keybinding  | Function                   | Description                         |
-|-------------+----------------------------+-------------------------------------|
-| C-S-c C-S-c | mc/edit-lines              | Edit all lines in a selected region |
-| C->         | mc/mark-next-like-this     | Mark the next occurrence            |
-| C-<         | mc/mark-previous-like-this | Mark the previous occurrence        |
-| C-c C-<     | mc/mark-all-like-this      | Mark all occurrences in the buffer  |
-
-#+begin_src emacs-lisp :tangle config.el
-   (use-package! multiple-cursors
-     :bind (("C-S-c C-S-c" . mc/edit-lines)
-            ("C->" . mc/mark-next-like-this)
-            ("C-<" . mc/mark-previous-like-this)
-            ("C-c C-<" . mc/mark-all-like-this)))
 #+end_src
 
 *** PDF VIEWER

@@ -1,0 +1,124 @@
+.mr-email-sms-modal {
+  width: 957px;
+  height: auto;
+  min-height: 603px;
+  background-color: #DAD8E4;
+  justify-content: center;
+}
+
+.mr-email-sms-modal .optional[data-text=""] {
+  display: none !important;
+}
+
+.mr-email-sms-modal .left-wrap {
+  width: 70%;
+}
+
+.mr-email-sms-modal .right-wrap {
+  width: 50%;
+  align-self: center;
+  position: relative;
+}
+
+.mr-email-sms-modal .left-wrap img {
+  object-fit: cover;
+  aspect-ratio: 1.5 / 1;
+}
+
+.quiz-btn {
+  border: 1px solid #3A2D4A;
+  background-color: #FFFFFF;
+  color: #3A2D4A;
+  border-radius: 100px;
+  padding: 0.75em 1em;
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s;
+  width: 80%;
+  margin: 0 auto;
+}
+
+.quiz-btn:hover,
+.quiz-btn.selected {
+  background-color: #3A2D4A;
+  color: #FFFFFF;
+}
+
+.quiz-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mr-email-sms-modal .right-wrap p a {
+  color: #911885;
+  text-decoration: underline;
+}
+
+.mr-email-sms-modal .form-cta {
+  border-radius: 100px;
+  width: 80%;
+  align-self: center;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 2.5em;
+}
+
+.mr-email-sms-modal .form-cta .btn-loader {
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+}
+
+#dy-email-capture-email-title {
+  width: 84%;
+  justify-self: center;
+}
+
+#dy-sms-capture-wrap {
+  justify-content: center;
+}
+
+#dy-sms-capture-phone-input,
+#dy-sms-capture-email-input {
+  width: 80%;
+  align-self: center
+}
+
+#dy-email-capture-wrap,
+#dy-sms-capture-wrap {
+  transition: opacity 0.3s ease-in-out;
+}
+
+.is-fading-out {
+  opacity: 0;
+}
+
+@media only screen and (max-width: 958px) {
+  .mr-email-sms-modal {
+    width: 100%
+  }
+}
+
+@media only screen and (max-width: 759px) {
+  .mr-email-sms-modal {
+    flex-direction: column;
+    height: 95vh;
+    justify-content: start;
+    padding-top: 3em;
+    width: 99%;
+  }
+
+  .mr-email-sms-modal .right-wrap {
+    width: 100%;
+  }
+
+  .quiz-btn,
+  .mr-email-sms-modal .form-cta,
+  #dy-sms-capture-phone-input,
+  #dy-sms-capture-email-input {
+    width: 100%;
+  }
+}
