@@ -1,0 +1,36 @@
+model_list:
+  # --- OPTION 1: THE SMART SWITCHER (Free -> Paid) ---
+  # Use this for 90% of your work. It saves money.
+  - model_name: gemini-gemma-free
+    litellm_params:
+      model: gemini/gemma-3-27b-it
+      api_key: ""
+      rpm: 30
+      tpm: 15000
+
+  - model_name: gemini-backup-flash
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: ""
+
+  # --- OPTION 2: FORCE PRO (Paid Only) ---
+  # Use this when you need complex reasoning immediately.
+  - model_name: gemini-pro-paid
+    litellm_params:
+      model: gemini/gemini-2.5-pro
+      api_key: ""
+
+router_settings:
+  # THE LOGIC:
+  # If 'smart-mix' fails for ANY reason (Context or Rate Limit),
+  # switch to 'backup-flash'.
+  fallbacks:
+    - {"gemini-gemma-free": ["gemini-backup-flash"]}
+
+  # Specific handling for "File too big" errors
+  context_window_fallbacks:
+    - {"gemini-gemma-free": ["gemini-backup-flash"]}
+
+  # If Free tier fails, ignore it for 1 minute before trying again
+  cooldown_time: 60
+  num_retries: 0
