@@ -390,9 +390,13 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 | `DOTCOMPB-7290` | Story | Specific Location page updates — Services + additional info  | **ALL ACs COMPLETE.** PR #20190 open. 143 tests passing. Code reviewed. |
 | `DOTCOMPB-7556` | Bug   | Add sticky Book Services button to location page             | Complete (FixedCtaBar created, integrated, tested, PR ready)            |
 | `DOTCOMPB-7557` | Bug   | ADA: Cannot tab to Book Services on desktop                  | Roam node created, not yet implemented                                  |
-| `DOTCOMPB-7463` | Story | Navigation Redesign                                          | **Near complete.** 15/18 tasks DONE. 41 tests. 5 events. Pending: snapshots, featuredTools title, QA. |
+| `DOTCOMPB-7463` | Story | Navigation Redesign                                          | PR #20210 open. CI failing (core_integration_tests + core_tests). Reviews dismissed. Bug fixes on `DOTCOMPB-7463-nav-bug-fixes`. |
 | `DOTCOMPB-7652` | Bug   | Madi overlapping with sticky CTA                             | Complete (MountedFlag + SierraWidget CSS fix, committed)                |
 | `DOTCOMPB-7555` | Bug   | Remove non-functional "Photos" button from location hero     | **Complete** — committed, 13 tests passing, PR ready                   |
+| `DOTCOMPB-7749` | Story | Nav title font size increase + CTA implementation            | In progress — font size bump done on `DOTCOMPB-7463-nav-bug-fixes`, CTA implementation pending |
+| `DOTCOMPB-7763` | Bug   | Mobile Shop submenu not fully scrollable — iOS Safari overlap | **MERGED** (PR #20317, 2026-03-26). iOS scroll fix + header spacing + double-tracking fix. 52 tests passing. |
+| `DOTCOMPB-7742` | Bug   | Featured service CTA on location page doesn't pre-select service in booking flow | **COMPLETE** (2026-03-30). Implemented, code reviewed (0 violations), 19 tests passing, 5263 full suite. Changes UNSTAGED — needs commit + PR. See §3.10. |
+| `DOTCOMPB-7712` | Story | New page to display location photos                          | **IN PROGRESS** (2026-03-30). Roam node created. Route + Pug + Vue component + hero button + carousel overlay implemented. Gallery grid with dynamic aspect ratios. Tests pending. See §3.11. |
 
 ### 2.3 Key Architectural Decisions (Session-Wide)
 
@@ -436,6 +440,24 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 38. **(2026-03-17)** **`NavCTAs` dynamic from Tophat** — Replaced hardcoded "Refer & Earn $15" with CMS-driven CTAs. Root-level `NavCTAs[]` array in `sr-top-nav` object.
 39. **(2026-03-18)** **DOTCOMPB-7555 scope: Photos button removal only** — Ticket misread initially as "add carousel for all breakpoints." Actual scope: remove only the non-functional `.more-photos` CTA, `handleImageGalleryClick()` (TODO stub since launch), `additionalImagesCount` computed, and `VISIBLE_HERO_IMAGES_COUNT` constant from `HairColorBarLocationHeroV2`. The 2-column static desktop layout (`primaryHeroImage`, `secondaryHeroImage`, `isMobile` matchMedia) remains untouched. Full desktop banner carousel (`LocationImageBannerCarousel`) is built and parked on `DOTCOMPB-7555_full_width` — DO NOT MERGE until business confirms.
 40. **(2026-03-19)** **`CmsPartialSsr` `clientConfig` replaces `MarketingBanner` URL workaround** — `CmsPartialSsr` accepts a `config` prop (Object) and passes it as `clientConfig` to the dynamically compiled CMS template component. This allows CMS partial HTML templates to reference `clientConfig.bookingUrl` directly (e.g., `:href="clientConfig.bookingUrl"`). Andris's PR #20229 (DOTCOMPB-7717) leveraged this to fix location-specific booking URLs by switching from `CMSPartial` → `CmsPartialSsr` and passing `{ bookingUrl }` as config. This made the `isBookServiceCta` text-sniffing workaround in `MarketingBanner` fully redundant — see §3.8 for cleanup plan.
+41. **(2026-03-24)** **`siteNav.js` null guard pattern** — `res.data || {}` before destructuring CMS API responses prevents `TypeError` when `res.data` is null (Sentry error on `siteNav.js#L60`). Pattern: `const data = res.data || {}; commit('setX', data.X)`.
+42. **(2026-03-24)** **`SiteNavShopContent` mandatory optional chaining** — All CMS data item accesses (`.link.text`, `.link.href`) in both template and script must use `?.`. Audited 17 spots, all fixed. Rule: never access nested properties on CMS objects without `?.`.
+43. **(2026-03-24)** **`SiteNavDesktopV2` nav title font size scale** — Bumped one step for DOTCOMPB-7749: `xs-f-small` → `xs-f-medium` (14→16px), `md-f-medium` → `md-f-xmedium` (16→18px), `lg-f-xsmall` → `lg-f-small` (12→14px), `xl-f-small` → `xl-f-medium` (14→16px). Applied to all 5 nav title elements.
+44. **(2026-03-24)** **Design system hex matches** — `#F7F7F8` = `ui-color-3`. `#EEEEEE` has no exact match (closest: `ui-color-4 = #eaeaea`). Keep as hardcoded hex if exact value required.
+45. **(2026-03-27)** **Single scroll container per mobile nav panel** — Each mobile nav panel owns exactly ONE scroll container. No nested scroll containers. MainNav: root element (`flex: 1` + `overflow-y: auto`). SubNav/AboutNav: `.nav-content` child (root is flex column, header pinned, `.nav-content` gets `flex: 1` + `overflow-y: auto`). ShopNav: `SiteNavShopContent` owns scroll (`height: 100%` + `overflow-y: auto` at `mq-desktop-md-less`). `SiteNavMobileWrapper` is purely structural — NO `overflow-y` on the wrapper.
+46. **(2026-03-27)** **Safe area padding values by panel** — `SiteNavShopContent`: `calc(8em + env(safe-area-inset-bottom))` (denser content, scroll container inside wrapper). MainNav/SubNav/AboutNav: `calc(4em + env(safe-area-inset-bottom))` (standard clearance for Safari toolbar + home indicator).
+47. **(2026-03-27)** **No flex on `SiteNavMobileWrapper`** — Adding `display: flex`, `flex-direction: column`, or `height: 100%` to the wrapper breaks the ShopContent scroll behavior. Wrapper must remain a simple structural container. ShopContent handles its own scroll at mobile via `height: 100%` + `overflow-y: auto` in `@media mq-desktop-md-less`. Wrapper's `.pb-400m` was redundant once ShopContent got proper safe area padding — removed.
+48. **(2026-03-27)** **`overflow-y: auto` over `overflow-y: scroll`** — All mobile nav panels use `auto` (scrollbar only when needed) not `scroll` (always shows). SubNav and AboutNav changed from `scroll` to `auto`.
+49. **(2026-03-27)** **CSS `padding` shorthand overrides `padding-bottom`** — `padding: 1em` resets all four sides, killing a more specific `padding-bottom` from a parent media query. Always add explicit `padding-bottom` AFTER the shorthand when safe area clearance is needed. Caught on `SiteNavShopContent` where `@media mq-mobile` `padding: 1em` was overriding the safe area `padding-bottom` from `@media mq-desktop-md-less`.
+50. **(2026-03-30)** **Cookie-based service pre-selection for `FeaturedServicesV2`**
+51. **(2026-03-30)** **Non-CMS page pattern for location photos** — Photos page uses direct `res.render()` → Pug → Vue hydration, bypassing CMS entirely. Pattern: `res.render('hcb-location-photos/hcb-location-photos', { locationCode, locationName, locationImages, content })`. Pug template extends `vue-layout.pug`, passes Express locals as static HTML attributes to Vue component props. Reference routes: `hcb-addon/message.pug`, `dashboard.pug`, `shop-menu.pug`.
+52. **(2026-03-30)** **Express route guidelines from 18-route analysis** — Documented in roam node `2026-03-30-150000-dotcompb_7712.org` DEVELOPMENT AC section. Template path convention: `<feature-dir>/<template-name>` → `views/desktop/<feature-dir>/`. Locals: layout flags (`simpleFooter`, `headerClass`) + nested `content` for meta tags + flat data props. Error: `res.code(404)` / `res.code(500)`, always `return`. Terminal routes use `res.render()`, passthrough uses `next()`.
+53. **(2026-03-30)** **CMS + cache image merging for photos page** — Express route loads CMS page content via `cms.loaders.getLoader().loadPage()` to get `defaultLocationImages` (hero images) AND `colorbarCache.getLocation()` for `carouselImages` + `headerImage`. Deduped by `_id`. CMS images first (hero primary/secondary), cache images second.
+54. **(2026-03-30)** **Recovered `MrBtn.more-photos` from DOTCOMPB-7555** — Commit `2dfd59d4a1f` removed the non-functional Photos button. DOTCOMPB-7712 restores it with real navigation: `handleImageGalleryClick()` now uses `trackMREventAndRedirect` to `/colorbar/locations/{code}/photos`. Same constant (`VISIBLE_HERO_IMAGES_COUNT`), computed (`additionalImagesCount`), template, and styles recovered. Button inside `.secondary-display` (which has `position: relative`).
+55. **(2026-03-30)** **MrBtn has `position: relative` internally** — `.mrbtn` class sets `position: relative` (line 218 of MrBtn.vue). When placing MrBtn with `position: absolute`, MrBtn's internal style overrides after hydration. Workaround: keep original `.more-photos` scoped styles; the scoped attribute specificity handles it in practice.
+56. **(2026-03-30)** **`carouselImages` from `colorbarCache` are raw Tophat media objects** — Shape: `{ _id, site, file_name, file_type, file_size, url, width, height, alt_text, aspects[], versionInfo[], ... }`. Have top-level `width` and `height` for dynamic aspect ratio computation. `ImgBox` handles URL construction from these objects via `:media-obj`.
+57. **(2026-03-30)** **CSS Grid masonry with pixel-perfect aspect ratios** — `grid-auto-rows: 1px` + `row-gap: 0` + `column-gap: 0.5rem`. Each item gets `grid-row: span N` where N = exact pixel height computed from `ResizeObserver`-measured grid width + image `width`/`height`. Separate `--row-span` and `--row-span-desktop` CSS custom properties because column spans differ per breakpoint (desktop capped at 50%).
+58. **(2026-03-30)** **`fitRowsToGrid()` row organization** — Organizes images into rows summing to exactly `GRID_COLUMNS` (6). Only expands the LARGEST item in each row (guard: `largest[spanKey] >= MIN_COL_SPAN + 1` = span 3+). Small images (span 2) never get stretched. `grid-auto-flow: dense` fills remaining gaps. — `FeaturedServicesV2.selectService()` must use the `selected_service` cookie + `trackMREventAndRedirect` to services URL (same pattern as `HairColorBarLocationServices`). The Vuex `setSelectedService` + `$router.push` approach doesn't survive cross-app page reloads. Maxi's `ServicesPage.setServiceFromCookie()` (PR #20308) handles consumption. Additionally, `HcbLocationPageV2.serverPrefetch` must call `hairColorBarBooking/getLocation` (booking endpoint) to populate `servicesOffered` — without it, `FeaturedServicesV2` silently renders nothing.
 
 ### 2.4 PR Review Resolutions (DOTCOMPB-7289)
 
@@ -443,13 +465,16 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 
 ### 2.5 Pending Work
 
-*   **DOTCOMPB-7463** — Snapshot updates (`SiteNav.test.js.snap`), add `title` to `featuredTools` in Tophat, QA verification. Commit + PR in roam node.
-*   **DOTCOMPB-7290** — In Code Review, PR [#20190](https://github.com/MadisonReed/mr/pull/20190) open. Awaiting review.
+*   **DOTCOMPB-7463-nav-bug-fixes** — Mobile nav scroll normalization + icon spacing + safe area padding changes are **UNSTAGED**. Tests need to run before committing. See §3.5 for full change list.
+*   **DOTCOMPB-7749** — CTA implementation for nav pending on `DOTCOMPB-7463-nav-bug-fixes`. Font size bump done. PR prep in `~/.brain.d/roam-nodes/madison_reed/2026-03-16-043543-dotcompb_7463.org`.
+*   **DOTCOMPB-7463** — PR #20210 open. CI failing (`core_integration_tests` + `core_tests`). Re-review needed (reviews dismissed). Tophat `featuredTools.title` field, QA verification.
+*   **DOTCOMPB-7290** — PR [#20190](https://github.com/MadisonReed/mr/pull/20190) open. Cherry-picked `CmsPartialSsr` fix (commit `329bce55079`). `partial-featured-services-v2` rendering issue root-caused — see §3.10.
+*   **DOTCOMPB-7742** — **COMPLETE** (2026-03-30). Changes UNSTAGED on branch `DOTCOMPB-7742`. Needs commit + PR creation. Commit msg and PR body in roam node `2026-03-27-120100-dotcompb_7742.org`.
 *   **DOTCOMPB-7555** — Complete on branch, PR description ready in roam node. Needs PR creation.
 *   **DOTCOMPB-7555_full_width** — Parked carousel work. Activate only when business confirms desktop banner carousel for location hero.
 *   **DOTCOMPB-7557** — ADA: Cannot tab to Book Services on desktop. Roam node exists, not started.
-*   **Full image gallery modal/page** — Separate ticket, not started. LocationImageCarousel overlay hidden with TODO.
-*   **DOTCOMPB-7717 cleanup** — New branch off `DOTCOMPB-7717`. Plan in §3.8. Remove dead workaround code from `MarketingBanner`, switch button label to `ctaUrl.text`, update tests, create PR referencing #20229.
+*   **DOTCOMPB-7712** — **IN PROGRESS** (2026-03-30). New photos page + "+X photos" button recovery. Route, Pug, Vue component, hero button, carousel overlay implemented. Gallery grid with dynamic sizing. Tests pending, commit + PR pending. See §3.11.
+*   **DOTCOMPB-7717 cleanup** — **COMPLETE** (2026-03-24). MarketingBanner dead workaround removed. Commit + PR body in §3.8.
 
 ---
 
@@ -501,10 +526,12 @@ HcbLocationPageV2 (page orchestrator)
 
 ### 3.4 DOTCOMPB-7290: Specific Location Page — Services + Additional Info
 
-**Created:** 2026-03-12 | **Last updated:** 2026-03-16
+**Created:** 2026-03-12 | **Last updated:** 2026-03-24
 **Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-03-12-114716-dotcompb_7290.org`
 **Branch:** `DOTCOMPB-7290` → `feat-website-booking-flow-site-revolution_with_performance`
 **PR:** [#20190](https://github.com/MadisonReed/mr/pull/20190) | **Status:** ALL ACs COMPLETE. In Code Review. 143 tests passing.
+
+**(2026-03-24) Cherry-pick:** Commit `329bce55079` from `DOTCOMPB-7717` applied to this branch — switches `FeaturedDeals` from `CMSPartial` → `CmsPartialSsr` with `:config="{ bookingUrl }"`. `FeaturedDeals` now accepts `bookingUrl` prop (String, default `''`). Currently investigating `partial-featured-services-v2` behavior on this branch.
 
 **Scope:** Extends `HcbLocationPageV2` (from 7289) with 7 new page sections: services, add-ons, FAQs, Birdeye reviews, marketing modules (×2 via CMS Partials), additional locations (V1 reuse), and special deals (desktop sidebar).
 
@@ -525,10 +552,73 @@ HcbLocationPageV2 (page orchestrator)
 
 ### 3.5 DOTCOMPB-7463: Navigation Redesign
 
-**Created:** 2026-03-16 | **Last updated:** 2026-03-17
+**Created:** 2026-03-16 | **Last updated:** 2026-03-27
 **Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-03-16-043543-dotcompb_7463.org`
-**Branch:** `feat-website-booking-flow-site-revolution_with_performance`
-**Status:** 15/18 tasks DONE. 41 tests. 5 events. Commit + PR in roam node. **Pending:** snapshot updates, `featuredTools` title in Tophat, QA.
+**Branch:** `DOTCOMPB-7463` (main PR) + `DOTCOMPB-7463-nav-bug-fixes` (post-PR bug fixes)
+**PR:** [#20210](https://github.com/MadisonReed/mr/pull/20210) | **Status:** OPEN. CI failing (`core_integration_tests` + `core_tests`). Reviews dismissed (re-review needed). Tophat `featuredTools.title` field pending. QA not done.
+
+**(2026-03-24) Bug fixes on `DOTCOMPB-7463-nav-bug-fixes`:**
+- **Sentry fix in `siteNav.js`** — `res.data || {}` guard before destructuring prevents `TypeError` on null response
+- **`SiteNavShopContent` focus-visible** — Added `:focus-visible` outline (`2px solid cta-color-1`) to `.collection-product` and `.solution-product` anchors
+- **`SiteNavShopContent` optional chaining** — 17 spots audited and fixed: all `.link.text`/`.link.href` now use `?.`
+- **`SiteNavShopContent` MrBtn hover color** — Added `color ui-color-1` to hover/active/focus state in `:deep(.mrbtn)` — text was invisible (cta-color-1 on cta-color-1 background)
+
+**(2026-03-25) Optional chaining for Object/Array props (commit `25df20c`):**
+- Added `?.` and `?? []` guards for optional Object/Array props across `SiteNavMobileV2AboutNav`, `SiteNavMobileV2MainNav`, `SiteNavMobileV2SubNav`, `SiteNavMobileWrapper`, `SiteNavShopContent`
+- Fixed undefined `v-for` keys across SiteNav components
+
+**(2026-03-26) DOTCOMPB-7763 — PR [#20317](https://github.com/MadisonReed/mr/pull/20317) — MERGED:**
+- **iOS scroll fix** — `padding-bottom: calc(4em + env(safe-area-inset-bottom))` on `.shop-nav-content` in `SiteNavShopContent.vue` at `@media mq-desktop-md-less`
+- **Header spacing** — Moved vertical padding from `header.shop-nav-header` (`.py-100m` removed) to `h2.nav-title` (`.py-25m` added) in `SiteNavMobileWrapper.vue`
+- **Double-tracking fix** — `mix_trackFTVNavViewed` moved into `else` branch in `SiteNavDesktopV2.toggleNav()` and `SiteNavMobileV2MainNav.openNav()` — shop nav only fires `Shop Nav - Opened`
+- **Style commit** — Adjusted mobile shop nav header padding (commit `7fb428b`)
+- 52 tests passing. Approved by Maxi-Di-Mito. Roam node: `~/.brain.d/roam-nodes/madison_reed/2026-03-26-dotcompb_7763.org`
+
+**(2026-03-27) Mobile nav scroll normalization (UNSTAGED on `DOTCOMPB-7463-nav-bug-fixes`):**
+
+Changes normalize scroll architecture across all 4 mobile nav panels. Each panel now owns exactly one scroll container with proper iOS safe area clearance.
+
+- **`SiteNavMobileV2MainNav.vue`:**
+  - Added `flex: 1` + `overflow-y: auto` + `padding-bottom: calc(4em + env(safe-area-inset-bottom))` on root — root IS the scroll container
+  - Added `.py-25m` to all 3 `i.icon-caret-right` elements (Shop, navItems loop, About) for icon vertical spacing
+  - MainNav does NOT get `.site-nav-mobile-content` from parent (unlike the other 3 panels)
+
+- **`SiteNavMobileV2SubNav.vue`:**
+  - Root: replaced `padding-bottom: 4em` with `display: flex` + `flex-direction: column`
+  - `.nav-content`: replaced `height: 100%` + `overflow-y: scroll` with `flex: 1` + `overflow-y: auto` + `padding-bottom: calc(4em + env(safe-area-inset-bottom))`
+
+- **`SiteNavMobileV2AboutNav.vue`:**
+  - Identical pattern to SubNav (same class name `.site-nav-mobile-v2-sub-nav`)
+  - Root: replaced `padding-bottom: 4em` with `display: flex` + `flex-direction: column`
+  - `.nav-content`: replaced `height: 100%` + `overflow-y: scroll` with `flex: 1` + `overflow-y: auto` + `padding-bottom: calc(4em + env(safe-area-inset-bottom))`
+
+- **`SiteNavMobileWrapper.vue`:**
+  - Removed `.pb-400m` from root template — wrapper is now purely structural
+  - No style changes — ShopContent owns its own scroll
+
+- **`SiteNavShopContent.vue`:**
+  - `@media mq-desktop-md-less`: removed `padding: 1.5em 1em` shorthand, updated `padding-bottom` from `calc(4em + ...)` to `calc(8em + env(safe-area-inset-bottom))`
+  - `@media mq-mobile`: added `padding-bottom: calc(8em + env(safe-area-inset-bottom))` after `padding: 1em` — fixes shorthand override bug
+
+**Mobile nav scroll architecture (final state, 2026-03-27):**
+
+Parent layout (`SiteNavMobileV2.vue`):
+```
+.site-nav-mobile-v2 → height: 100vh, overflow: hidden, display: flex, flex-direction: column
+├── .site-nav-mobile-header (top bar with hamburger, logo, cart)
+└── <transition>
+    ├── MainNav         ← NO .site-nav-mobile-content class
+    ├── ShopNav(Wrapper) ← .site-nav-mobile-content (flex: 1, position: relative, overscroll-behavior: contain)
+    ├── SubNav           ← .site-nav-mobile-content
+    └── AboutNav         ← .site-nav-mobile-content
+```
+
+| Panel | Root styles | Scroll container | Safe area padding |
+|---|---|---|---|
+| MainNav | `flex: 1`, `overflow-y: auto` | Root itself | `calc(4em + env(...))` on root |
+| SubNav | `display: flex`, `flex-direction: column` | `.nav-content` (`flex: 1`, `overflow-y: auto`) | `calc(4em + env(...))` on `.nav-content` |
+| AboutNav | Same as SubNav | Same as SubNav | Same as SubNav |
+| ShopNav | Wrapper: no scroll styles. ShopContent at mobile: `height: 100%`, `overflow-y: auto` | ShopContent | `calc(8em + env(...))` on ShopContent |
 
 **Component Tree:**
 ```
@@ -765,6 +855,236 @@ Labels: DOTCOM TEAM, Pending Code Review
 
 ---
 
+### 3.9 DOTCOMPB-7749: Nav Title Font Size + CTA Implementation
+
+**Created:** 2026-03-24
+**Roam Node:** Documented in `~/.brain.d/roam-nodes/madison_reed/2026-03-16-043543-dotcompb_7463.org` (§ Bug Fix Branch — Mar 24, 2026)
+**Branch:** `DOTCOMPB-7463-nav-bug-fixes`
+**Status:** Font size bump done. CTA implementation pending. Do NOT create PR until CTA work is complete.
+
+**Font size change — `SiteNavDesktopV2.vue`:** All 5 nav title elements (Shop button, navItems loop, About button, navLinks `<a>`, Extole `.site-nav-title`) bumped one step:
+- `xs-f-small` → `xs-f-medium` (14px → 16px)
+- `md-f-medium` → `md-f-xmedium` (16px → 18px)
+- `lg-f-xsmall` → `lg-f-small` (12px → 14px)
+- `xl-f-small` → `xl-f-medium` (14px → 16px)
+2 snapshots updated in `SiteNav.test.js`. 48 tests passing.
+
+**PR prep** — Title: `[DOTCOMPB-7749]: Nav title font size increase and site nav bug fixes`. Full PR body in roam node.
+
+---
+
+### 3.10 DOTCOMPB-7742: Featured Service CTA Pre-Selection on Location Page
+
+**Created:** 2026-03-27 | **Last updated:** 2026-03-30
+**Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-03-27-120100-dotcompb_7742.org`
+**Branch:** `DOTCOMPB-7742` (based on `master`, Maxi's `set-service-from-cookie-in-new-booking-flow` merged)
+**PR Dependency:** [#20308](https://github.com/MadisonReed/mr/pull/20308) (Maxi — cookie-based service pre-selection in V2 booking flow)
+**Status:** **COMPLETE** (2026-03-30). Implemented, code reviewed, 19 tests passing, full suite clean (5263/5263). Changes UNSTAGED — needs commit + PR.
+
+#### Problem Statement
+
+The `FeaturedServicesV2` component (inside CMS partial `partial-featured-services-v2`, rendered by `FeaturedDeals` in the V2 location page sidebar) has two compounding failures on the HCB location details page:
+
+1. **Rendering failure:** `FeaturedServicesV2` silently renders nothing because `hairColorBarBooking.location.servicesOffered` is not populated. The location page calls `colorbar/loadLocation` → `/api/colorbar/getLocation` (CMS endpoint), which does NOT return `servicesOffered`. The booking endpoint (`hairColorBarBooking/getLocation` → `/api/colorbar/getLocationForBooking`) that returns `servicesOffered` is never called.
+
+2. **State loss on navigation:** `FeaturedServicesV2.selectService()` uses Vuex `setSelectedService` + `$router.push({ name: 'booking-calendar' })`. On the location page this triggers a full page reload (different app entry point than the booking SPA) — Vuex state is wiped and the selected service is lost.
+
+**Two API endpoints — two data shapes:**
+
+| Endpoint | Store Action | Used By | Returns `servicesOffered`? |
+|---|---|---|---|
+| `/api/colorbar/getLocation` | `colorbar/loadLocation` | `HcbLocationPageV2` (location page) | No |
+| `/api/colorbar/getLocationForBooking` | `hairColorBarBooking/getLocation` | `HairColorBarBookingV2` (booking flow) | Yes |
+
+Current `HcbLocationPageV2.serverPrefetch`:
+```js
+await this.loadLocation(code);          // colorbar store — CMS data only
+this.setBookingLocation(this.location); // shallow copy to hairColorBarBooking — no servicesOffered
+```
+
+Result: `servicesOfferedDictionary` → `{}` → `servicesPopulated` → `[]` → `FeaturedServicesV2` renders nothing.
+
+**Scope note:** V1 location page (`HcbLocationPage`) does NOT use `partial-featured-services-v2` — only V2 does via `FeaturedDeals`. The partial also renders on the booking flow services page (`HairColorBarBooking/Services/Services.vue`) where it works because the booking endpoint is called.
+
+#### Existing Cookie Pattern (Working Reference)
+
+`HairColorBarLocationServices` (V2 location services section) uses a cookie-based flow that survives page reloads:
+1. Click "Book Now" → `this.$cookies.set('selected_service', code)` (with `_consult`/`_only` normalization based on `hadAppointment`)
+2. Redirect to `/colorbar/booking/${code}/services` via `trackMREventAndRedirect`
+3. `ServicesPage` mounts → `setServiceFromCookie()` reads cookie → pre-selects → navigates to calendar
+
+`FeaturedServicesV2` does NOT use this pattern — uses Vuex + `$router.push` which doesn't survive cross-app page reloads.
+
+#### Maxi's Solution — PR #20308 (`set-service-from-cookie-in-new-booking-flow`)
+
+Maxi rewrote the cookie consumption side in `ServicesPage.vue` (`HairColorBarBookingV2/ServicesPage/`):
+
+| File | Change |
+|---|---|
+| `ServicesPage.vue` | `setServiceFromCookie()` rewritten: normalizes codes (strips `_consult`, tries `_only`), finds service via `serviceTagMap` tag subset matching, computes enhancement add-ons, sets store state via mutations, navigates to `booking-calendar`. `mounted`: `$watch('categories')` defers call until async data loads. |
+| `hairColorBarBooking.js` | New `serviceSetByCookie` state + mutation. `loadAppointmentBookingProgress`: two early-return guards (before + after async call) skip session restore when cookie flow is active. |
+| `HairColorBarBookingV2.vue` | Skips `resumeUnsavedBooking()` when `serviceSetByCookie` is true. |
+| `ServicesPage.test.js` | +167 lines of cookie pre-selection tests. |
+
+**Result:** Booking flow consumption side is ready. Missing piece: making `FeaturedServicesV2` produce the cookie.
+
+#### Implementation Plan
+
+**Step 1 — Fix rendering: populate `servicesOffered` on V2 location page**
+
+Add `hairColorBarBooking/getLocation` call in `HcbLocationPageV2.serverPrefetch`:
+
+```js
+async serverPrefetch() {
+  await Promise.all([
+    this.loadLocation(this.routeParams.locationCode),
+    this.getBookingLocation(this.routeParams.locationCode),
+  ]);
+}
+```
+
+Map the action: `...mapActions('hairColorBarBooking', { getBookingLocation: 'getLocation' })`.
+
+This populates `hairColorBarBooking.location` with the full booking object (including `servicesOffered`), enabling `FeaturedServicesV2` to render. The existing `this.setBookingLocation(this.location)` mutation becomes redundant — `getBookingLocation` commits via `setLocation` directly. Remove it.
+
+Side effects to validate:
+- `hairColorBarBooking/getLocation` also commits `addOnTreatments` — harmless on location page
+- Adds one extra API call during SSR (parallelized via `Promise.all`, no latency penalty)
+
+**Step 2 — Fix `FeaturedServicesV2` to use cookie-based pre-selection**
+
+Modify `selectService()` to set the `selected_service` cookie and redirect to the services URL:
+
+Current (`FeaturedServicesV2.vue` L143–154):
+```js
+selectService(service, includesColorWonder) {
+  if (service) {
+    this.trackMREvent("Services redesign 2024 - featured service selected", { serviceCode: service.code });
+    this.setSelectedService({...service, includesColorWonder});
+    this.$router.push({ name: 'booking-calendar', params: { code: this.location.code } });
+  }
+}
+```
+
+New:
+```js
+selectService(service) {
+  if (service) {
+    this.$cookies.set('selected_service', service.code);
+    this.trackMREventAndRedirect(
+      'Services redesign 2024 - featured service selected',
+      `/colorbar/booking/${this.location.code}/services`,
+      { serviceCode: service.code, isFrontEndEvent: true },
+    );
+  }
+}
+```
+
+Changes:
+- Set `selected_service` cookie with `service.code`
+- Navigate to services URL (not calendar) so `ServicesPage.setServiceFromCookie()` runs
+- Use `trackMREventAndRedirect` (consistent with `HairColorBarLocationServices` pattern)
+- Remove `setSelectedService` Vuex call (doesn't survive reload)
+- Remove `includesColorWonder` param (handled by Maxi's tag matching)
+
+**Impact on booking flow services page:** `FeaturedServicesV2` also renders there via `CMSPartial`. After this change, clicking redirects to the same services URL. `ServicesPage` remounts, reads cookie, pre-selects, and navigates to calendar. User experience is identical — the flash is imperceptible.
+
+**Step 3 — Verify old booking flow compatibility**
+
+`HairColorBarBooking/Services/Services.vue` has an older `setServiceFromCookie()` with simpler code matching. Since `FeaturedServicesV2` now sets the cookie, verify the old method handles the service codes correctly, or confirm all traffic routes to the V2 booking flow.
+
+**Step 4 — Tests**
+
+- `FeaturedServicesV2.test.js` — update `selectService` tests: assert cookie set, assert `trackMREventAndRedirect` called with services URL
+- `HcbLocationPageV2.test.js` — add test for `getBookingLocation` in serverPrefetch
+- Run: `cd website && npm run test:vue FeaturedServicesV2 && npm run test:vue HcbLocationPageV2`
+
+**Step 5 — End-to-end verification**
+
+1. V2 location page → sidebar featured service CTA → booking flow → calendar with service pre-selected
+2. Booking flow services page → featured service CTA → calendar with service pre-selected
+3. Verify cookie is removed after consumption
+4. Verify `serviceSetByCookie` flag prevents session restore from overwriting
+
+---
+
+### 3.11 DOTCOMPB-7712: New Page to Display Location Photos
+
+**Created:** 2026-03-30 | **Last updated:** 2026-03-30
+**Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-03-30-150000-dotcompb_7712.org`
+**Branch:** `DOTCOMPB-7712`
+**Status:** IN PROGRESS. Route + Pug + Vue component + hero button + carousel overlay implemented. Gallery grid with dynamic aspect ratios and sizing. Tests pending. Commit + PR pending.
+
+**Scope:** "+X photos" tag on location hero images (desktop + mobile), new photos gallery page at `/colorbar/locations/{locationCode}/photos`.
+
+**Architecture — Non-CMS Direct Render Page:**
+```
+Express route (views.js)
+  → colorbarCache.getLocation(urlKey)
+  → cms.loaders.getLoader().loadPage(locationUri) — gets CMS defaultLocationImages
+  → Merges CMS images + carouselImages + headerImage (deduped by _id)
+  → res.render('hcb-location-photos/hcb-location-photos', { locationCode, locationName, locationImages })
+  → Pug template (extends vue-layout.pug)
+  → hcb-location-photos-page(location-code=locationCode location-name=locationName :location-images=locationImages)
+  → Vue hydrates client-side, no serverPrefetch
+```
+
+**Component Tree:**
+```
+HcbLocationPhotosPage (photos gallery page)
+└── ImgBox (per image, locally imported)
+
+HairColorBarLocationHeroV2 (modified — recovered +X photos button)
+├── MrBtn.more-photos (recovered from DOTCOMPB-7555, inside .secondary-display)
+└── LocationImageCarousel (modified — re-enabled +X photos overlay)
+    └── a.view-more-overlay (on 5th slide when remainingImagesCount > 0)
+```
+
+**`HcbLocationPhotosPage.vue` key architecture:**
+- **Props:** `locationCode` (String), `locationImages` (Array — JSON from Express), `locationName` (String)
+- **No Vuex dependency** — fully props-driven from Express route data
+- **Gallery grid:** CSS Grid with `grid-auto-rows: 1px`, `row-gap: 0`, `column-gap: 0.5rem`, `grid-template-columns: repeat(6, 1fr)`, `grid-auto-flow: dense`
+- **Dynamic sizing per image:** `getItemStyle(item)` computes `--col-span`, `--col-span-desktop`, `--row-span`, `--row-span-desktop` from image `width`/`height` and `maxImageWidth`
+- **Desktop cap:** `DESKTOP_MAX_SPAN = 3` (50% of 6 columns)
+- **Min span:** `MIN_COL_SPAN = 2` (no image smaller than ~33%)
+- **`fitRowsToGrid()`:** Organizes images into rows summing to 6 columns. Only expands largest item (span >= 3) via `expandLargestInRow()`. Separate passes for mobile and desktop spans.
+- **`ResizeObserver`** on grid container measures real pixel width for exact row span computation: `cellHeight = cellWidth * (h/w)`, `rowSpan = round(cellHeight / 1px)`
+- **Tracking:** `TrackSegmentPage` fires in `mounted()` — `colorbar locations {code} photos`
+
+**`HairColorBarLocationHeroV2.vue` changes (recovered from `2dfd59d4a1f^`):**
+- `VISIBLE_HERO_IMAGES_COUNT = 2` (constant, was deleted in 7555)
+- `additionalImagesCount` (computed, was deleted)
+- `MrBtn.more-photos` template (inside `.secondary-display`, was sibling before)
+- `handleImageGalleryClick()` — now navigates to `/colorbar/locations/{code}/photos` via `trackMREventAndRedirect` (was TODO stub)
+- `.more-photos` styles recovered: `position: absolute; bottom: 1em; right: 1em` within `.secondary-display` (has `position: relative`)
+
+**`LocationImageCarousel.vue` changes:**
+- Added `locationCode` prop (String)
+- Added `photosUrl` computed
+- Re-enabled `a.view-more-overlay` on 5th slide (removed TODO comment)
+- Added `handleViewMoreClick()` — `trackMREventAndRedirect` to photos URL
+- `handleSlideClick()` delegates to `handleViewMoreClick` when `isViewMoreSlide(index)`
+- Overlay styles: `position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); color: white`
+- Parent passes `:location-code="location.code"` to carousel
+
+**Key Decisions:**
+
+| Decision | Date | Rationale |
+|---|---|---|
+| Direct Pug render, no CMS | 2026-03-30 | Photos page doesn't need CMS template data — images come from cache + CMS loader in Express. Follows `hcb-addon/message.pug` pattern. |
+| CMS + cache image merging | 2026-03-30 | Hero uses `cmsSettings.defaultLocationImages` (CMS), photos page needs those + `carouselImages` (cache). Express loads both via `cms.loaders` + `colorbarCache`. |
+| 6-column grid with dynamic spans | 2026-03-30 | 6 columns provides granularity for proportional sizing. `span N = round(sizeRatio * 6)`. Desktop capped at span 3 (50%). |
+| `grid-auto-rows: 1px` + `row-gap: 0` | 2026-03-30 | Standard `gap` compounds between sub-rows within a spanning item, distorting aspect ratios. `1px` rows + `0` row-gap = pixel-perfect heights. Visual spacing via `margin-bottom`. |
+| `ResizeObserver` for grid measurement | 2026-03-30 | Row spans must be computed from actual pixel width. Static formula can't account for responsive container width changes. |
+| Recover button inside `.secondary-display` | 2026-03-30 | Original had button as sibling. Moving inside gives proper `position: absolute` context from `.secondary-display`'s `position: relative`. |
+| `expandLargestInRow` with span >= 3 guard | 2026-03-30 | Only items with span 3+ get expanded to fill row gaps. Prevents small images (span 2) from being stretched. |
+| Header NOT sticky | 2026-03-30 | Removed `position: sticky` per Kyo's direction. Header scrolls with content. |
+| `ImgBox` imported locally | 2026-03-30 | Not globally registered for this component context. Explicit import required. |
+
+**Tests:** Pending. Existing tests unaffected — 13 hero tests + 14 page tests passing.
+
+---
+
 ## SECTION 4: FILE INDEX
 
 > Quick reference for all files created or modified during this session.
@@ -789,6 +1109,9 @@ Labels: DOTCOM TEAM, Pending Code Review
 | `website/src/vuescripts/components/HairColorBarBookingV2/components/MarketingBanner/MarketingBanner.test.js` | DOTCOMPB-7290 |
 | `website/src/vuescripts/components/HairColorBarBookingV2/components/MarketingBanner/index.js` | DOTCOMPB-7290 |
 | `website/src/assets/svg-icons/star-solid.svg` | DOTCOMPB-7290 |
+| `website/src/vuescripts/components/HairColorBar/HcbLocationPhotosPage/HcbLocationPhotosPage.vue` | DOTCOMPB-7712 |
+| `website/src/vuescripts/components/HairColorBar/HcbLocationPhotosPage/index.js` | DOTCOMPB-7712 |
+| `website/src/views/desktop/hcb-location-photos/hcb-location-photos.pug` | DOTCOMPB-7712 |
 | `website/src/vuescripts/components/SiteNav/SiteNavShopContent/SiteNavShopContent.vue` | DOTCOMPB-7463 |
 | `website/src/vuescripts/components/SiteNav/SiteNavShopContent/SiteNavShopContent.test.js` | DOTCOMPB-7463 |
 | `website/src/vuescripts/components/SiteNav/SiteNavShopContent/index.js` | DOTCOMPB-7463 |
@@ -810,8 +1133,9 @@ Labels: DOTCOM TEAM, Pending Code Review
 |---|---|
 | `website/src/vuescripts/components/HairColorBar/HcbLocationPageV2/HcbLocationPageV2.vue` | 7289, 7290, 7556, 7652 |
 | `website/src/vuescripts/components/HairColorBar/HcbLocationPageV2/HcbLocationPageV2.test.js` | 7289, 7290, 7556 |
-| `website/src/vuescripts/components/HairColorBar/HcbIndividual/HairColorBarLocationHeroV2/HairColorBarLocationHeroV2.vue` | 7290 (aria fix), 7555 (photos btn removed) |
+| `website/src/vuescripts/components/HairColorBar/HcbIndividual/HairColorBarLocationHeroV2/HairColorBarLocationHeroV2.vue` | 7290 (aria fix), 7555 (photos btn removed), 7712 (photos btn recovered) |
 | `website/src/vuescripts/components/HairColorBar/HcbIndividual/HairColorBarLocationHeroV2/HairColorBarLocationHeroV2.test.js` | 7290, 7555 (13 tests) |
+| `website/src/vuescripts/components/HairColorBar/HcbIndividual/HairColorBarLocationHeroV2/LocationImageCarousel/LocationImageCarousel.vue` | 7712 (re-enabled +X photos overlay, locationCode prop) |
 | `website/src/vuescripts/components/HairColorBar/HcbIndividual/HairColorBarLocationAbout/HairColorBarLocationAbout.vue` | 7290 (aria + utility) |
 | `website/src/vuescripts/components/HairColorBar/HcbIndividual/HairColorBarLocationAbout/HairColorBarLocationAbout.test.js` | 7290 |
 | `website/src/vuescripts/components/HairColorBar/HcbIndividual/HairColorBarLocationServices/HairColorBarLocationServices.vue` | 7290 |
@@ -820,14 +1144,15 @@ Labels: DOTCOM TEAM, Pending Code Review
 | `website/src/vuescripts/components/HairColorBar/HcbIndividual/HairColorBarLocationReviews/HairColorBarLocationReviews.test.js` | 7290, 7652 |
 | `website/src/vuescripts/components/HairColorBarBookingV2/components/PageIntro/PageIntro.vue` | 7290 (titleId prop) |
 | `website/src/vuescripts/components/HairColorBarBookingV2/components/PageIntro/PageIntro.test.js` | 7290 |
-| `website/src/vuescripts/mrVueApp.js` | 7290 (MarketingBanner global registration) |
-| `website/src/vuescripts/ssr/registerGlobalsSsr.js` | 7290 (MarketingBanner SSR registration) |
+| `website/src/vuescripts/mrVueApp.js` | 7290 (MarketingBanner), 7712 (HcbLocationPhotosPage) |
+| `website/src/vuescripts/ssr/registerGlobalsSsr.js` | 7290 (MarketingBanner), 7712 (HcbLocationPhotosPage) |
+| `website/src/routing/views.js` | 7712 (photos page Express route) |
 | `website/src/vuescripts/store/modules/colorbar.js` | 7290 (getLocationReviews try/catch) |
-| `website/src/vuescripts/components/SiteNav/SiteNavDesktopV2/SiteNavDesktopV2.vue` | 7463 |
+| `website/src/vuescripts/components/SiteNav/SiteNavDesktopV2/SiteNavDesktopV2.vue` | 7463, 7749 (font size bump) |
 | `website/src/vuescripts/components/SiteNav/SiteNavMobileV2/SiteNavMobileV2MainNav/SiteNavMobileV2MainNav.vue` | 7463 |
 | `website/src/vuescripts/components/SiteNav/SiteNavMobileV2/SiteNavMobileV2.vue` | 7463 |
 | `website/src/vuescripts/components/SiteNav/SiteNav.vue` | 7463 |
-| `website/src/vuescripts/store/modules/siteNav.js` | 7463 (mixinKey → sr-top-nav) |
+| `website/src/vuescripts/store/modules/siteNav.js` | 7463 (mixinKey → sr-top-nav, res.data null guard) |
 | `website/src/vuescripts/components/SierraWidget/SierraWidget.vue` | 7652 |
 
 ### Roam Nodes
@@ -842,6 +1167,7 @@ Labels: DOTCOM TEAM, Pending Code Review
 | `~/.brain.d/roam-nodes/madison_reed/2026-03-17-065717-dotcompb_7652.org` | DOTCOMPB-7652 |
 | `~/.brain.d/roam-nodes/madison_reed/2026-03-18-121233-dotcompb_7555.org` | DOTCOMPB-7555 (photos btn + parked carousel) |
 | `~/.brain.d/roam-nodes/madison_reed/2026-03-18-135209-site_revolution_redesign.org` | Site Revolution architecture reference (no JIRA ticket) |
+| `~/.brain.d/roam-nodes/madison_reed/2026-03-30-150000-dotcompb_7712.org` | DOTCOMPB-7712 (photos page + gallery) |
 | `~/.brain.d/roam-nodes/2025-11-18-index_madison_reed.org` | Sprint Board Index |
 
 ### Session & Directives
@@ -857,35 +1183,42 @@ Labels: DOTCOM TEAM, Pending Code Review
 
 > **Start here when resuming.** This section captures the most recent work and immediate next steps.
 
-### What was done last (2026-03-19)
+### What was done last (2026-03-30 / 2026-03-31)
 
-*   **DOTCOMPB-7717 cleanup — implemented and all tests passing.**
-    *   `MarketingBanner.vue` — removed `import { mapState } from 'vuex'`, `ctaText` prop, entire `computed` block. `handleCtaClick` now uses `this.ctaUrl?.url` directly. **8/8 tests passing.**
-    *   `MarketingBanner.test.js` — updated two rendering tests to drive text through `ctaUrl.text`.
-*   **FeaturedDeals.test.js — refined** (was stale after Andris's `CMSPartial` → `CmsPartialSsr` switch):
-    *   Replaced `import CMSPartial from '@components/CMSPartial'` → `import CmsPartialSsr from '@components/CmsPartialSsr'`
-    *   Updated stub from `CMSPartial: true` → `CmsPartialSsr: true`
-    *   Updated `createWrapper` to accept `propsOverrides`
-    *   Fixed "renders CMSPartial with correct mixin-key" → "renders CmsPartialSsr with correct mixin-key" (uses `findComponent(CmsPartialSsr)`)
-    *   Added new test: "passes bookingUrl as config to CmsPartialSsr"
-    *   **4/4 tests passing.**
-*   **Commit message, PR title, and PR body saved in §3.8** — ready to copy-paste. Commit and PR creation are manual steps.
+*   **DOTCOMPB-7712 implemented** — Full photos page feature:
+    - Created roam node (`2026-03-30-150000-dotcompb_7712.org`) from JIRA ticket, populated DEVELOPMENT AC with plan, updated index
+    - Analyzed 18 Express routes to extract non-CMS page creation guidelines (documented in roam node)
+    - Express route at `/colorbar/locations/:urlKey/photos` — `res.render()` direct Pug, no CMS. Loads images from both `cms.loaders.getLoader().loadPage()` (hero images) and `colorbarCache` (carousel + header images), deduped by `_id`
+    - Pug template: `website/src/views/desktop/hcb-location-photos/hcb-location-photos.pug` extending `vue-layout.pug`
+    - Vue component: `HcbLocationPhotosPage` — props-driven (no Vuex), CSS Grid gallery with 6 columns, `grid-auto-rows: 1px` + `row-gap: 0` for pixel-perfect aspect ratios, `ResizeObserver` for grid width measurement, `fitRowsToGrid()` row organization
+    - Global registration in `registerGlobalsSsr.js` + `mrVueApp.js`
+    - Recovered `MrBtn.more-photos` on desktop hero from DOTCOMPB-7555 removal (commit `2dfd59d4a1f^`) — `handleImageGalleryClick()` now navigates to photos page
+    - Re-enabled `+X photos` overlay on mobile `LocationImageCarousel` 5th slide + `locationCode` prop + `handleViewMoreClick()`
+*   **Gallery refinement iterations** — Multiple layout approaches tested (CSS columns, flex masonry, CSS Grid). Final: 6-column grid with dynamic `--col-span` / `--row-span` per breakpoint, desktop max 50% (span 3), min span 2, `expandLargestInRow` only for items with span >= 3
+*   **Key discoveries:** `carouselImages` are raw Tophat media objects with `width`/`height`/`aspects[]`; `cmsSettings.defaultLocationImages` is separate data source from `carouselImages`; `MrBtn` has internal `position: relative`; `ImgBox` needs local import in non-CMS pages
+*   **All existing tests passing** — 13 hero + 14 page tests unaffected
 
 ### Pending
 
-*   **DOTCOMPB-7717 cleanup** — Implementation done. Needs: commit (message in §3.8) + push + PR creation (title + body in §3.8). Labels: `DOTCOM TEAM`, `Pending Code Review`. Base: `DOTCOMPB-7717`.
-*   **DOTCOMPB-7463** — Snapshot updates (`SiteNav.test.js.snap`), add `title` to `featuredTools` in Tophat, QA verification (touch targets, links).
-*   **DOTCOMPB-7290** — PR [#20190](https://github.com/MadisonReed/mr/pull/20190) open. Awaiting code review.
-*   **DOTCOMPB-7555** — Needs PR creation. PR description is in the roam node.
+*   **DOTCOMPB-7712** — Tests pending (`HcbLocationPhotosPage.test.js`, `LocationImageCarousel.test.js`, hero test updates). Commit + PR pending. Changes UNSTAGED on branch `DOTCOMPB-7712`.
+*   **DOTCOMPB-7742** — **COMPLETE.** Changes UNSTAGED on branch `DOTCOMPB-7742`. Needs commit + PR. Roam node `2026-03-27-120100-dotcompb_7742.org`.
+*   **DOTCOMPB-7768** — Roam node needed. On branch `DOTCOMPB-7768`.
+*   **DOTCOMPB-7463-nav-bug-fixes** — 5 files UNSTAGED (mobile nav scroll normalization). Need testing then commit. See §3.5.
+*   **DOTCOMPB-7749** — CTA implementation pending on `DOTCOMPB-7463-nav-bug-fixes`. Font size bump done.
+*   **DOTCOMPB-7463** — PR #20210 open. CI failing. Re-review needed.
+*   **DOTCOMPB-7290** — PR #20190 open. `partial-featured-services-v2` rendering root cause in §3.10.
+*   **DOTCOMPB-7555** — Needs PR creation. PR description in roam node.
 *   **DOTCOMPB-7557** — ADA: Cannot tab to Book Services on desktop. Not started.
 
 ### Where to resume
 
-If user asks to ship **DOTCOMPB-7717 cleanup**: Commit message, PR title, and PR body are all in §3.8 — copy-paste ready. Base `DOTCOMPB-7717`, labels `DOTCOM TEAM` + `Pending Code Review`.
-If user asks to continue **DOTCOMPB-7463**: Read Section 3.5. Near complete — 15/18 tasks done. Pending: snapshots, Tophat `title` field, QA.
-If user asks about **DOTCOMPB-7290**: PR [#20190](https://github.com/MadisonReed/mr/pull/20190) is open awaiting review.
-If user asks to create a PR for **DOTCOMPB-7555**: Use `/create-pr` skill. PR description is in `~/.brain.d/roam-nodes/madison_reed/2026-03-18-121233-dotcompb_7555.org`.
-If user asks to activate **DOTCOMPB-7555_full_width**: Confirm business approved the desktop banner carousel first.
+**IMMEDIATE: Finish DOTCOMPB-7712.** On branch `DOTCOMPB-7712`. Implementation complete. Remaining:
+1. Write tests: `HcbLocationPhotosPage.test.js` (new), `LocationImageCarousel.test.js` (new), update `HairColorBarLocationHeroV2.test.js` (recover `additionalImagesCount` + `handleImageGalleryClick` tests)
+2. Commit + PR creation using `/create-pr` skill
+
+If user wants to **commit DOTCOMPB-7742**: Use `/create-pr` skill — commit msg and PR body in roam node `2026-03-27-120100-dotcompb_7742.org`. Branch `DOTCOMPB-7742`.
+If user switches to **DOTCOMPB-7768**: Create roam node first using `/mr-roam-node`.
+If user wants to **commit nav scroll work**: Run tests on `DOTCOMPB-7463-nav-bug-fixes`, then commit 5 files.
 If user asks for **Site Revolution architecture**: Read `~/.brain.d/roam-nodes/madison_reed/2026-03-18-135209-site_revolution_redesign.org`.
 
 <!-- DESCRIPTION AND USER CONTEXT END -->
