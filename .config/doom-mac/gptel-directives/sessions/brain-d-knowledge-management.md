@@ -24,7 +24,7 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 ### 1.1 File Naming & Structure
 
 *   **Date-prefixed filenames:** All org files follow `YYYY-MM-DD-slug_name.org` format.
-*   **Subdirectory placement:** Every node belongs in a subdirectory under `roam-nodes/` based on its domain (e.g., `knowledge/`, `madison_reed/`, `personal_stuff/`).
+*   **Subdirectory placement:** Every node belongs in a subdirectory under `roam-nodes/` based on its domain (e.g., `knowledge/`, `madison_reed/`, `personal_stuff/`, `cyber_code_syndicate/`).
 *   **Org-Roam ID required:** Every file MUST have a `:PROPERTIES:` drawer with `:ID:` at the top. This is how Org-Roam tracks and links nodes.
 *   **FILETAGS:** Every file uses `#+FILETAGS:` for categorization (e.g., `:KYO:`, `:MR:`, `:CCS:`, `:INDEX:`).
 *   **Index naming:** Index nodes use the pattern `index_*.org` and are tagged with `:INDEX:`.
@@ -40,9 +40,10 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 ### 1.3 Metadata Headers
 
 *   **Standard headers:** `#+TITLE:`, `#+SUBTITLE:`, `#+DESCRIPTION:`, `#+FILETAGS:`, `#+AUTHOR:`, `#+EMAIL:`.
-*   **Author:** Always `Cristian D. Moreno - Kyonax`.
-*   **Email:** `kyonax.corp@gmail.com`.
-*   **ORCID:** `0009-0006-4459-5538`.
+*   **Author:** Always `Cristian D. Moreno - Zerønet Labs~\orcidlink{0009-0006-4459-5538}\affiliation{Senior Full-Stack Engineer, Zerønet Labs}`. This LaTeX-compatible format includes the ORCID link and affiliation inline. Applied to ALL nodes without exception.
+*   **Email:** `kyonax.corp@gmail.com` (default), or `iam@kyonax.com` for personal/diary nodes.
+*   **Header order:** TITLE → SUBTITLE → DESCRIPTION → FILETAGS → AUTHOR → EMAIL (mandatory).
+*   **All six headers are required** on every index node. Non-index nodes require at minimum TITLE, FILETAGS, AUTHOR.
 
 ### 1.4 Linking & Graph Integrity
 
@@ -61,11 +62,11 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
     *   `=verbatim=` for literal values like brand handles (e.g., `=@is.kyonax=`).
     *   `~code~` for inline code references.
     *   Org comments (`#`) only when necessary — no decorative comments.
-*   **FILETAGS format:** Compact, no spaces between tags: `:KYO:INDEX:` not `:KYO: :INDEX:`.
-*   **Header order:** `#+TITLE:`, `#+SUBTITLE:`, `#+DESCRIPTION:`, `#+FILETAGS:`, `#+AUTHOR:`, `#+EMAIL:`.
+*   **FILETAGS format:** Compact, no spaces between tags: `:KYO:INDEX:` not `:KYO: :INDEX:`. Domain tag comes first, then `:INDEX:` (e.g., `:MR:INDEX:`, `:CCS:INDEX:`, `:KYO:ARCH:INDEX:`).
 *   **Content lifecycle:** Important content earns its own roam node — never dump inline in an index. *Quick Notes* is a temporary scratch area; anything left there more than a few days without promotion gets removed.
 *   **WORK & PROJECTs scope:** Professional work, side projects, personal projects — anything that generates income.
 *   **Sensitive data:** Passwords and passphrases belong in `kyo-utils` repo, not in `.brain.d`. Bank accounts go under a general *FINANCE INFO* section, never bank-specific sections.
+*   **Review labels:** Nodes pending future removal use `=[REVIEW: pending removal]=` in their `:: description`.
 
 ### 1.6 Infrastructure & Symlinks
 
@@ -78,7 +79,7 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 
 ### 2.1 Purpose
 
-`~/.brain.d/` is Kyonax's **Org-Roam personal knowledge management system** — a second brain built on Doom Emacs that consolidates professional work tracking, technical learning, personal documents, content creation strategy, and community management into a single, interconnected graph of 118+ org-mode files. Git remote: `https://github.com/kyonax/roam-brain-emacs`.
+`~/.brain.d/` is Kyonax's **Org-Roam personal knowledge management system** — a second brain built on Doom Emacs that consolidates professional work tracking, technical learning, personal documents, content creation strategy, and community management into a single, interconnected graph of 120+ org-mode files. Git remote: `https://github.com/kyonax/roam-brain-emacs`.
 
 ### 2.2 Scope
 
@@ -91,19 +92,32 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 | Session file reset (skill-based)  | Documentation  | Rewrite to comply with session-reset skill 5-section rules          | **DONE**        |
 | Kyonax master index refactor      | Refactor       | Library-style reorganization: removed 12 inline sections, linked 4 domain indices | **DONE** |
 | Index formatting rules            | Documentation  | Abstracted patterns from refactor decisions into Section 1.5        | **DONE**        |
+| Index linking expansion           | Refactor       | Added CCS, Documentation, Arch Linux, Gentleman Staff to master index | **DONE**      |
+| Full index refinement pass        | Refactor       | Applied Section 1 guidelines to all 8 linked indices                | **DONE**        |
+| Coding Knowledge content extraction | Refactor     | Extracted 3 inline content blocks into separate nodes               | **DONE**        |
+| Author orcidlink standardization  | Refactor       | Applied Zerønet Labs orcidlink author format to all 12 index/node files | **DONE**    |
+| Session reset (2nd)               | Documentation  | Second session reset capturing all refinement work                  | **DONE**        |
 
 ### 2.3 Key Decisions (Session-Wide)
 
 1.  **(2026-04-05)** Session file named `brain-d-knowledge-management.md` — covers the full `.brain.d` repo, not a single ticket or feature. Cross-cutting session.
 2.  **(2026-04-05)** Skills shared between GPTel and Claude Code via symlinks — single source of truth for skill definitions across both AI tools.
 3.  **(2026-04-05)** Section 3 organized by domain (not by individual node) since this is a PKM session, not a code session. Each domain is a logical unit of work.
-4.  **(2026-04-05)** Master index refactored to library-style: index is a catalog of domain indices, not a content dump. Removed 12 stale/inline sections. Linked Madison Reed, Coding Knowledge, Content Creation, and Diary as domain indices. Gentleman Staff and Arch Linux intentionally excluded.
+4.  **(2026-04-05)** Master index refactored to library-style: index is a catalog of domain indices, not a content dump. Removed 12 stale/inline sections. Initially linked 4 domain indices; later expanded to 8.
 5.  **(2026-04-05)** Passwords/passphrases moved to `kyo-utils` repo. Bank accounts under general FINANCE INFO section.
 6.  **(2026-04-05)** Index formatting convention established: plain list items (`-`) with `:: description`, `*bold*` for key nouns, `/italic/` for categories, compact FILETAGS.
+7.  **(2026-04-05)** CCS placed under WORK & PROJECTs, Arch Linux under HOME & PERSONAL, Documentation as its own new section in master index.
+8.  **(2026-04-05)** Gentleman Staff linked under WORK & PROJECTs with `=[REVIEW: pending removal]=` label — user intends to remove it in the future.
+9.  **(2026-04-05)** Inline content extracted from Coding Knowledge index (441 → 38 lines): created 3 new nodes (Senior Interview Q&A, Design Patterns, JavaScript Yasnippets).
+10. **(2026-04-05)** Author tag standardized to Zerønet Labs orcidlink format across ALL files: `Cristian D. Moreno - Zerønet Labs~\orcidlink{0009-0006-4459-5538}\affiliation{Senior Full-Stack Engineer, Zerønet Labs}`. Replaces previous `Cristian D. Moreno - Kyonax` convention.
+11. **(2026-04-05)** FILETAGS ordering convention: domain tag first, then `:INDEX:` (e.g., `:MR:INDEX:` not `:INDEX:MR:`).
+12. **(2026-04-05)** Completed tasks in indices should be cleaned up (e.g., Content Creation `[5/5]` social accounts task removed).
+13. **(2026-04-05)** Empty index sections (NOTEs, TASKs with no content) should be removed rather than left as empty headings.
+14. **(2026-04-05)** Doom Emacs Comprehensive Guide section removed from Documentation index — was inline TODO with empty sub-sections. Can be recreated as its own node if needed.
 
 ### 2.4 Pending Work
 
-- [ ] No pending tasks — session initialized for future `.brain.d` work
+- [ ] No pending tasks — session up to date after full refinement pass
 
 ---
 
@@ -115,9 +129,9 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 **Status:** DONE
 
 *   Full directory structure analysis: 7 domain subdirectories under `roam-nodes/`, plus `latex/`, `agenda/`, `templates/`, `bookmarks/`, `media/`.
-*   118+ org files identified across all domains.
+*   120+ org files identified across all domains (increased from 118 after content extraction).
 *   Doom Emacs integration mapped: org-roam config (lines 371-452 in `config.el`), GPTel config (lines 675-806), capture templates, keybindings.
-*   Key entry points identified: master index (`2023-04-19-index_kyonax.org`), domain-specific indices for all 6 active domains.
+*   Key entry points identified: master index (`2023-04-19-index_kyonax.org`), domain-specific indices for all active domains.
 
 ### 3.2 GPTel Skills → Claude Code Symlinks (Infrastructure)
 
@@ -129,20 +143,66 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
     *   `code-review`, `emacs-expert`, `mr-dotcom-dev`, `mr-roam-node`, `seo-web-quality`, `session-reset`, `skill-architect`
 *   **Result:** 8 total skills in `~/.claude/skills/` (7 GPTel + 1 pre-existing `omarchy`).
 
-### 3.3 Kyonax Master Index Refactor (Library-Style)
+### 3.3 Kyonax Master Index Refactor & Expansion
 
 **Created:** 2026-04-05 | **Last updated:** 2026-04-05
 **Status:** DONE
 
-*   **Problem:** Master index (`2023-04-19-index_kyonax.org`) was a 1065-line scratch pad with GPTel conversations, code exercises, financial calculators, and personal notes dumped inline. No domain indices were linked.
-*   **Fix:** Refactored to a clean library catalog (~55 lines):
-    *   **Kept:** HOME & PERSONAL (3 existing child nodes), FINANCE INFO (bank accounts table), QUICK NOTEs (empty scratch area).
-    *   **Added domain links:** Madison Reed, Coding Knowledge, Content Creation, Diary — each with `:: description`.
-    *   **Removed 12 sections:** PASSPHRASEs (→ `kyo-utils`), KEYBINDINGs, EMACS BUILD, WORK, MMORPG, SKANDIA, BANCOLOMBIA (→ FINANCE INFO), NOTEs (tax), PENSAMIENTOs, DEUDAs, PAGAR/DEDUCCIONES/DECLARACION/ASEO, RUT+CEDULA.
-    *   **Excluded from index:** Gentleman Staff, Arch Linux (user choice).
-*   **Formatting rules established:** Section 1.5 now documents index conventions (list items, `::` descriptions, markup, content lifecycle).
+*   **Phase 1 — Library-style refactor:** Reduced from 1065-line scratch pad to ~55-line catalog. Removed 12 stale/inline sections. Initially linked 4 domain indices (Madison Reed, Coding Knowledge, Content Creation, Diary).
+*   **Phase 2 — Index expansion:** Added 4 more links:
+    *   Arch Linux → HOME & PERSONAL section
+    *   Cyber Code Syndicate → WORK & PROJECTs section
+    *   Gentleman Staff → WORK & PROJECTs section (with `=[REVIEW: pending removal]=`)
+    *   Documentation → New DOCUMENTATION section (between CONTENT CREATION and DIARY)
+*   **Final structure (8 sections):** HOME & PERSONAL (4 items), WORK & PROJECTs (3 items), KNOWLEDGE & LEARNING (1 item), CONTENT CREATION (1 item), DOCUMENTATION (1 item), DIARY (1 item), FINANCE INFO (table), QUICK NOTEs.
 
-### 3.4 Domain: Madison Reed (32 nodes — ACTIVE)
+### 3.4 Full Index Refinement Pass
+
+**Created:** 2026-04-05 | **Last updated:** 2026-04-05
+**Status:** DONE
+
+Applied Section 1 guidelines systematically to all 8 indices linked from Index Kyonax. Common fixes across multiple files:
+
+*   **Headers:** Added missing `#+SUBTITLE:`, `#+DESCRIPTION:`, `#+EMAIL:`. Fixed header order to TITLE → SUBTITLE → DESCRIPTION → FILETAGS → AUTHOR → EMAIL. Uppercased lowercase headers.
+*   **FILETAGS:** Fixed spacing (`:KYO: :INDEX:` → `:KYO:INDEX:`), fixed domain ordering (`:INDEX:MR:` → `:MR:INDEX:`), added missing `:INDEX:` tags, corrected wrong domain tags (Diary had `:MR:` instead of `:KYO:DIARY:`).
+*   **Author:** Standardized to `Cristian D. Moreno - Kyonax` (later updated to orcidlink format).
+*   **Structure:** Converted `**` subheading children to `-` list items with `:: description`. Added one-line section descriptions under all headings. Removed empty sections.
+*   **Content lifecycle:** Removed completed `[5/5]` task from Content Creation. Removed inline DOOM EMACS guide TODO from Documentation.
+
+Per-index specifics:
+*   **Arch Linux:** Fixed generic subtitle, added `:KYO:` to FILETAGS.
+*   **CCS:** Added SUBTITLE/DESCRIPTION, converted SOCIAL task from `**` to list item, added section descriptions.
+*   **Documentation:** Full rewrite — fixed typo "PROYECTs", flattened CV nesting, removed inline Doom Emacs guide, reorganized into 4 clean sections.
+*   **Madison Reed:** Added SUBTITLE/DESCRIPTION, fixed intro grammar ("actual" → "current", "my role be" → "my role is to be").
+*   **Coding Knowledge:** Full rewrite — extracted 400+ lines of inline content into 3 new nodes (see Section 3.5), reorganized into 5 sections.
+*   **Content Creation:** Full rewrite — consolidated brand sections into BRANDs list items, removed completed social accounts task.
+*   **Gentleman Staff:** Added SUBTITLE/DESCRIPTION, removed empty NOTEs/TASKs sections, converted DA'DOCs to list item.
+*   **Diary:** Added SUBTITLE/DESCRIPTION, fixed FILETAGS from `:INDEX:MR:` to `:KYO:DIARY:INDEX:`, fixed header order.
+
+### 3.5 Content Extraction from Coding Knowledge
+
+**Created:** 2026-04-05 | **Last updated:** 2026-04-05
+**Status:** DONE
+
+*   **Problem:** `index_coding_knowledge.org` was 441 lines with interview Q&A, design patterns, yasnippets, and code examples dumped inline — violating Section 1.5 content lifecycle rule.
+*   **Fix:** Extracted into 3 new nodes under `roam-nodes/knowledge/`:
+    *   `2026-04-05-senior_interview_qa.org` (ID: `ac1a16d7-df12-4cfa-835c-6f33a3d52ec7`) — Q&A for ReactJS, JS, NextJS, AWS, TypeScript, Storybook, CI/CD, Jest + interview prep checklist
+    *   `2026-04-05-design_patterns.org` (ID: `b28c9d4e-0683-4906-b47d-d0cc84c6ed56`) — Creational, structural, behavioral patterns with React/Next examples
+    *   `2026-04-05-javascript_yasnippets.org` (ID: `62c11856-d6e1-4f25-ae82-c6ef4de1a091`) — Emacs yasnippet templates for JS file/method documentation (CCS code style)
+*   **Result:** Index reduced from 441 → 38 lines. 5 clean sections: CURRENTLY LEARNING, STUFF TO LEARN, INTERVIEW PREP, DESIGN PATTERNs, TOOLING.
+
+### 3.6 Author Orcidlink Standardization
+
+**Created:** 2026-04-05 | **Last updated:** 2026-04-05
+**Status:** DONE
+
+*   **Problem:** Author tags inconsistent across files — some had `Cristian D. Moreno - Kyonax`, others `Kyonax - Cristian Moreno`, Madison Reed had `Cristian D. Moreno - Agile Engine`. Diary had the orcidlink format but was the only one.
+*   **Fix:** Applied `Cristian D. Moreno - Zerønet Labs~\orcidlink{0009-0006-4459-5538}\affiliation{Senior Full-Stack Engineer, Zerønet Labs}` to all 12 files:
+    *   9 index files: Kyonax, Arch Linux, CCS, Documentation, Madison Reed, Coding Knowledge, Content Creation, Gentleman Staff, Diary
+    *   3 extracted nodes: JS Yasnippets, Senior Interview Q&A, Design Patterns
+*   **Session guideline updated:** Section 1.3 now mandates orcidlink format for all nodes.
+
+### 3.7 Domain: Madison Reed (32 nodes — ACTIVE)
 
 **Created:** 2025-11-18 | **Last updated:** 2026-04-05
 **Status:** ACTIVE
@@ -158,16 +218,17 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 *   ADA accessibility compliance
 *   Multiple JIRA tickets (DOTCOMPB-6943 through DOTCOMPB-7652)
 
-### 3.5 Domain: Knowledge Base (11 nodes — REFERENCE)
+### 3.8 Domain: Knowledge Base (14 nodes — REFERENCE)
 
 **Created:** 2024-12-18 | **Last updated:** 2026-04-05
 **Status:** REFERENCE
 
-**Index:** `roam-nodes/2024-12-18-index_coding_knowledge.org`
+**Index:** `roam-nodes/knowledge/2024-12-18-index_coding_knowledge.org`
 **Topics:** JavaScript (ES6+, async, closures, event loop), ReactJS (hooks, performance), Next.js (SSR/SSG/ISR), Node.js, Ruby, Vue.js, AWS (S3, EC2, IAM, CI/CD), Design Patterns (Creational/Structural/Behavioral with React), Jest testing.
 **Purpose:** Senior engineer interview preparation and continuous learning reference.
+**Note:** 3 new nodes added (2026-04-05) via content extraction — Senior Interview Q&A, Design Patterns, JavaScript Yasnippets. Node count increased from 11 to 14.
 
-### 3.6 Domain: Content Creation (2 nodes — ACTIVE)
+### 3.9 Domain: Content Creation (2 nodes — ACTIVE)
 
 **Created:** 2024-09-16 | **Last updated:** 2026-04-05
 **Status:** ACTIVE
@@ -176,7 +237,7 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 **Brands:** `@is.kyonax` (main personal), `@kyonax_on` (gaming/lore), `@kyonax_on_tech` (tech/programming), `Discord Creed` (Discord content), `Datomanía` (data/facts).
 **Strategy:** Simultaneous shorts-based growth across YouTube, TikTok, Twitter, Instagram, Twitch, Facebook with cross-promotion.
 
-### 3.7 Domain: Cyber Code Syndicate (4 nodes — IN DEVELOPMENT)
+### 3.10 Domain: Cyber Code Syndicate (4 nodes — IN DEVELOPMENT)
 
 **Created:** 2025-11-01 | **Last updated:** 2026-04-05
 **Status:** IN DEVELOPMENT
@@ -186,22 +247,32 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 **Code style:** `snake_case` variables, `kebab-case` files, `UPPER_SNAKE_CASE` constants.
 **Pending:** Manifesto creation, community launch.
 
-### 3.8 Domain: Gentleman Staff (1 node — ACTIVE)
+### 3.11 Domain: Gentleman Staff (1 node — ACTIVE, REVIEW)
 
 **Created:** 2025-12-23 | **Last updated:** 2026-04-05
-**Status:** ACTIVE
+**Status:** ACTIVE (pending removal from master index)
 
 **Index:** `roam-nodes/2025-12-23-index_gentleman_staff.org`
 **Role:** Discord server moderator for `@gentlemanprogramming` YouTube community.
+**Note:** Linked to master index with `=[REVIEW: pending removal]=` label per user decision.
 
-### 3.9 Domain: Personal (12 nodes — LIVING)
+### 3.12 Domain: Personal (12 nodes — LIVING)
 
 **Created:** ~2023-04-19 | **Last updated:** 2026-04-05
 **Status:** LIVING
 
 **Contents:** CVs (English, Spanish, JS-focused), family info (partner: Leidy Johana Guerrero), baby/family planning, career planning, birthday reminders, hiring interview notes.
 
-### 3.10 Domain: Omarchy / Arch Linux (ACTIVE — Separate Session)
+### 3.13 Domain: Documentation (REFERENCE)
+
+**Created:** 2024-09-16 | **Last updated:** 2026-04-05
+**Status:** REFERENCE
+
+**Index:** `roam-nodes/2024-09-16-index_documentation.org`
+**Contents:** Brain Dump guide, Work Liquidation reference, Maritz/Softtek work docs, CVs (EN/ES), Invoice templates.
+**Note:** Doom Emacs Comprehensive Guide section removed during refinement (was empty TODO stubs). Can be recreated as its own node when ready.
+
+### 3.14 Domain: Omarchy / Arch Linux (ACTIVE — Separate Session)
 
 **Created:** 2026-03-20 | **Last updated:** 2026-04-05
 **Status:** ACTIVE (tracked in `sessions/omarchy-installation.md`)
@@ -215,18 +286,27 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 
 ### 4.1 Index Nodes
 
-| File                                                    | Domain              |
-|---------------------------------------------------------|---------------------|
-| `roam-nodes/2023-04-19-index_kyonax.org`                | Master index        |
-| `roam-nodes/2025-11-18-index_madison_reed.org`          | Madison Reed        |
-| `roam-nodes/2024-12-18-index_coding_knowledge.org`      | Knowledge base      |
-| `roam-nodes/2024-09-16-index_content_creation.org`      | Content creation    |
-| `roam-nodes/2024-09-16-index_documentation.org`         | Documentation       |
-| `roam-nodes/2025-12-23-index_gentleman_staff.org`       | Gentleman Staff     |
-| `roam-nodes/2026-02-15-index_diary.org`                 | Daily agenda/diary  |
-| `roam-nodes/2026-03-20-arch_linux.org`                  | Arch/Omarchy        |
+| File                                                              | Domain              |
+|-------------------------------------------------------------------|---------------------|
+| `roam-nodes/2023-04-19-index_kyonax.org`                          | Master index        |
+| `roam-nodes/2025-11-18-index_madison_reed.org`                    | Madison Reed        |
+| `roam-nodes/knowledge/2024-12-18-index_coding_knowledge.org`      | Knowledge base      |
+| `roam-nodes/2024-09-16-index_content_creation.org`                | Content creation    |
+| `roam-nodes/2024-09-16-index_documentation.org`                   | Documentation       |
+| `roam-nodes/2025-12-23-index_gentleman_staff.org`                 | Gentleman Staff     |
+| `roam-nodes/2026-02-15-index_diary.org`                           | Daily agenda/diary  |
+| `roam-nodes/2026-03-20-arch_linux.org`                            | Arch/Omarchy        |
+| `roam-nodes/cyber_code_syndicate/2025-10-14-cyber_code_syndicate.org` | CCS             |
 
-### 4.2 Templates
+### 4.2 Extracted Nodes (2026-04-05)
+
+| File                                                           | Source                |
+|----------------------------------------------------------------|-----------------------|
+| `roam-nodes/knowledge/2026-04-05-senior_interview_qa.org`      | Coding Knowledge      |
+| `roam-nodes/knowledge/2026-04-05-design_patterns.org`          | Coding Knowledge      |
+| `roam-nodes/knowledge/2026-04-05-javascript_yasnippets.org`    | Coding Knowledge      |
+
+### 4.3 Templates
 
 | File                                         | Key | Purpose                  |
 |----------------------------------------------|-----|--------------------------|
@@ -235,7 +315,7 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 | `templates/new-node-invoice.org`             | `v` | Invoice                  |
 | `templates/new-node-sentinel-inspection.org` | `i` | Inspection report        |
 
-### 4.3 LaTeX & Exports
+### 4.4 LaTeX & Exports
 
 | File                             | Purpose                     |
 |----------------------------------|-----------------------------|
@@ -245,7 +325,7 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 | `latex/ticket-mr-export.org`     | Madison Reed ticket export  |
 | `latex/latex-macros.tex`         | Reusable LaTeX macros       |
 
-### 4.4 Infrastructure
+### 4.5 Infrastructure
 
 | File                             | Purpose                     |
 |----------------------------------|-----------------------------|
@@ -253,7 +333,7 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 | `bookmarks/bookmarks`           | URL bookmarks               |
 | `roam-nodes/.virtual_brain`     | Archived project links      |
 
-### 4.5 Symlinks (Claude Code ← GPTel Skills)
+### 4.6 Symlinks (Claude Code ← GPTel Skills)
 
 | Source (`~/.config/doom/gptel-directives/skills/`) | Target (`~/.claude/skills/`) |
 |----------------------------------------------------|------------------------------|
@@ -265,7 +345,7 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 | `session-reset/`                                   | `session-reset`              |
 | `skill-architect/`                                 | `skill-architect`            |
 
-### 4.6 Session Files (GPTel Directives)
+### 4.7 Session Files (GPTel Directives)
 
 | File                                                                     | Domain                 |
 |--------------------------------------------------------------------------|------------------------|
@@ -283,22 +363,22 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 
 ### What was done last
 
-*   Refactored master index (`2023-04-19-index_kyonax.org`) from 1065-line scratch pad to ~55-line library catalog.
-*   Removed 12 stale/inline sections (PASSPHRASEs, KEYBINDINGs, EMACS BUILD, SKANDIA, DEUDAs, etc.).
-*   Linked 4 domain indices: Madison Reed, Coding Knowledge, Content Creation, Diary.
-*   Added FINANCE INFO section with bank accounts table (replacing Bancolombia-specific section).
-*   Established index formatting conventions and documented them in Section 1.5.
-*   Removed external disk auto-mount details from session file (kept Da\_ Disk symlink origin reference).
+*   Linked 4 additional indices to master index: Arch Linux (HOME & PERSONAL), CCS (WORK & PROJECTs), Gentleman Staff (WORK & PROJECTs, with REVIEW label), Documentation (new DOCUMENTATION section).
+*   Ran full refinement pass on all 8 linked indices — fixed headers, FILETAGS, structure, content lifecycle violations across every index.
+*   Extracted 400+ lines of inline content from Coding Knowledge index into 3 new nodes (Senior Interview Q&A, Design Patterns, JavaScript Yasnippets).
+*   Standardized author tag to Zerønet Labs orcidlink format across all 12 files (9 indices + 3 extracted nodes).
+*   Performed session reset to capture all work.
 
 ### Pending / Not yet started
 
-*   No pending tasks — session initialized for future `.brain.d` work
+*   No pending tasks — all refinement work complete.
 
 ### Where to resume
 
-If the user asks to **create a new node**: apply Section 1 naming/tagging rules + Section 1.5 formatting rules, use appropriate template (Section 1.2), place in correct subdirectory.
+If the user asks to **create a new node**: apply Section 1 naming/tagging rules + Section 1.3 orcidlink author + Section 1.5 formatting rules, use appropriate template (Section 1.2), place in correct subdirectory.
 If the user asks to **edit an index**: follow Section 1.5 conventions (list items, `:: descriptions`, bold/italic markup, content lifecycle).
 If the user asks to **work on a specific domain**: load the relevant Section 3 subsection for context, check the domain's index node.
+If the user asks to **remove Gentleman Staff**: remove the link from master index WORK & PROJECTs (it has the REVIEW label).
 If the user asks about **infrastructure**: reference Section 3.2 (skill symlinks) for prior decisions.
 If the user asks for a **new task**: check Section 2.4 (Pending Work).
 
