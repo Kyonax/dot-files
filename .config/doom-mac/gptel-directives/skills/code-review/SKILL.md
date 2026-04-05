@@ -10,6 +10,91 @@ metadata:
 
 Structured code quality analysis that goes beyond linting — enforcing architectural patterns, design principles, performance best practices, accessibility, and testability.
 
+## Quick Reference — Project-Specific Checklists
+
+| Rule File | Scope | When to Load |
+|---|---|---|
+| `rules/mr-review-checklist.md` | 45-rule checklist + 22 Andris review patterns for Madison Reed Vue components | When reviewing any file in `website/src/vuescripts/` |
+
+---
+
+## Parallel Subagent Review Flow (Validated 2026-04-03)
+
+When reviewing multiple files against a large checklist (e.g., the 45-rule MR checklist + 22 Andris patterns), use this parallel subagent architecture for thoroughness and efficiency. Validated on DOTCOMPB-7712 (6 files, 67 rules, 2 full rounds).
+
+### Step 1: Present the Checklist
+
+Before launching subagents, show the user the FULL rule table so they can see what's being checked. Load `rules/mr-review-checklist.md` and display both tables (45 rules + 22 Andris patterns).
+
+### Step 2: Group Rules into Categories
+
+Split the checklist into 8 focused categories. Each category becomes one subagent:
+
+| # | Category | Rules | Focus |
+|---|---|---|---|
+| 1 | **Template** | Rules 1-4, andris-6, andris-7 | Pug, headings, v-if guards, h1 per page, no redundant div |
+| 2 | **Script Structure** | Rules 5-13 | Options API, field order, computed alpha, Vuex helpers, constants, optional chaining, no inline logic |
+| 3 | **Styling** | Rules 14-21, andris-14, andris-16 | Scoped Stylus, utility-first, flex in Stylus only, max-at-tweak, design vars, CSS alpha, nesting, third-party comments |
+| 4 | **Naming** | Rules 22-26 | Root prefix, redundant prefixes, card children, grid columns, no BEM |
+| 5 | **ADA Accessibility** | Rules 27-33, andris-1 | Self-contained landmarks, aria-hidden, role=list, heading levels, focus-visible, nested interactives, duplicate landmarks, alt text |
+| 6 | **Images + Tracking** | Rules 34-38, andris-9, andris-13 | ImgBox, skeleton, :deep(img), trackMREvent vs trackMREventAndRedirect, method traceability |
+| 7 | **Code Style** | Rules 39-41, andris-2-5, andris-15, andris-20 | Blank lines, no info comments, minimal-touch, traceable methods, one-line expressions, clean strings |
+| 8 | **MrBtn + Components** | Rules 42-45, andris-8, andris-11, andris-12, andris-22 | MrBtn variants, :deep(.mrbtn), shared level, thin wrapper, no hardcoded routes, extract don't bloat |
+
+### Step 3: Launch All 8 Subagents in Parallel
+
+Each subagent receives:
+- The specific rules it's checking (full descriptions, not just numbers)
+- The list of ALL file paths to review
+- The output format (YAML per violation with rule, file, location, severity, problem, before/after)
+- Instruction: return `NO VIOLATIONS` if clean
+
+All 8 launch in a single message as background agents. They run simultaneously, each reading all files but checking only its assigned rules.
+
+### Step 4: Collect Results and Build Summary Table
+
+As subagents complete, build a running tally:
+
+```
+| Category | Result |
+|---|---|
+| Template | NO VIOLATIONS |
+| Script | 3 findings (1 MEDIUM, 2 LOW) |
+| Styling | 7 findings (2 HIGH, 3 MEDIUM, 2 LOW) |
+| ...etc |
+```
+
+### Step 5: Interactive One-by-One Resolution
+
+Present findings **one at a time**, ordered by severity (CRITICAL → HIGH → MEDIUM → LOW). For each:
+
+1. Show the rule, file, line, severity, and problem
+2. Note if pre-existing (not introduced by the current work) — reference andris-5 (minimal-touch)
+3. Ask: "Implement or skip?"
+4. If implement → apply the fix immediately
+5. If skip → move to next
+6. After implementing, verify related items (e.g., if fixing alphabetization in one file, verify all files)
+
+### Step 6: Final Test Run
+
+After all findings are resolved, run the full test suite to confirm no regressions.
+
+### Performance Notes
+
+- **Round 1** (DOTCOMPB-7712, 2026-04-03): 6 files, 30 findings total, 5 implemented, 25 skipped. Tests: 75 passing.
+- **Round 2** (same session, post-fixes): 6 files, 18 findings total (reduced from 30 due to round 1 fixes), 7 implemented, 10 skipped. Tests: 81 passing.
+- **Total execution time**: ~3-5 minutes per round (8 subagents in parallel). Much faster than sequential single-agent review.
+- **Key benefit**: Each subagent focuses on 4-12 rules only, producing zero false positives from rule confusion. Sequential reviews of 67 rules in one pass tend to miss edge cases or misapply rules.
+
+### When to Use This Flow
+
+- Reviewing 3+ files against 20+ rules
+- Pre-PR comprehensive review
+- Post-implementation quality gate
+- When the user explicitly asks for a "full" or "extensive" code review
+
+For quick reviews (1-2 files, specific category), use the standard 3-stage pipeline instead.
+
 ---
 
 ## Execution Flow

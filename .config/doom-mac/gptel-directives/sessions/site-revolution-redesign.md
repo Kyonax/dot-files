@@ -396,7 +396,7 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 | `DOTCOMPB-7749` | Story | Nav title font size increase + CTA implementation            | In progress — font size bump done on `DOTCOMPB-7463-nav-bug-fixes`, CTA implementation pending |
 | `DOTCOMPB-7763` | Bug   | Mobile Shop submenu not fully scrollable — iOS Safari overlap | **MERGED** (PR #20317, 2026-03-26). iOS scroll fix + header spacing + double-tracking fix. 52 tests passing. |
 | `DOTCOMPB-7742` | Bug   | Featured service CTA on location page doesn't pre-select service in booking flow | **COMPLETE** (2026-03-30). Implemented, code reviewed (0 violations), 19 tests passing, 5263 full suite. Changes UNSTAGED — needs commit + PR. See §3.10. |
-| `DOTCOMPB-7712` | Story | New page to display location photos                          | **IN PROGRESS** (2026-03-30). Roam node created. Route + Pug + Vue component + hero button + carousel overlay implemented. Gallery grid with dynamic aspect ratios. Tests pending. See §3.11. |
+| `DOTCOMPB-7712` | Story | New page to display location photos                          | **IN PROGRESS** (2026-04-03). V1+V2 migration done. Photos page: hero pair + CSS masonry + CMS/DB image merge. 81 tests across 5 files. 2 code review rounds (48 findings, 12 implemented). Express 404, hydration fix, skeleton backgrounds, ADA fixes. NEXT: PR prep + commit. See §3.11. |
 
 ### 2.3 Key Architectural Decisions (Session-Wide)
 
@@ -458,6 +458,16 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 56. **(2026-03-30)** **`carouselImages` from `colorbarCache` are raw Tophat media objects** — Shape: `{ _id, site, file_name, file_type, file_size, url, width, height, alt_text, aspects[], versionInfo[], ... }`. Have top-level `width` and `height` for dynamic aspect ratio computation. `ImgBox` handles URL construction from these objects via `:media-obj`.
 57. **(2026-03-30)** **CSS Grid masonry with pixel-perfect aspect ratios** — `grid-auto-rows: 1px` + `row-gap: 0` + `column-gap: 0.5rem`. Each item gets `grid-row: span N` where N = exact pixel height computed from `ResizeObserver`-measured grid width + image `width`/`height`. Separate `--row-span` and `--row-span-desktop` CSS custom properties because column spans differ per breakpoint (desktop capped at 50%).
 58. **(2026-03-30)** **`fitRowsToGrid()` row organization** — Organizes images into rows summing to exactly `GRID_COLUMNS` (6). Only expands the LARGEST item in each row (guard: `largest[spanKey] >= MIN_COL_SPAN + 1` = span 3+). Small images (span 2) never get stretched. `grid-auto-flow: dense` fills remaining gaps. — `FeaturedServicesV2.selectService()` must use the `selected_service` cookie + `trackMREventAndRedirect` to services URL (same pattern as `HairColorBarLocationServices`). The Vuex `setSelectedService` + `$router.push` approach doesn't survive cross-app page reloads. Maxi's `ServicesPage.setServiceFromCookie()` (PR #20308) handles consumption. Additionally, `HcbLocationPageV2.serverPrefetch` must call `hairColorBarBooking/getLocation` (booking endpoint) to populate `servicesOffered` — without it, `FeaturedServicesV2` silently renders nothing.
+59. **(2026-04-02)** **SsrApp.vue has NO root `<router-view>`** — CMS HTML is injected via string interpolation into a dynamic template (`${self.htmlContent}`). `entry/server.js` line 28 confirms: "SSR doesn't render `<router-view>`". The `router-view` inside `HcbLocationPageV2` is the ONLY one on CMS pages. Zero dual-render conflict risk when registering location routes.
+60. **(2026-04-02)** **Dual-route section extraction architecture for DOTCOMPB-7712** — `HcbLocationPageV2` becomes a thin parent (data loading + `router-view` only). ALL visible content extracted into `HcbLocationSections` (new component). Two routes: `/colorbar/locations/:locationCode` → `HcbLocationSections`, `/colorbar/locations/:locationCode/photos` → `HcbLocationPhotosPage`. Vue Router swaps between them — no `v-if`.
+61. **(2026-04-02)** **`galleryImages` computed ownership moved to `HcbLocationPageV2` parent** — Filter/URL-strip logic (was in `HairColorBarLocationHeroV2`) moves to the parent so BOTH child routes (sections + photos) receive the same pre-computed array. HeroV2 prop changes from `heroImages` (raw CMS) to `galleryImages` (pre-filtered).
+62. **(2026-04-02)** **`HcbLocationSections` uses static import, `HcbLocationPhotosPage` uses dynamic** — Sections is the main page content and MUST render synchronously during SSR. Photos page is lazy-loaded on client navigation only.
+63. **(2026-04-03)** **Express 404 validation for `/colorbar/locations/:urlKey/photos`** — Validates location exists via `colorbarCache.getLocation` before CMS catch-all. Invalid → `res.code(404)`. No URL rewrite (caused hydration mismatch). Just validates and calls `next()`.
+64. **(2026-04-03)** **CSS-only responsive columns for photos masonry (Option A)** — Replaced JS `matchMedia` + `columnCount` data with CSS `column-count: 2/3/4` via media queries. Zero hydration mismatch. SSR and client produce identical HTML. Images in flat list, CSS handles distribution.
+65. **(2026-04-03)** **Photos page hero pair + masonry layout** — First 2 images (`heroImages` computed) render full-width stacked on mobile, 50% side-by-side on desktop. Remaining images (`masonryImages` computed) render in CSS masonry grid below. `HERO_IMAGE_COUNT = 2` constant.
+66. **(2026-04-03)** **Back/close on photos page uses `trackMREventAndRedirect` (hard redirect)** — `$router.push` to `location-details` doesn't work on direct `/photos` access (CMS page has different context, sections don't render properly). Hard redirect via `trackMREventAndRedirect` ensures full SSR cycle with correct `cmsSettings`.
+67. **(2026-04-03)** **`v-if="location?.code"` guard on `router-view`** — Defense-in-depth on thin parent. Initial Vuex state is `{}` (empty object, truthy), so `v-if="location"` is insufficient. `?.code` catches both `null` and empty `{}`.
+68. **(2026-04-03)** **Padding/margin utility classes MUST use breakpoint prefix** — `.xs-pt-50m` not `.pt-50m`. Mobile-first convention. Rule added to code-review skill `rules/mr-review-checklist.md`.
 
 ### 2.4 PR Review Resolutions (DOTCOMPB-7289)
 
@@ -473,7 +483,7 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 *   **DOTCOMPB-7555** — Complete on branch, PR description ready in roam node. Needs PR creation.
 *   **DOTCOMPB-7555_full_width** — Parked carousel work. Activate only when business confirms desktop banner carousel for location hero.
 *   **DOTCOMPB-7557** — ADA: Cannot tab to Book Services on desktop. Roam node exists, not started.
-*   **DOTCOMPB-7712** — **IN PROGRESS** (2026-03-30). New photos page + "+X photos" button recovery. Route, Pug, Vue component, hero button, carousel overlay implemented. Gallery grid with dynamic sizing. Tests pending, commit + PR pending. See §3.11.
+*   **DOTCOMPB-7712** — **IN PROGRESS** (2026-04-03). Implementation complete. 81 tests, 2 code review rounds. All changes UNSTAGED on branch `DOTCOMPB-7712`. NEXT: PR prep + commit. See §3.11.
 *   **DOTCOMPB-7717 cleanup** — **COMPLETE** (2026-03-24). MarketingBanner dead workaround removed. Commit + PR body in §3.8.
 
 ---
@@ -1010,78 +1020,88 @@ Changes:
 
 ### 3.11 DOTCOMPB-7712: New Page to Display Location Photos
 
-**Created:** 2026-03-30 | **Last updated:** 2026-03-30
+**Created:** 2026-03-30 | **Last updated:** 2026-04-03
 **Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-03-30-150000-dotcompb_7712.org`
 **Branch:** `DOTCOMPB-7712`
-**Status:** IN PROGRESS. Route + Pug + Vue component + hero button + carousel overlay implemented. Gallery grid with dynamic aspect ratios and sizing. Tests pending. Commit + PR pending.
+**Status:** IN PROGRESS — V1+V2 migration complete. Photos page with hero pair + CSS masonry + DB image merge. 81 tests passing. 2 full code reviews (round 1: 30 findings/5 fixed, round 2: 18 findings/7 fixed). All changes UNSTAGED. **NEXT: PR prep + commit.**
 
 **Scope:** "+X photos" tag on location hero images (desktop + mobile), new photos gallery page at `/colorbar/locations/{locationCode}/photos`.
 
-**Architecture — Non-CMS Direct Render Page:**
+**Architecture (Final — V2 Section Extraction + Dual Routes):**
 ```
-Express route (views.js)
-  → colorbarCache.getLocation(urlKey)
-  → cms.loaders.getLoader().loadPage(locationUri) — gets CMS defaultLocationImages
-  → Merges CMS images + carouselImages + headerImage (deduped by _id)
-  → res.render('hcb-location-photos/hcb-location-photos', { locationCode, locationName, locationImages })
-  → Pug template (extends vue-layout.pug)
-  → hcb-location-photos-page(location-code=locationCode location-name=locationName :location-images=locationImages)
-  → Vue hydrates client-side, no serverPrefetch
+HcbLocationPageV2 (thin parent — data loading + router-view)
+│  serverPrefetch: loadLocation + setBookingLocation
+│  Computed: defaultLocationImages, galleryImages, routeViewProps
+│  Guard: v-if="location?.code" on router-view
+│
+└── router-view(v-slot="{ Component }")
+    ├── /colorbar/locations/:locationCode → HcbLocationSections (static import)
+    │   ├── SiteMessageBannerCarousel
+    │   ├── HairColorBarLocationHeroV2 (:gallery-images="galleryImages")
+    │   │   ├── PageIntro, ImgBox ×2 (desktop), a.more-photos → $router.push
+    │   │   └── LocationImageCarousel (mobile, +X overlay → $router.push)
+    │   ├── .location-body (grid: main-column + sidebar)
+    │   │   ├── About, CMSPartials, Services, Getting Here, Payments, Reviews, FAQs
+    │   │   └── FeaturedDeals (sidebar)
+    │   ├── V1 footer (MoreLocations, RegionList, MoreInfo)
+    │   ├── MountedFlag + FixedCtaBar (mobile CTA)
+    │   └── Breadcrumbs + location tracking watcher
+    │
+    └── /colorbar/locations/:locationCode/photos → HcbLocationPhotosPage (dynamic import)
+        ├── Sticky header (back arrow-left + title + x-rounded close)
+        ├── Hero pair (first 2 images, stacked mobile / 50% desktop)
+        └── CSS masonry grid (column-count: 2 mobile / 3 tablet / 4 desktop)
 ```
 
-**Component Tree:**
-```
-HcbLocationPhotosPage (photos gallery page)
-└── ImgBox (per image, locally imported)
+**All Migration Steps (COMPLETE):**
 
-HairColorBarLocationHeroV2 (modified — recovered +X photos button)
-├── MrBtn.more-photos (recovered from DOTCOMPB-7555, inside .secondary-display)
-└── LocationImageCarousel (modified — re-enabled +X photos overlay)
-    └── a.view-more-overlay (on 5th slide when remainingImagesCount > 0)
-```
+| Step | Status |
+|---|---|
+| V1: Remove Express route, Pug, global registrations | DONE |
+| V1: Move HcbLocationPhotosPage, refactor (galleryImages prop, remove sessionStorage) | DONE |
+| V1: Register routes, update navigation ($router.push) | DONE |
+| V2: Move routes.js to HcbLocationPageV2, add location-details route | DONE |
+| V2: Update route imports in mrVueApp.js + ssr/router.js | DONE |
+| V2: Create HcbLocationSections (extract ALL content from HcbLocationPageV2) | DONE |
+| V2: Refactor HcbLocationPageV2 to thin parent (router-view + galleryImages) | DONE |
+| V2: Update HeroV2 (heroImages → galleryImages prop, remove galleryImages computed, remove router-view) | DONE |
+| V2: Move HcbLocationPhotosPage from HeroV2 to HcbLocationPageV2 folder | DONE |
+| Express: Add 404 validation for /photos URL (no URL rewrite) | DONE |
+| Photos page: CSS-only masonry (replaced JS matchMedia — fixes hydration mismatch) | DONE |
+| Photos page: Hero pair layout (first 2 images large, rest in masonry) | DONE |
+| Photos page: Sticky header refinement (arrow-left, x-rounded, text-left, gap-12) | DONE |
+| Back/close: trackMREventAndRedirect (hard redirect, not $router.push) | DONE |
+| Utility class prefix fix: 11 classes updated to use xs- prefix across 3 files | DONE |
+| Tests: 75 tests across 5 files (PageV2 11, Sections 12, HeroV2 10, PhotosPage 18, Carousel 24) | DONE |
 
-**`HcbLocationPhotosPage.vue` key architecture:**
-- **Props:** `locationCode` (String), `locationImages` (Array — JSON from Express), `locationName` (String)
-- **No Vuex dependency** — fully props-driven from Express route data
-- **Gallery grid:** CSS Grid with `grid-auto-rows: 1px`, `row-gap: 0`, `column-gap: 0.5rem`, `grid-template-columns: repeat(6, 1fr)`, `grid-auto-flow: dense`
-- **Dynamic sizing per image:** `getItemStyle(item)` computes `--col-span`, `--col-span-desktop`, `--row-span`, `--row-span-desktop` from image `width`/`height` and `maxImageWidth`
-- **Desktop cap:** `DESKTOP_MAX_SPAN = 3` (50% of 6 columns)
-- **Min span:** `MIN_COL_SPAN = 2` (no image smaller than ~33%)
-- **`fitRowsToGrid()`:** Organizes images into rows summing to 6 columns. Only expands largest item (span >= 3) via `expandLargestInRow()`. Separate passes for mobile and desktop spans.
-- **`ResizeObserver`** on grid container measures real pixel width for exact row span computation: `cellHeight = cellWidth * (h/w)`, `rowSpan = round(cellHeight / 1px)`
-- **Tracking:** `TrackSegmentPage` fires in `mounted()` — `colorbar locations {code} photos`
-
-**`HairColorBarLocationHeroV2.vue` changes (recovered from `2dfd59d4a1f^`):**
-- `VISIBLE_HERO_IMAGES_COUNT = 2` (constant, was deleted in 7555)
-- `additionalImagesCount` (computed, was deleted)
-- `MrBtn.more-photos` template (inside `.secondary-display`, was sibling before)
-- `handleImageGalleryClick()` — now navigates to `/colorbar/locations/{code}/photos` via `trackMREventAndRedirect` (was TODO stub)
-- `.more-photos` styles recovered: `position: absolute; bottom: 1em; right: 1em` within `.secondary-display` (has `position: relative`)
-
-**`LocationImageCarousel.vue` changes:**
-- Added `locationCode` prop (String)
-- Added `photosUrl` computed
-- Re-enabled `a.view-more-overlay` on 5th slide (removed TODO comment)
-- Added `handleViewMoreClick()` — `trackMREventAndRedirect` to photos URL
-- `handleSlideClick()` delegates to `handleViewMoreClick` when `isViewMoreSlide(index)`
-- Overlay styles: `position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); color: white`
-- Parent passes `:location-code="location.code"` to carousel
+**Code Review (2026-04-03 — 8 parallel subagents, 45-rule checklist):**
+- 30 findings total: 1 CRITICAL, 5 HIGH, 12 MEDIUM, 12 LOW
+- 5 implemented: nested interactive fix (a→span in carousel), focus-visible on slides, computed alphabetization (HeroV2), hidden h2 removal, utility class prefix fixes
+- 25 skipped: pre-existing issues, acceptable page-specific patterns, andris-5 minimal-touch
 
 **Key Decisions:**
 
 | Decision | Date | Rationale |
 |---|---|---|
-| Direct Pug render, no CMS | 2026-03-30 | Photos page doesn't need CMS template data — images come from cache + CMS loader in Express. Follows `hcb-addon/message.pug` pattern. |
-| CMS + cache image merging | 2026-03-30 | Hero uses `cmsSettings.defaultLocationImages` (CMS), photos page needs those + `carouselImages` (cache). Express loads both via `cms.loaders` + `colorbarCache`. |
-| 6-column grid with dynamic spans | 2026-03-30 | 6 columns provides granularity for proportional sizing. `span N = round(sizeRatio * 6)`. Desktop capped at span 3 (50%). |
-| `grid-auto-rows: 1px` + `row-gap: 0` | 2026-03-30 | Standard `gap` compounds between sub-rows within a spanning item, distorting aspect ratios. `1px` rows + `0` row-gap = pixel-perfect heights. Visual spacing via `margin-bottom`. |
-| `ResizeObserver` for grid measurement | 2026-03-30 | Row spans must be computed from actual pixel width. Static formula can't account for responsive container width changes. |
-| Recover button inside `.secondary-display` | 2026-03-30 | Original had button as sibling. Moving inside gives proper `position: absolute` context from `.secondary-display`'s `position: relative`. |
-| `expandLargestInRow` with span >= 3 guard | 2026-03-30 | Only items with span 3+ get expanded to fill row gaps. Prevents small images (span 2) from being stretched. |
-| Header NOT sticky | 2026-03-30 | Removed `position: sticky` per Kyo's direction. Header scrolls with content. |
-| `ImgBox` imported locally | 2026-03-30 | Not globally registered for this component context. Explicit import required. |
+| Section extraction + dual routes | 2026-04-02 | `router-view` at page level. Two routes swap ALL visible content. No `v-if`. |
+| CSS-only masonry (Option A) | 2026-04-03 | JS matchMedia caused hydration mismatch (SSR 2 cols, client 4). CSS `column-count` is SSR-safe. |
+| Hero pair + masonry layout | 2026-04-03 | Figma spec: first 2 images large (store exterior/interior), rest in grid. |
+| `trackMREventAndRedirect` for back/close | 2026-04-03 | `$router.push` to location-details fails on direct /photos access (CMS context differs). Hard redirect ensures full SSR. |
+| Express 404 without URL rewrite | 2026-04-03 | URL rewrite caused SSR to render sections route but client expected photos route → hydration mismatch. |
+| `v-if="location?.code"` on router-view | 2026-04-03 | Initial Vuex `location: {}` is truthy. `?.code` catches both null and empty object. |
+| Padding/margin utilities must use `xs-` prefix | 2026-04-03 | Mobile-first convention. `.xs-pt-50m` not `.pt-50m`. Rule added to code-review skill. |
+| Merge CMS + DB images in `galleryImages` | 2026-04-03 | CMS `defaultLocationImages` first (hero images), then `location.carouselImages` (Tophat uploads). Normalized to same shape `{ image: {...} }`. `locationImages` computed wraps DB flat objects. |
+| `location.carouselImages` are Tophat uploads, NOT DashHudson | 2026-04-03 | Verified: DB images managed via Tophat admin (`croppedImage` field). DashHudson is a separate client-side widget with zero connection to carouselImages. Session decision #22 still applies. |
+| Inline `aspect-ratio` for images with `width`/`height` | 2026-04-03 | `getImageAspectStyle(image)` returns `{ aspectRatio: 'w / h' }` for DB images (have dimensions). CMS images without dimensions use natural aspect ratio via `height: auto`. |
+| Remove `role="region"` from HeroV2 root | 2026-04-03 | PageIntro already owns the self-contained landmark (`role="region"` + `aria-label` + `h1#id`). HeroV2 root is purely structural — no ARIA attributes. Eliminates nested duplicate landmarks. |
+| Parallel subagent code review flow | 2026-04-03 | 8 subagents per rule category, all in parallel. Each checks 4-12 rules against all files. Interactive one-by-one resolution. Documented in code-review skill SKILL.md. |
 
-**Tests:** Pending. Existing tests unaffected — 13 hero tests + 14 page tests passing.
+**Tests:** 81 passing across 5 test files. All components have coverage.
+
+**Code Review (2 rounds, 2026-04-03):**
+- Round 1: 8 subagents, 30 findings (1 CRITICAL, 5 HIGH, 12 MEDIUM, 12 LOW). 5 implemented, 25 skipped.
+- Round 2: 8 subagents, 18 findings (0 CRITICAL, 4 HIGH, 7 MEDIUM, 7 LOW). 7 implemented, 10 skipped (1 N/A).
+- Total implemented across both rounds: nested interactive fix, focus-visible, computed alphabetization (×2), hidden h2 removal, utility prefix fixes, magic number constant, CSS alphabetization, nested landmark fix, aria-hidden on icons, skeleton backgrounds.
 
 ---
 
@@ -1109,9 +1129,14 @@ HairColorBarLocationHeroV2 (modified — recovered +X photos button)
 | `website/src/vuescripts/components/HairColorBarBookingV2/components/MarketingBanner/MarketingBanner.test.js` | DOTCOMPB-7290 |
 | `website/src/vuescripts/components/HairColorBarBookingV2/components/MarketingBanner/index.js` | DOTCOMPB-7290 |
 | `website/src/assets/svg-icons/star-solid.svg` | DOTCOMPB-7290 |
-| `website/src/vuescripts/components/HairColorBar/HcbLocationPhotosPage/HcbLocationPhotosPage.vue` | DOTCOMPB-7712 |
-| `website/src/vuescripts/components/HairColorBar/HcbLocationPhotosPage/index.js` | DOTCOMPB-7712 |
-| `website/src/views/desktop/hcb-location-photos/hcb-location-photos.pug` | DOTCOMPB-7712 |
+| `website/src/vuescripts/components/HairColorBar/HcbLocationPageV2/HcbLocationPhotosPage/HcbLocationPhotosPage.vue` | DOTCOMPB-7712 (photos gallery: hero pair + CSS masonry, sticky header) |
+| `website/src/vuescripts/components/HairColorBar/HcbLocationPageV2/HcbLocationPhotosPage/HcbLocationPhotosPage.test.js` | DOTCOMPB-7712 (18 tests) |
+| `website/src/vuescripts/components/HairColorBar/HcbLocationPageV2/HcbLocationPhotosPage/index.js` | DOTCOMPB-7712 (barrel export) |
+| `website/src/vuescripts/components/HairColorBar/HcbLocationPageV2/routes.js` | DOTCOMPB-7712 (two routes: location-details static + location-photos dynamic) |
+| `website/src/vuescripts/components/HairColorBar/HcbLocationPageV2/HcbLocationSections/HcbLocationSections.vue` | DOTCOMPB-7712 (extracted ALL section content from HcbLocationPageV2) |
+| `website/src/vuescripts/components/HairColorBar/HcbLocationPageV2/HcbLocationSections/HcbLocationSections.test.js` | DOTCOMPB-7712 (12 tests) |
+| `website/src/vuescripts/components/HairColorBar/HcbLocationPageV2/HcbLocationSections/index.js` | DOTCOMPB-7712 (barrel export) |
+| `website/src/vuescripts/components/HairColorBar/HcbIndividual/HairColorBarLocationHeroV2/LocationImageCarousel/LocationImageCarousel.test.js` | DOTCOMPB-7712 (24 tests, NEW) |
 | `website/src/vuescripts/components/SiteNav/SiteNavShopContent/SiteNavShopContent.vue` | DOTCOMPB-7463 |
 | `website/src/vuescripts/components/SiteNav/SiteNavShopContent/SiteNavShopContent.test.js` | DOTCOMPB-7463 |
 | `website/src/vuescripts/components/SiteNav/SiteNavShopContent/index.js` | DOTCOMPB-7463 |
@@ -1144,9 +1169,10 @@ HairColorBarLocationHeroV2 (modified — recovered +X photos button)
 | `website/src/vuescripts/components/HairColorBar/HcbIndividual/HairColorBarLocationReviews/HairColorBarLocationReviews.test.js` | 7290, 7652 |
 | `website/src/vuescripts/components/HairColorBarBookingV2/components/PageIntro/PageIntro.vue` | 7290 (titleId prop) |
 | `website/src/vuescripts/components/HairColorBarBookingV2/components/PageIntro/PageIntro.test.js` | 7290 |
-| `website/src/vuescripts/mrVueApp.js` | 7290 (MarketingBanner), 7712 (HcbLocationPhotosPage) |
-| `website/src/vuescripts/ssr/registerGlobalsSsr.js` | 7290 (MarketingBanner), 7712 (HcbLocationPhotosPage) |
-| `website/src/routing/views.js` | 7712 (photos page Express route) |
+| `website/src/vuescripts/mrVueApp.js` | 7290 (MarketingBanner), 7712 (REMOVE global reg L769, ADD route import + spread) |
+| `website/src/vuescripts/ssr/registerGlobalsSsr.js` | 7290 (MarketingBanner), 7712 (REMOVE global reg L80+L246) |
+| `website/src/vuescripts/ssr/router.js` | 7712 (ADD route import + spread) |
+| `website/src/routing/views.js` | 7712 (REMOVE Express route L1579–1594) |
 | `website/src/vuescripts/store/modules/colorbar.js` | 7290 (getLocationReviews try/catch) |
 | `website/src/vuescripts/components/SiteNav/SiteNavDesktopV2/SiteNavDesktopV2.vue` | 7463, 7749 (font size bump) |
 | `website/src/vuescripts/components/SiteNav/SiteNavMobileV2/SiteNavMobileV2MainNav/SiteNavMobileV2MainNav.vue` | 7463 |
@@ -1183,24 +1209,26 @@ HairColorBarLocationHeroV2 (modified — recovered +X photos button)
 
 > **Start here when resuming.** This section captures the most recent work and immediate next steps.
 
-### What was done last (2026-03-30 / 2026-03-31)
+### What was done last (2026-04-03)
 
-*   **DOTCOMPB-7712 implemented** — Full photos page feature:
-    - Created roam node (`2026-03-30-150000-dotcompb_7712.org`) from JIRA ticket, populated DEVELOPMENT AC with plan, updated index
-    - Analyzed 18 Express routes to extract non-CMS page creation guidelines (documented in roam node)
-    - Express route at `/colorbar/locations/:urlKey/photos` — `res.render()` direct Pug, no CMS. Loads images from both `cms.loaders.getLoader().loadPage()` (hero images) and `colorbarCache` (carousel + header images), deduped by `_id`
-    - Pug template: `website/src/views/desktop/hcb-location-photos/hcb-location-photos.pug` extending `vue-layout.pug`
-    - Vue component: `HcbLocationPhotosPage` — props-driven (no Vuex), CSS Grid gallery with 6 columns, `grid-auto-rows: 1px` + `row-gap: 0` for pixel-perfect aspect ratios, `ResizeObserver` for grid width measurement, `fitRowsToGrid()` row organization
-    - Global registration in `registerGlobalsSsr.js` + `mrVueApp.js`
-    - Recovered `MrBtn.more-photos` on desktop hero from DOTCOMPB-7555 removal (commit `2dfd59d4a1f^`) — `handleImageGalleryClick()` now navigates to photos page
-    - Re-enabled `+X photos` overlay on mobile `LocationImageCarousel` 5th slide + `locationCode` prop + `handleViewMoreClick()`
-*   **Gallery refinement iterations** — Multiple layout approaches tested (CSS columns, flex masonry, CSS Grid). Final: 6-column grid with dynamic `--col-span` / `--row-span` per breakpoint, desktop max 50% (span 3), min span 2, `expandLargestInRow` only for items with span >= 3
-*   **Key discoveries:** `carouselImages` are raw Tophat media objects with `width`/`height`/`aspects[]`; `cmsSettings.defaultLocationImages` is separate data source from `carouselImages`; `MrBtn` has internal `position: relative`; `ImgBox` needs local import in non-CMS pages
-*   **All existing tests passing** — 13 hero + 14 page tests unaffected
+**Session 1 (V2 migration + initial code review):**
+*   **V1+V2 migration fully executed** — 8 V1 steps + 7 V2 steps. Express/Pug removed, section extraction into `HcbLocationSections`, thin parent `HcbLocationPageV2` with `router-view`, HeroV2 updated (galleryImages prop), `HcbLocationPhotosPage` moved to PageV2 folder.
+*   **Photos page layout built per Figma** — Hero pair (first 2 images, stacked mobile / 50% desktop) + CSS masonry grid (column-count 2/3/4). Sticky header (arrow-left, title left-aligned, x-rounded close).
+*   **Hydration mismatch fixed** — JS matchMedia replaced with CSS-only `column-count`. Express URL rewrite removed (caused SSR/client route divergence).
+*   **Code review round 1** — 8 parallel subagents, 30 findings, 5 implemented.
+*   **75 tests, utility prefix rule enforced** (11 classes updated to `xs-` prefix).
+
+**Session 2 (DB image merge + round 2 code review):**
+*   **CMS + DB image merge** — `galleryImages` computed now merges `defaultLocationImages` (CMS, first) + `location.carouselImages` (DB/Tophat uploads, after). New `locationImages` computed normalizes DB flat objects to `{ image: {...} }` shape. Verified: DB images are Tophat manual uploads, NOT DashHudson.
+*   **Aspect ratio fallback** — `getImageAspectStyle(image)` returns inline `aspect-ratio` for images with `width`/`height` (DB images). CMS images without dimensions use natural ratio via `height: auto`.
+*   **Photos page header refined** — Font sizes (xs-f-small title, xs-f-xsmall count), text-color-3 for count, gap-12 between arrow and text, arrow-left icon, x-rounded close icon.
+*   **Code review round 2** — 8 parallel subagents, 18 findings, 7 implemented: computed alphabetization (PageV2), magic number → `MOBILE_MEDIA_QUERY` constant (HeroV2), CSS alphabetization (Sections), nested landmark fix (removed `role="region"` from HeroV2 root — PageIntro owns it), `aria-hidden="true"` on decorative mr-icons (PhotosPage), skeleton `:deep(.image-box)` + `:deep(img)` on carousel main display + thumbnails, hero image skeleton `height 100%`.
+*   **81 tests passing** — PageV2 (17), Sections (12), HeroV2 (10), PhotosPage (18), Carousel (24).
+*   **Code-review skill updated** — Parallel subagent flow documented in SKILL.md. MR checklist (45 rules + 22 Andris) saved to `rules/mr-review-checklist.md`.
 
 ### Pending
 
-*   **DOTCOMPB-7712** — Tests pending (`HcbLocationPhotosPage.test.js`, `LocationImageCarousel.test.js`, hero test updates). Commit + PR pending. Changes UNSTAGED on branch `DOTCOMPB-7712`.
+*   **DOTCOMPB-7712** — Implementation complete. 81 tests, 2 code review rounds. All changes UNSTAGED on branch `DOTCOMPB-7712`. **NEXT: PR prep + commit.** Use `/create-pr` skill.
 *   **DOTCOMPB-7742** — **COMPLETE.** Changes UNSTAGED on branch `DOTCOMPB-7742`. Needs commit + PR. Roam node `2026-03-27-120100-dotcompb_7742.org`.
 *   **DOTCOMPB-7768** — Roam node needed. On branch `DOTCOMPB-7768`.
 *   **DOTCOMPB-7463-nav-bug-fixes** — 5 files UNSTAGED (mobile nav scroll normalization). Need testing then commit. See §3.5.
@@ -1212,9 +1240,23 @@ HairColorBarLocationHeroV2 (modified — recovered +X photos button)
 
 ### Where to resume
 
-**IMMEDIATE: Finish DOTCOMPB-7712.** On branch `DOTCOMPB-7712`. Implementation complete. Remaining:
-1. Write tests: `HcbLocationPhotosPage.test.js` (new), `LocationImageCarousel.test.js` (new), update `HairColorBarLocationHeroV2.test.js` (recover `additionalImagesCount` + `handleImageGalleryClick` tests)
-2. Commit + PR creation using `/create-pr` skill
+**IMMEDIATE: Create PR for DOTCOMPB-7712.** On branch `DOTCOMPB-7712`. Implementation complete, 2 code review rounds done, 81 tests passing. Use `/create-pr` skill.
+
+**Current git status (all UNSTAGED on `DOTCOMPB-7712`):**
+- Modified: `views.js` (Express 404 route), `mrVueApp.js` (route import), `ssr/router.js` (route import), `HcbLocationPageV2.vue` (thin parent + galleryImages merge), `HcbLocationPageV2.test.js` (17 tests), `HairColorBarLocationHeroV2.vue` (galleryImages prop, no region, MOBILE_MEDIA_QUERY constant), `HairColorBarLocationHeroV2.test.js` (10 tests), `LocationImageCarousel.vue` (ADA fixes, focus-visible, skeleton, no nested interactive)
+- New: `HcbLocationPageV2/routes.js`, `HcbLocationSections/` (vue + test + index), `HcbLocationPhotosPage/` (vue + test + index), `LocationImageCarousel.test.js` (24 tests)
+- Deleted: `HeroV2/routes.js` (moved), `views/desktop/hcb-location-photos/` (Pug), `HairColorBar/HcbLocationPhotosPage/` (moved), global registrations in `mrVueApp.js` + `registerGlobalsSsr.js`
+
+**Before committing, verify:**
+1. Run full test suite: `cd website && npm run test:vue HcbLocationPageV2 HairColorBarLocationHeroV2 LocationImageCarousel` — expect 81 passing
+2. Run lint: `eslint` on changed files
+3. Test manually:
+   - Location page → click "+X photos" → photos page loads (hero pair + masonry)
+   - Photos page back/close button → hard redirect to location page
+   - Direct `/photos` URL → page loads, Express validates location code
+   - Invalid location code on `/photos` → 404
+   - Mobile carousel → "+X photos" overlay → photos page
+   - Verify DB images (location.carouselImages) appear after CMS images in gallery
 
 If user wants to **commit DOTCOMPB-7742**: Use `/create-pr` skill — commit msg and PR body in roam node `2026-03-27-120100-dotcompb_7742.org`. Branch `DOTCOMPB-7742`.
 If user switches to **DOTCOMPB-7768**: Create roam node first using `/mr-roam-node`.
@@ -1222,6 +1264,216 @@ If user wants to **commit nav scroll work**: Run tests on `DOTCOMPB-7463-nav-bug
 If user asks for **Site Revolution architecture**: Read `~/.brain.d/roam-nodes/madison_reed/2026-03-18-135209-site_revolution_redesign.org`.
 
 <!-- DESCRIPTION AND USER CONTEXT END -->
+
+### HYDRATION FIX APPROACHES (2026-04-03) — Photos Page Column Layout
+
+**Problem:** SSR renders 2 columns (`window` undefined), client renders 4 (desktop matchMedia). Hydration mismatch: images land in different `.masonry-column` divs, different child counts, different `src`/`alt` attributes. Only happens on direct `/photos` URL access (SSR). Normal flow (client navigation from location page) has no issue.
+
+**Option A — CSS-only responsive columns (PREFERRED, test first)**
+Remove JS `columnCount`/`matchMedia` entirely. Use CSS `column-count` or CSS Grid with media queries to distribute images into columns. The template renders a flat list of images. CSS handles layout at every breakpoint. SSR and client produce identical HTML — zero hydration mismatch.
+
+Implementation:
+- Remove: `columnCount` data, `columns` computed, `getInitialColumnCount`, `beforeMount` matchMedia setup, `updateColumnCount`, `tabletQuery`/`desktopQuery` data, `beforeUnmount` cleanup
+- Template: replace `.masonry-column(v-for)` with flat `.photo-item(v-for="item in galleryImages")`
+- Styles: add `column-count: 2` (mobile default), `@media tablet: column-count: 3`, `@media desktop: column-count: 4` on `.gallery-grid`
+- Add `break-inside: avoid` on `.photo-item` to prevent images from splitting across columns
+
+Pros: Zero hydration mismatch. No JS for layout. Simpler component (remove ~40 lines of matchMedia logic).
+Cons: CSS columns distribute top-to-bottom then left-to-right (not left-to-right then top-to-bottom like the JS masonry). Visual difference from current layout — images flow vertically per column instead of horizontally across columns.
+
+**Option B — Accept SSR flash, suppress warning**
+Keep current JS masonry. Accept that direct `/photos` access shows 2 columns briefly, then corrects to 4 after `beforeMount`. Vue says "this mismatch is check-only. The DOM will not be rectified in production" — meaning production doesn't re-render, it just keeps the server HTML. The `beforeMount` correction handles the visual update.
+
+Implementation: No code changes. The current `SSR_DEFAULT_COLUMNS = 2` + `beforeMount` `updateColumnCount()` is already correct. Add a comment explaining the expected hydration warning on direct access.
+
+Pros: No layout change. Current masonry behavior preserved exactly.
+Cons: Brief 2→4 column flash on direct URL access. Console warnings in dev (not in prod).
+
+**Decision:** Test Option A first. If layout doesn't meet expectations, revert to Option B.
+
+---
+
+### EDGE CASE ANALYSIS (2026-04-03) — DOTCOMPB-7712 V2 Migration
+
+**Scope:** Analysis of all 7 V2 execution steps from the DEFINITIVE ARCHITECTURE PLAN. Each step was compared against the current working tree state (branch `DOTCOMPB-7712`), session guidelines (Section 1.1-1.17), SSR safety rules, and reactive dependency chains. Steps 1-6 appear to be partially executed in the working tree; Step 7 (tests) has not been started yet.
+
+**Current state summary:** `HcbLocationPageV2.vue` has been refactored to thin parent. `HcbLocationSections.vue` has been created. `routes.js` has been moved to `HcbLocationPageV2/`. Route imports added in `mrVueApp.js` and `ssr/router.js`. `HairColorBarLocationHeroV2.vue` has been updated with V1 additions (+N photo(s) overlay, carousel locationCode, router-view) but Step 6 changes (prop rename, computed removal, router-view removal) have NOT been applied. The old `HeroV2/routes.js` has been deleted from disk.
+
+---
+
+| # | Step | Issue | Severity | Detail |
+|---|---|---|---|---|
+| 1 | Step 1 (routes.js) | Route path collision with Express | MEDIUM | Express `views.js` has `/colorbar/locations/:urlKey` which only matches single path segments, so `/nyc-flat/photos` falls through to the CMS catch-all. The plan documents this as "RESOLVED" but notes: **verify Tophat serves the same `cmsSettings` for the `/photos` URL variant**. If Tophat does not serve `defaultLocationImages` for the `/photos` page, direct-URL access renders an empty gallery. This cannot be verified from code alone -- requires Tophat configuration audit. |
+| 2 | Step 2 (mrVueApp.js) | CRITICAL: Old import of deleted file still present | HIGH | `mrVueApp.js` line 134 still has `import hcbLocationHeroRoutes from '@components/HairColorBar/HcbIndividual/HairColorBarLocationHeroV2/routes';`. This file has been deleted from disk. The diff shows the new `hcbLocationPageRoutes` import was ADDED at line 135 but the old import was NOT removed. Line 163 still spreads `...hcbLocationHeroRoutes` into the routes array. **This will cause a build-time import resolution failure.** The Vite bundler (both client and SSR) will crash when it cannot find the module. |
+| 3 | Step 2 (ssr/router.js) | CRITICAL: Old import of deleted file still present | HIGH | `ssr/router.js` line 7 still has `import hcbLocationHeroRoutes from '@components/HairColorBar/HcbIndividual/HairColorBarLocationHeroV2/routes';`. Same deleted file. Line 17 still spreads `...hcbLocationHeroRoutes`. **SSR bundle will fail to build.** The diff for `ssr/router.js` only shows additions, confirming the old lines were not removed. |
+| 4 | Step 3 (barrel export) | No issues found | LOW | `HcbLocationSections/index.js` correctly imports `./HcbLocationSections.vue` and re-exports. The `routes.js` imports `./HcbLocationSections` which resolves to the barrel. Consistent with codebase patterns. |
+| 5 | Step 4 (HcbLocationSections.vue) | CMSPartial serverPrefetch timing with nested router-view | MEDIUM | `CMSPartial` has its own `serverPrefetch()` that fetches HTML referencing globally registered components (e.g., `FeaturedServicesV2`) that depend on `hairColorBarBooking.location`. The parent's `serverPrefetch` populates this store state. In Vue 3 SSR, parent `serverPrefetch` completes before children render, so the store is populated before `CMSPartial` fires. With the new architecture, `HcbLocationPageV2.serverPrefetch` runs first, then `router-view` resolves `HcbLocationSections` (static import, immediate), then Sections renders `CMSPartial`, which runs ITS `serverPrefetch`. **Order preserved -- no regression.** But this is fragile: if `HcbLocationSections` were changed to a dynamic import, the timing could break. Document in PR. |
+| 6 | Step 4 (HcbLocationSections.vue) | `location` watcher with `immediate: true` fires duplicate tracking events | LOW | When user navigates photos-to-sections (back), `HcbLocationSections` remounts and the watcher fires again with `immediate: true`, sending a duplicate page-view tracking event. Pre-existing behavior from the original `HcbLocationPageV2` -- not introduced by migration. Worth noting in PR description. |
+| 7 | Step 4 (HcbLocationSections.vue) | MountedFlag body class removal on route change | LOW | Navigating from location page to photos unmounts Sections, which unmounts `MountedFlag`, removing `bt-with-sticky-cta` from `document.body`. The plan documents this as CORRECT (no sticky CTA on photos page). When navigating BACK, Sections remounts and `MountedFlag` re-adds the class. Vue unmounts old before mounting new -- brief classless gap during transition. No CSS transition on the Sierra widget offset, so no visual flash. |
+| 8 | Step 4 (HcbLocationSections.vue) | Breadcrumbs rely on store data from serverPrefetch only | MEDIUM | `setBreadcrumbFragments()` in `mounted()` reads `this.location` from Vuex. On initial SSR load, `location` is populated by the parent's `serverPrefetch`. On client-side navigation back from photos, `location` is still in the store (same page context). But if the user somehow navigates client-side to a DIFFERENT location code, `loadLocation` only runs in `serverPrefetch` (not `mounted`/`created`), so the store retains the OLD location. Breadcrumbs would show stale data. **Pre-existing issue** -- same pattern existed in the original component. |
+| 9 | Step 4 (HcbLocationSections.vue) | Scoped style `.hcb-sections .row` correctly targets own template elements | LOW | `.row` class is on `.row.hero-section` and `.row.location-body` which are direct template elements in Sections. Scoped styles apply correctly via `data-v-*` attribute. If any child component had `.row` on its root, Vue's scoped parent selector would also match (intended scoped behavior). No real risk -- child components use component-specific class names. |
+| 10 | Step 4 (HcbLocationSections.vue) | `:deep(.marketing-banner)` scope ID transparency | LOW | The marketing banner class is inside dynamically compiled `CMSPartial` template. `:deep()` pierces the scoped boundary to target any descendant `.marketing-banner`. Scope ID change (from `HcbLocationPageV2`'s filepath hash to `HcbLocationSections`'s filepath hash) is transparent because `:deep()` removes the scope constraint for descendants. No issue. |
+| 11 | Step 5 (HcbLocationPageV2.vue) | Template loses `.gap-md.px-125m` from parent root | LOW | Original root: `.hcb-page-v2.div-center.gap-md.px-125m`. New root: `.hcb-page-v2.div-center`. The gap/padding moved to `HcbLocationSections` root (`.hcb-sections.gap-md.px-125m`). The photos page has its own padding (`.px-125m` on `.photos-grid`). The parent now has NO padding/gap, which means the `router-view` children control their own spacing. **Correct per session guideline 1.11** (self-sufficient component spacing). But verify the photos page doesn't need the parent's gap. Current photos page: `.hcb-photos-page.div-center` has `max-width: 1440px` in Stylus -- no gap needed since it's a single full-width element. Safe. |
+| 12 | Step 5 (HcbLocationPageV2.vue) | `routeViewProps` passes unused props causing Vue 3 fallthrough attrs warning | LOW | `routeViewProps` includes `locationCode` and `locationName` (consumed by photos page only). `HcbLocationSections` does NOT use them but DOES declare them as props (lines 95-101 in current Sections file). **Correctly mitigated per the plan's inline action.** No console warning. |
+| 13 | Step 5 (HcbLocationPageV2.vue) | `location?.code` and `location?.name` empty during SSR failure | MEDIUM | If `loadLocation` in `serverPrefetch` fails (network error, bad location code), `location` remains `null`. `routeViewProps` returns `locationCode: ''` and `locationName: ''`. Photos page header would show " Images" (empty name + "Images"). Sections would render with `location` being `null` -- all `v-if="location"` guards throughout child components would prevent rendering. The hero guard `v-if="location"` (line 3 of HeroV2) would hide the entire hero. **Not a new issue** -- same failure mode existed before. Consider adding `v-if="location"` on `router-view` in thin parent for defense-in-depth. |
+| 14 | Step 5 (HcbLocationPageV2.vue) | SSR hydration mismatch for dynamic import on `/photos` direct access | MEDIUM | `HcbLocationPhotosPage` is a dynamic import in `routes.js`. During SSR, dynamic imports resolve asynchronously. Vite's SSR bundler typically pre-bundles dynamic imports for SSR, but if this chunk is not pre-resolved, SSR renders empty for the `/photos` route while the client hydrates and lazy-loads the component -- causing hydration mismatch. **The plan accepts this:** "The primary flow is client-side navigation. Direct access is edge-case." Photos page will flash empty briefly on direct URL access, then hydrate with content. |
+| 15 | Step 6 (HeroV2) | CRITICAL: Step 6 NOT executed -- `heroImages` prop NOT renamed to `galleryImages` | HIGH | The plan says: REMOVE `heroImages` prop, ADD `galleryImages` prop, REMOVE `galleryImages` computed. Current HeroV2 on disk still has: (a) `heroImages` prop (lines 63-68), (b) `galleryImages` computed (lines 87-98), (c) `router-view` in template (line 38). The Sections template passes `:gallery-images="galleryImages"` but HeroV2 declares `heroImages`, not `galleryImages`. Vue 3 fallthrough: `gallery-images` becomes an HTML attribute on the root div (ignored functionally). `heroImages` prop defaults to `[]`. `galleryImages` computed filters `[]` and returns `[]`. **Result: hero displays ZERO images.** |
+| 16 | Step 6 (HeroV2) | CRITICAL: `router-view` still in HeroV2 template | HIGH | Line 38: `router-view(:gallery-images="galleryImages" :location-code="location.code" :location-name="location.name")`. The plan says REMOVE this. With the current FLAT route config (no `children` array), this nested `router-view` finds no matching child route and renders nothing. It is dead code producing an empty element. Not functionally breaking, but confusing and wastes DOM. Must be removed per plan. |
+| 17 | Step 6 (HeroV2) | `photosUrl` hardcodes route path | LOW | `photosUrl` returns `/colorbar/locations/${code}/photos`. Session guideline andris-guideline-11 says "no hardcoded route paths in reusable components." HeroV2 is page-specific (not reusable), so this is acceptable. Could use `this.$router.resolve({ name: 'location-photos', params: {...} }).href` for consistency but not blocking. Same pattern exists in `LocationImageCarousel`. |
+| 18 | Step 6 (HeroV2) | HcbLocationPhotosPage back navigation uses path string, not named route | LOW | `handleBackClick`/`handleCloseClick` use `this.$router.push(this.backUrl)` where `backUrl = /colorbar/locations/${locationCode}`. This works because the path matches `location-details`. Plan recommends refactoring to `{ name: 'location-details', params: { locationCode } }`. Non-blocking but should be done per plan inline action. |
+| 19 | Step 7 (tests) | CRITICAL: Existing test file will fail | HIGH | `HcbLocationPageV2.test.js` (7628 bytes) was written for the original component rendering all sections. The thin parent has no `components`, no section HTML, no breadcrumbs, no CMS computed. Every assertion on rendered section content, breadcrumb mutations, or CMS computed properties will fail. Must be rewritten for: `routeViewProps` shape, `galleryImages` filter logic, `serverPrefetch`, `router-view` existence. |
+| 20 | Step 7 (tests) | HeroV2 test file needs prop rename and describe block removal | MEDIUM | Tests pass `heroImages` as prop. After Step 6, prop name is `galleryImages`. The `galleryImages` describe block (filter/map tests) must be removed since logic moved to parent. `primaryHeroImage`/`secondaryHeroImage` tests must pass pre-filtered data directly. |
+| 21 | Step 7 (tests) | HcbLocationSections.test.js must be created | MEDIUM | All section tests (breadcrumbs, CMS computed, layout structure, tracking watcher) must move from `HcbLocationPageV2.test.js` to a new `HcbLocationSections.test.js`. Mount `HcbLocationSections` with `cmsSettings`, `routeParams`, `galleryImages` as props. Mock store: `colorbar` (location), `global` (isDesktop, breadcrumb mutations). |
+| 22 | General | Route name `location-details` is new -- no other code references it yet | LOW | The `location-details` named route is new. No existing code navigates TO it by name (only the photos page `handleBackClick` uses a path string). If Step 18 (refactor to named route) is done, `location-details` will be referenced. No breakage risk from the name itself. |
+| 23 | General | `HcbLocationPhotosPage` `mounted()` tracking event fires on every mount | LOW | On client-side navigation from location page to photos, `mounted()` fires the tracking event. If user goes back and forward again, it fires again. This is correct per session guideline 1.7 (page load events in lifecycle hooks). No double-fire concern since the component is unmounted on back navigation. |
+| 24 | Step 4 (HcbLocationSections.vue) | `SiteMessageBannerCarousel` locally imported AND globally registered | LOW | Both locally imported in Sections (line 58) and globally registered in `registerGlobalsSsr.js` (line 201). Local import takes precedence in Vue 3. No conflict. Standard codebase pattern. |
+| 25 | Step 1 (routes.js) | Route order correctness | LOW | `location-details` (`:locationCode`) before `location-photos` (`:locationCode/photos`) in the array. Vue Router param matching does NOT capture slashes, so `nyc-flat/photos` does not match `:locationCode`. The longer path route `/photos` is correctly placed second. Safe. |
+| 26 | Step 5 (HcbLocationPageV2.vue) | Computed alphabetization follows session guidelines | LOW | `...mapState` first (andris-guideline-10), then `defaultLocationImages`, `galleryImages`, `routeViewProps`. Alpha order: d < g < r. Correct per SS1.3. |
+| 27 | Step 5 (HcbLocationPageV2.vue) | `router-view` v-slot `Component` may be undefined during async route resolution | LOW | During async route resolution (e.g., `HcbLocationPhotosPage` dynamic import), `Component` may be `undefined` briefly. `component(:is="undefined")` renders nothing -- Vue handles gracefully. No error. No `<transition>` or `<keep-alive>` involved. Safe. |
+
+---
+
+**BLOCKING ISSUES -- Must fix before commit:**
+
+1. **Issues #2 and #3 (HIGH):** `mrVueApp.js` line 134 and `ssr/router.js` line 7 still import `hcbLocationHeroRoutes` from `HairColorBarLocationHeroV2/routes` which has been deleted from disk. Both the import line AND the spread (`...hcbLocationHeroRoutes`) in the routes array must be removed. **Build will fail without this fix.**
+
+2. **Issue #15 (HIGH):** HeroV2 Step 6 has not been executed. `heroImages` prop must be renamed to `galleryImages`, the `galleryImages` computed must be removed, and the hero currently receives no image data from the Sections parent (which passes `:gallery-images`). **Hero displays zero images.**
+
+3. **Issue #16 (HIGH):** `router-view` on line 38 of HeroV2 must be removed. It is a nested router-view with no matching child routes (flat route config). Dead code.
+
+4. **Issue #19 (HIGH):** `HcbLocationPageV2.test.js` must be rewritten for the thin parent and `HcbLocationSections.test.js` must be created. Steps 4-7 must be committed atomically per the plan's critical constraint.
+
+**NON-BLOCKING RECOMMENDATIONS:**
+
+- Issue #18: Refactor `HcbLocationPhotosPage` back/close to use named route `location-details`.
+- Issue #13: Consider `v-if="location"` on `router-view` in thin parent for defense-in-depth on SSR failure.
+- Issue #1: Verify Tophat CMS serves identical `cmsSettings` for `/photos` URL variant (cannot verify from code).
+- Issue #5: Document in PR that `CMSPartial` serverPrefetch timing is preserved but fragile if Sections import changes to dynamic.
+
+### NAMING CONVENTION REVIEW (2026-04-03) --- DOTCOMPB-7712 V2 Migration
+
+Reviewed all naming decisions in the Definitive Architecture Plan and the already-implemented code on branch `DOTCOMPB-7712` against session guidelines SS1.3, SS1.14, SS1.15, SS1.17 (andris patterns 2, 7, 12, 15, 20).
+
+**Files analyzed:**
+- `HcbLocationPageV2/HcbLocationPageV2.vue` (refactored thin parent)
+- `HcbLocationPageV2/HcbLocationSections/HcbLocationSections.vue` (new extracted component)
+- `HcbLocationPageV2/routes.js` (new route definitions)
+- `HairColorBarLocationHeroV2/HairColorBarLocationHeroV2.vue` (pending Step 6 prop change)
+- `HairColorBarLocationHeroV2/HcbLocationPhotosPage/HcbLocationPhotosPage.vue` (refactored)
+- `HairColorBarLocationHeroV2/LocationImageCarousel/LocationImageCarousel.vue` (reference)
+
+#### Component Names
+
+| # | Category | Current Name | Suggestion | Rationale | Guideline Ref |
+|---|---|---|---|---|---|
+| 1 | Component Name | `HcbLocationSections` | Consider `HcbLocationContent` | "Sections" is generic and does not communicate what KIND of sections. Every page has "sections." The component renders the entire visible content of the location detail page: hero, about, services, reviews, FAQs, footer links, mobile CTA. `HcbLocationContent` better conveys "all the visible page content" vs. "some arbitrary sections." Alternative: keep `HcbLocationSections` if the team reads "sections" as "the section-based content below the router-view" -- but `Content` is more self-explanatory per SS1.14 ("self-explanatory, general names"). Counter-argument: `Content` is even MORE generic than `Sections`. The word "sections" at least implies structured, divided content areas. The component IS literally the collection of page sections. VERDICT: **Acceptable as-is.** Both names are defensible. If the team has no preference, `HcbLocationSections` is fine -- it accurately describes a component that renders multiple page sections. | SS1.14 |
+| 2 | Component Name | `HcbLocationPhotosPage` | Correct | Follows `Hcb` prefix convention. "LocationPhotos" is the domain. "Page" suffix correctly indicates this is a page-level component (not a reusable section). Consistent with `HcbLocationPageV2` naming pattern. | SS1.14 |
+| 3 | Component Name | `HcbLocationPageV2` | Correct | Already validated across session. Thin parent role is an internal refactor -- name stays. | SS1.14 |
+
+#### Folder Structure & Location
+
+| # | Category | Current Name | Suggestion | Rationale | Guideline Ref |
+|---|---|---|---|---|---|
+| 4 | Folder Location | `HcbLocationPageV2/HcbLocationSections/` | Correct | Nesting under `HcbLocationPageV2/` is correct because `HcbLocationSections` is a child route component exclusively used by `HcbLocationPageV2`'s `router-view`. It is NOT reusable elsewhere. SS1.14 says "location by domain, not by page" but makes an exception: "components that are truly page-section wrappers belong in the page folder." This is exactly that case. | SS1.14 |
+| 5 | Folder Location | `HairColorBarLocationHeroV2/HcbLocationPhotosPage/` | FLAG: Inconsistent after V2 refactor | The photos page is now a sibling route to `HcbLocationSections`, rendered by `HcbLocationPageV2`'s `router-view`. Logically, it should live alongside `HcbLocationSections` inside `HcbLocationPageV2/`. Instead, it remains nested inside `HairColorBarLocationHeroV2/` (a V1 artifact from when `router-view` was inside the hero). The `routes.js` import already uses a relative path `'../HcbIndividual/HairColorBarLocationHeroV2/HcbLocationPhotosPage'` which is a code smell -- a sibling route importing from a deeply nested unrelated component folder. **Recommendation:** Move to `HcbLocationPageV2/HcbLocationPhotosPage/` in a follow-up. Not blocking for this PR since the import works, but document the tech debt. | SS1.14 |
+
+#### CSS Root Class Names
+
+| # | Category | Current Name | Suggestion | Rationale | Guideline Ref |
+|---|---|---|---|---|---|
+| 6 | CSS Root Class | `.hcb-sections` | Correct | Follows `hcb-` prefix convention (SS1.14: "short CSS root classes use `hcb-` prefix"). Consistent with established pattern: `.hcb-page-v2`, `.hcb-hero-v2`, `.hcb-about`, `.hcb-services`, `.hcb-reviews`, `.hcb-faqs`. The name `.hcb-sections` is descriptive enough -- scoped styles prevent collision. Adding `location-` (`.hcb-location-sections`) would break the "short" rule. | SS1.14 |
+| 7 | CSS Root Class | `.hcb-photos-page` | Correct | Follows `hcb-` prefix, consistent with `.hcb-page-v2`. Descriptive: identifies the photos page. | SS1.14 |
+| 8 | CSS Root Class | `.hcb-page-v2` (parent) | Correct | Already validated. Retained after refactor to thin parent. | SS1.14 |
+| 9 | CSS Internal Class | `.image-carousel` (LocationImageCarousel root) | Correct | Not `hcb-` prefixed because it is NOT a page section -- it is a UI component inside the hero. Short, descriptive. Scoped. | SS1.14, SS1.15 |
+
+#### Route Names
+
+| # | Category | Current Name | Suggestion | Rationale | Guideline Ref |
+|---|---|---|---|---|---|
+| 10 | Route Name | `location-details` | Correct | Consistent with booking flow pattern: `booking-location`, `booking-services`, `booking-calendar`, etc. The `location-` prefix groups all location page routes. `details` accurately describes the main location detail view. Already referenced by `HcbLocationPhotosPage` navigation (`{ name: 'location-details' }`). Cross-reference: `HairColorBarLocationHeroV2.handleImageGalleryClick` uses `{ name: 'location-photos' }` -- both routes use the `location-` prefix consistently. | SS1.14, consistency with booking routes |
+| 11 | Route Name | `location-photos` | Correct | Matches the URL path segment (`/photos`). Follows `location-` prefix grouping. Already used by `LocationImageCarousel.handleViewMoreClick` and `HairColorBarLocationHeroV2.handleImageGalleryClick`. Consistent. | SS1.14 |
+
+#### Prop Names
+
+| # | Category | Current Name | Suggestion | Rationale | Guideline Ref |
+|---|---|---|---|---|---|
+| 12 | Prop Name | `galleryImages` (on `HcbLocationSections`) | Correct | Semantically accurate -- these are the filtered, URL-stripped gallery images passed from the parent. Same prop name used consistently by `HcbLocationPhotosPage`. The rename from `heroImages` (old HeroV2 prop) to `galleryImages` is correct: the images are not "hero images" anymore -- they are shared gallery data consumed by both the hero AND the photos page. | SS1.3 |
+| 13 | Prop Name | `heroImages` (current HeroV2 prop, pending Step 6 change) | CHANGE TO `galleryImages` | Step 6 of the plan correctly specifies removing `heroImages` prop and adding `galleryImages` prop on `HairColorBarLocationHeroV2`. This has NOT been executed yet (the HeroV2 file still declares `heroImages`). The `HcbLocationSections` template already passes `:gallery-images="galleryImages"` -- a mismatch. **This must be resolved in Step 6.** The plan is correct; execution is pending. | SS1.3, plan Step 6 |
+| 14 | Prop Name | `locationCode` (String) on `HcbLocationSections` | Correct (fallthrough suppression) | Declared to suppress Vue 3 fallthrough attrs warning per the plan's edge case analysis. Not consumed by the component. This is an intentional pattern, not dead code. Acceptable. | Plan edge case mitigation |
+| 15 | Prop Name | `locationName` (String) on `HcbLocationSections` | Correct (fallthrough suppression) | Same rationale as #14. | Plan edge case mitigation |
+| 16 | Prop Name | `cmsSettings` (Object) on `HcbLocationSections` | Correct | Pass-through from parent. Same name and shape as the original `HcbLocationPageV2` prop. No rename needed. | SS1.3 |
+| 17 | Prop Name | `routeParams` (Object) on `HcbLocationSections` | Correct | Pass-through from parent. Same name and shape as original. | SS1.3 |
+| 18 | Prop Name | `locationCode` (String, required) on `HcbLocationPhotosPage` | Correct | Required prop from `routeViewProps`. Used for back URL construction and tracking. Matches the route param name (`:locationCode`). | SS1.3 |
+| 19 | Prop Name | `locationName` (String) on `HcbLocationPhotosPage` | Correct | Used in header title and tracking. | SS1.3 |
+
+#### Computed Property Names & Ordering
+
+| # | Category | Current Name | Suggestion | Rationale | Guideline Ref |
+|---|---|---|---|---|---|
+| 20 | Computed Name | `routeViewProps` (in `HcbLocationPageV2`) | Correct | Clearly describes what it returns: the props object for the `router-view` slot's child component. Self-documenting. Not a common computed pattern in the codebase but justified by the `v-slot` architecture. | SS1.3 |
+| 21 | Computed Order | `HcbLocationPageV2` computed: `...mapState` -> `defaultLocationImages` -> `galleryImages` -> `routeViewProps` | Correct | Vuex helpers first (SS1.17 andris-guideline-10). Then alphabetical: `d` -> `g` -> `r`. Correct order. | SS1.3, SS1.17-10 |
+| 22 | Computed Order | `HcbLocationSections` computed: `...mapState` -> `...mapGetters` -> `addonServices` -> `bookingUrl` -> `faqsList` -> `faqsTitle` -> `gettingHereText` -> `marketingPartialDark` -> `marketingPartialLight` -> `paymentsText` -> `servicesList` -> `siteMessageTopics` | Correct | Vuex helpers first (mapState, then mapGetters). Local computed alphabetized: `a` -> `b` -> `f` -> `f` -> `g` -> `m` -> `m` -> `p` -> `s` -> `s`. Perfect alphabetical order. | SS1.3, SS1.17-10 |
+| 23 | Computed Order | `HcbLocationPhotosPage` computed: `backUrl` -> `columns` -> `hasImages` | Correct | Alphabetical: `b` -> `c` -> `h`. | SS1.3 |
+| 24 | Computed Name | `galleryImages` (in `HcbLocationPageV2` parent) | Correct | Moved from HeroV2. Same name, now in the parent. Semantically accurate -- filters and URL-strips CMS images into gallery-ready data. | SS1.3 |
+| 25 | Computed Name | `defaultLocationImages` (in `HcbLocationPageV2`) | Correct | Extracts `cmsSettings?.defaultLocationImages`. Name matches the CMS field. Self-documenting. | SS1.3 |
+
+#### CSS Internal Class Names
+
+| # | Category | Current Name | Suggestion | Rationale | Guideline Ref |
+|---|---|---|---|---|---|
+| 26 | CSS Class | `.photos-header` | Correct | `{context}-{role}` pattern per SS1.15. "photos" is the context, "header" is the role. | SS1.15 |
+| 27 | CSS Class | `.header-content` | Correct | `{context}-{role}` pattern. Nested inside `.photos-header` -- context is clear from nesting. | SS1.15 |
+| 28 | CSS Class | `.header-text` | Correct | | SS1.15 |
+| 29 | CSS Class | `.header-title` | Correct | | SS1.15 |
+| 30 | CSS Class | `.image-count` | Correct | Descriptive, no redundant prefix. | SS1.14, SS1.15 |
+| 31 | CSS Class | `.back-link` | Correct | Descriptive action element. | SS1.15 |
+| 32 | CSS Class | `.close-btn` | Correct | | SS1.15 |
+| 33 | CSS Class | `.photos-grid` | Correct | `{context}-{role}` pattern. | SS1.15 |
+| 34 | CSS Class | `.gallery-grid` | Correct | Internal grid container inside `.photos-grid`. Distinguishes the masonry layout from the outer semantic region. | SS1.15 |
+| 35 | CSS Class | `.masonry-column` | Correct | `{role}-column` pattern per SS1.15 grid column convention. | SS1.15 |
+| 36 | CSS Class | `.photo-item` | Correct | `{component}-{element}` BEM-like pattern for repeating items. | SS1.15 |
+| 37 | CSS Class | `.hero-section` (in HcbLocationSections) | Correct | `{name}-section` semantic section pattern. Already validated in SS1.15 reference. | SS1.15 |
+| 38 | CSS Class | `.location-body` (in HcbLocationSections) | Correct | `{context}-{role}` layout container. Already validated. | SS1.15 |
+| 39 | CSS Class | `.main-column` / `.sidebar-column` | Correct | `{role}-column` pattern. Already validated. | SS1.15 |
+| 40 | CSS Class | `.getting-here-section` / `.payments-section` | Correct | `{name}-section` semantic section pattern. Already validated. | SS1.15 |
+
+#### Constants & Variables
+
+| # | Category | Current Name | Suggestion | Rationale | Guideline Ref |
+|---|---|---|---|---|---|
+| 41 | Constant | `MINIMUM_BREADCRUMB_COUNT = 3` (in HcbLocationSections) | Correct | Moved from parent. No magic number. UPPER_SNAKE_CASE. Not used in template so no computed wrapper needed. | SS1.3 |
+| 42 | Constant | `VISIBLE_HERO_IMAGES_COUNT = 2` (in HeroV2) | Correct | Already existed pre-refactor. Not used in template directly -- only in `additionalImagesCount` computed. | SS1.3 |
+| 43 | Constant | `TABLET_BREAKPOINT` / `DESKTOP_BREAKPOINT` (in HcbLocationPhotosPage) | Correct | Module-level constants for matchMedia strings. No magic strings. UPPER_SNAKE_CASE. | SS1.3 |
+
+#### Method Names
+
+| # | Category | Current Name | Suggestion | Rationale | Guideline Ref |
+|---|---|---|---|---|---|
+| 44 | Method Name | `handleBackClick` (HcbLocationPhotosPage) | Correct | Follows `handle{Action}Click` pattern consistent with codebase (`handleBookServiceClick`, `handleImageGalleryClick`, `handleSlideClick`). | SS1.3, SS1.17-4 |
+| 45 | Method Name | `handleCloseClick` (HcbLocationPhotosPage) | Correct | Same pattern. | SS1.3 |
+| 46 | Method Name | `updateColumnCount` (HcbLocationPhotosPage) | Correct | Descriptive action name. Not a click handler (called from matchMedia listener), so no `handle` prefix -- correct. | SS1.3 |
+| 47 | Method Name | `setBreadcrumbFragments` (HcbLocationSections) | Correct | Moved from parent. Already validated. | SS1.3 |
+| 48 | Method Name | `handleImageGalleryClick` (HeroV2) | FLAG: Uses `$router.push` with `trackMREvent`, not `trackMREventAndRedirect` | This is a naming review, not a logic review, but the method name `handleImageGalleryClick` is correct. However, the implementation uses `trackMREvent` + `$router.push` which is acceptable for client-side route changes (no hard redirect). `trackMREventAndRedirect` is for `location.href` hard navigations per SS1.7. The `$router.push` is a soft SPA transition. **Name is correct.** | SS1.7, SS1.3 |
+
+#### Webpack Chunk Name
+
+| # | Category | Current Name | Suggestion | Rationale | Guideline Ref |
+|---|---|---|---|---|---|
+| 49 | Chunk Name | `"HCBLocationPhotosPage"` | Minor: Consider `"HcbLocationPhotosPage"` | The webpackChunkName uses `HCB` (all caps) while the component name uses `Hcb` (PascalCase). This is cosmetic only -- chunk names don't affect runtime behavior. But for consistency with the component naming convention (`Hcb` prefix), `HcbLocationPhotosPage` would be more consistent. Not blocking. | Consistency |
+
+#### `name` Property in `export default`
+
+| # | Category | Current Name | Suggestion | Rationale | Guideline Ref |
+|---|---|---|---|---|---|
+| 50 | Component `name` | `'HairColorBarLocationsHeroV2'` (HeroV2, line 53) | FLAG: Typo -- should be `'HairColorBarLocationHeroV2'` | The component file is `HairColorBarLocationHeroV2.vue` (singular "Location") but the `name` property says `HairColorBarLocationsHeroV2` (plural "Locations"). This is a pre-existing bug, not introduced by DOTCOMPB-7712. **Not blocking for this PR** but worth noting. The `name` property is used for devtools and recursive component references. | SS1.14, pre-existing |
+
+#### Summary
+
+**Blocking issues:** 0
+**Pending execution (already planned):** 1 item (#13 -- HeroV2 prop rename `heroImages` -> `galleryImages`, Step 6)
+**Non-blocking recommendations:** 2 items (#5 -- move `HcbLocationPhotosPage` folder in follow-up; #49 -- chunk name casing)
+**Pre-existing bugs discovered:** 1 item (#50 -- `name` property typo in HeroV2)
+**All other decisions (44 of 50):** Correct per session guidelines.
 
 <!-- Local Variables: -->
 <!-- gptel-model: gemini-pro-paid -->
