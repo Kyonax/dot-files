@@ -109,6 +109,7 @@ Maps each rule name to a keyword-rich description. This is what the GPTel Analyz
 - Include specific terms that appear in the rule's content
 - The Analyzer uses these descriptions for semantic matching — accuracy is critical
 - Each description should be 1-2 sentences, ~100-150 characters
+- **IMPORTANT:** If a description exceeds ~15 words, put a short summary in the cell and add a `[Details](#anchor)` link to a named block below the table. Long cells break alignment and hurt readability for both humans and AI
 
 ## Size Constraints
 

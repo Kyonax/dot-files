@@ -386,17 +386,20 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 
 | Ticket          | Type  | Summary                                                      | Status                                                                  |
 |-----------------|-------|--------------------------------------------------------------|-------------------------------------------------------------------------|
-| `DOTCOMPB-7289` | Story | Specific Location page updates — HCB details                 | In Code Review (hero, about, page scaffolding complete)                 |
-| `DOTCOMPB-7290` | Story | Specific Location page updates — Services + additional info  | **ALL ACs COMPLETE.** PR #20190 open. 143 tests passing. Code reviewed. |
-| `DOTCOMPB-7556` | Bug   | Add sticky Book Services button to location page             | Complete (FixedCtaBar created, integrated, tested, PR ready)            |
+| `DOTCOMPB-7289` | Story | Specific Location page updates — HCB details                 | **MERGED** (PR #20137). Hero, about, page scaffolding.                  |
+| `DOTCOMPB-7290` | Story | Specific Location page updates — Services + additional info  | **MERGED** (PR #20190). 143 tests. Services, FAQs, reviews, marketing modules. |
+| `DOTCOMPB-7556` | Bug   | Add sticky Book Services button to location page             | **MERGED** (PR #20166). FixedCtaBar component.                          |
 | `DOTCOMPB-7557` | Bug   | ADA: Cannot tab to Book Services on desktop                  | Roam node created, not yet implemented                                  |
-| `DOTCOMPB-7463` | Story | Navigation Redesign                                          | PR #20210 open. CI failing (core_integration_tests + core_tests). Reviews dismissed. Bug fixes on `DOTCOMPB-7463-nav-bug-fixes`. |
-| `DOTCOMPB-7652` | Bug   | Madi overlapping with sticky CTA                             | Complete (MountedFlag + SierraWidget CSS fix, committed)                |
-| `DOTCOMPB-7555` | Bug   | Remove non-functional "Photos" button from location hero     | **Complete** — committed, 13 tests passing, PR ready                   |
-| `DOTCOMPB-7749` | Story | Nav title font size increase + CTA implementation            | In progress — font size bump done on `DOTCOMPB-7463-nav-bug-fixes`, CTA implementation pending |
-| `DOTCOMPB-7763` | Bug   | Mobile Shop submenu not fully scrollable — iOS Safari overlap | **MERGED** (PR #20317, 2026-03-26). iOS scroll fix + header spacing + double-tracking fix. 52 tests passing. |
-| `DOTCOMPB-7742` | Bug   | Featured service CTA on location page doesn't pre-select service in booking flow | **COMPLETE** (2026-03-30). Implemented, code reviewed (0 violations), 19 tests passing, 5263 full suite. Changes UNSTAGED — needs commit + PR. See §3.10. |
-| `DOTCOMPB-7712` | Story | New page to display location photos                          | **IN PROGRESS** (2026-04-03). V1+V2 migration done. Photos page: hero pair + CSS masonry + CMS/DB image merge. 81 tests across 5 files. 2 code review rounds (48 findings, 12 implemented). Express 404, hydration fix, skeleton backgrounds, ADA fixes. NEXT: PR prep + commit. See §3.11. |
+| `DOTCOMPB-7463` | Story | Navigation Redesign                                          | **MERGED** (PR #20210). Bug fixes also merged (PR #20309). Font size merged (PR #20294). |
+| `DOTCOMPB-7652` | Bug   | Madi overlapping with sticky CTA                             | **MERGED** (PR #20203). MountedFlag + SierraWidget CSS fix.            |
+| `DOTCOMPB-7555` | Bug   | Remove non-functional "Photos" button from location hero     | **MERGED** (PR #20218). 13 tests passing.                              |
+| `DOTCOMPB-7749` | Story | Nav title font size increase + CTA implementation            | **MERGED** (PR #20294). Font size bump + nav bug fixes.                 |
+| `DOTCOMPB-7763` | Bug   | Mobile Shop submenu not fully scrollable — iOS Safari overlap | **MERGED** (PR #20317, 2026-03-26). iOS scroll fix + header spacing + double-tracking fix. |
+| `DOTCOMPB-7742` | Bug   | Featured service CTA on location page doesn't pre-select service in booking flow | **PR #20368 OPEN** (2026-03-30). Cookie-based pre-selection + serverPrefetch fix. See §3.10. |
+| `DOTCOMPB-7712` | Story | New page to display location photos                          | **PR #20423 OPEN** (2026-04-06). Committed on branch `DOTCOMPB-7712`. 81 tests, 3 code review rounds. See §3.11. |
+| `DOTCOMPB-7527` | Story | Dash Hudson Module Updates — UGC carousel style overrides   | **MERGED** (PR #20424, 2026-04-06). CSS `:deep()` overrides, configurable SDK props, event tracking fix, ADA. 118 tests. See §3.13. |
+| `DOTCOMPB-7768` | Bug   | (TBD — PR open)                                              | **PR #20335 OPEN**.                                                     |
+| DashHudson Research | Research | Platform research + per-location gallery integration plan    | **COMPLETE** (2026-04-06). Full platform analysis documented. Roam node: `2026-04-06-dashhudson_research.org`. |
 
 ### 2.3 Key Architectural Decisions (Session-Wide)
 
@@ -468,6 +471,11 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 66. **(2026-04-03)** **Back/close on photos page uses `trackMREventAndRedirect` (hard redirect)** — `$router.push` to `location-details` doesn't work on direct `/photos` access (CMS page has different context, sections don't render properly). Hard redirect via `trackMREventAndRedirect` ensures full SSR cycle with correct `cmsSettings`.
 67. **(2026-04-03)** **`v-if="location?.code"` guard on `router-view`** — Defense-in-depth on thin parent. Initial Vuex state is `{}` (empty object, truthy), so `v-if="location"` is insufficient. `?.code` catches both `null` and empty `{}`.
 68. **(2026-04-03)** **Padding/margin utility classes MUST use breakpoint prefix** — `.xs-pt-50m` not `.pt-50m`. Mobile-first convention. Rule added to code-review skill `rules/mr-review-checklist.md`.
+69. **(2026-04-05)** **DashHudson per-location gallery integration — REVISES decision #22**
+70. **(2026-04-06)** **`:deep()` for third-party SDK DOM overrides** — When the Dash Hudson (or any third-party) SDK injects its own DOM inside a Vue component, use scoped `:deep()` selectors to override styles. Target SDK class names (`.aspect-ratio-box`, `.ls-slider-item`) directly. Pattern validated on `DashHudsonScriptInner.vue` under `&.version-2`.
+71. **(2026-04-06)** **Conditional `aria-labelledby` for slotted headings** — When a heading `id` is in a slot (defined by parent), use `:aria-labelledby="showTitle ? 'ugc-section-title' : null"` on the component root. Vue removes the attribute when value is `null`. Prevents dangling reference when heading hasn't rendered yet.
+72. **(2026-04-06)** **`isFrontEndEvent: true` is explicitly passed** — Despite `segmentTracking.js` auto-adding it, the team convention (validated across HcbLocationPageV2, Services, FAQs, Reviews, SiteNav) is to explicitly include `{ isFrontEndEvent: true }` in `trackMREvent` properties. JIRA specs also list it. Follow the convention.
+73. **(2026-04-06)** **Scope `document.querySelector` to component ref** — When polling for SDK-injected DOM via `waitForElement`, use `container.querySelector()` (scoped to `this.$refs`) not `document.querySelector()`. Prevents wrong element match when multiple widget instances exist. — Decision #22 said "No per-location gallery API." Research confirms Dash Social (rebranded from DashHudson Jan 2025) HAS a Gallery API: `GET /brands/{brand_id}/galleries/{gallery_id}/media`. Per-location segmentation is possible via one gallery per location with a `gallery_id` stored in the location data model (new Tophat field `dashHudsonGalleryId`). Two implementation paths: Option A (widget — client-side, `DashHudsonWidget` component, separate section) or Option B (API — server-side fetch, merge into `galleryImages`, appears in hero +X count and photos page masonry). Full research and plan in session appendix "DASH HUDSON / DASH SOCIAL DEEP RESEARCH".
 
 ### 2.4 PR Review Resolutions (DOTCOMPB-7289)
 
@@ -475,16 +483,13 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 
 ### 2.5 Pending Work
 
-*   **DOTCOMPB-7463-nav-bug-fixes** — Mobile nav scroll normalization + icon spacing + safe area padding changes are **UNSTAGED**. Tests need to run before committing. See §3.5 for full change list.
-*   **DOTCOMPB-7749** — CTA implementation for nav pending on `DOTCOMPB-7463-nav-bug-fixes`. Font size bump done. PR prep in `~/.brain.d/roam-nodes/madison_reed/2026-03-16-043543-dotcompb_7463.org`.
-*   **DOTCOMPB-7463** — PR #20210 open. CI failing (`core_integration_tests` + `core_tests`). Re-review needed (reviews dismissed). Tophat `featuredTools.title` field, QA verification.
-*   **DOTCOMPB-7290** — PR [#20190](https://github.com/MadisonReed/mr/pull/20190) open. Cherry-picked `CmsPartialSsr` fix (commit `329bce55079`). `partial-featured-services-v2` rendering issue root-caused — see §3.10.
-*   **DOTCOMPB-7742** — **COMPLETE** (2026-03-30). Changes UNSTAGED on branch `DOTCOMPB-7742`. Needs commit + PR creation. Commit msg and PR body in roam node `2026-03-27-120100-dotcompb_7742.org`.
-*   **DOTCOMPB-7555** — Complete on branch, PR description ready in roam node. Needs PR creation.
-*   **DOTCOMPB-7555_full_width** — Parked carousel work. Activate only when business confirms desktop banner carousel for location hero.
+*   **DOTCOMPB-7712** — **PR #20423 OPEN** (2026-04-06). In code review. 81 tests, 3 code review rounds. Branch `DOTCOMPB-7712`.
+*   **DOTCOMPB-7742** — **PR #20368 OPEN** (2026-03-30). Cookie-based service pre-selection. In code review. Roam node `2026-03-27-120100-dotcompb_7742.org`.
+*   **DOTCOMPB-7768** — **PR #20335 OPEN**. Details TBD.
+*   **DOTCOMPB-7717 cleanup** — MarketingBanner dead workaround removal. Plan in §3.8. Andris's PR #20229 still OPEN. Our cleanup not implemented.
 *   **DOTCOMPB-7557** — ADA: Cannot tab to Book Services on desktop. Roam node exists, not started.
-*   **DOTCOMPB-7712** — **IN PROGRESS** (2026-04-03). Implementation complete. 81 tests, 2 code review rounds. All changes UNSTAGED on branch `DOTCOMPB-7712`. NEXT: PR prep + commit. See §3.11.
-*   **DOTCOMPB-7717 cleanup** — **COMPLETE** (2026-03-24). MarketingBanner dead workaround removed. Commit + PR body in §3.8.
+*   **DOTCOMPB-7555_full_width** — Parked carousel work. Activate only when business confirms desktop banner carousel for location hero.
+*   **DashHudson Integration** — **RESEARCH COMPLETE** (2026-04-06). Validation checklist (12 items) in roam node Part 8. Need PM/stakeholder input. Recommended: A0 first → A2/A3 → Option B. No code until validation done.
 
 ---
 
@@ -496,10 +501,10 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 
 ### 3.1 DOTCOMPB-7289: Specific Location Page Updates (HCB Details)
 
-**Created:** ~2026-03-02 | **Last updated:** 2026-03-13
+**Created:** ~2026-03-02 | **Last updated:** 2026-04-06
 **Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-03-02-131328-dotcompb_7289.org`
 **Branch:** `DOTCOMPB-7289_new_feat` → `feat-website-booking-flow-site-revolution_with_performance`
-**Status:** In Code Review. Hero, about, and page scaffolding complete. PR reviewed (8 comments resolved).
+**Status:** **MERGED** (PR #20137). Hero, about, and page scaffolding complete.
 
 **Component Tree:**
 ```
@@ -520,7 +525,7 @@ HcbLocationPageV2 (page orchestrator)
 
 ### 3.2 DOTCOMPB-7556: Sticky Book Services Button
 
-**Created:** ~2026-03-11 | **Status:** Complete — 35 tests passing, PR ready.
+**Created:** ~2026-03-11 | **Status:** **MERGED** (PR #20166). 35 tests passing.
 **Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-03-11-165514-dotcompb_7556.org`
 
 **`FixedCtaBar`** — `website/src/vuescripts/components/HairColorBarBookingV2/components/FixedCtaBar/` — Fixed bottom CTA bar. Props: `visible`, `ctaText` (required), `trackEventName`, `redirectUrl`, `ctaDisabled`, `ctaLoading`, `ariaLabel`. Emits: `cta-click`. No store coupling.
@@ -536,10 +541,10 @@ HcbLocationPageV2 (page orchestrator)
 
 ### 3.4 DOTCOMPB-7290: Specific Location Page — Services + Additional Info
 
-**Created:** 2026-03-12 | **Last updated:** 2026-03-24
+**Created:** 2026-03-12 | **Last updated:** 2026-04-06
 **Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-03-12-114716-dotcompb_7290.org`
 **Branch:** `DOTCOMPB-7290` → `feat-website-booking-flow-site-revolution_with_performance`
-**PR:** [#20190](https://github.com/MadisonReed/mr/pull/20190) | **Status:** ALL ACs COMPLETE. In Code Review. 143 tests passing.
+**PR:** [#20190](https://github.com/MadisonReed/mr/pull/20190) | **Status:** **MERGED**. 143 tests passing.
 
 **(2026-03-24) Cherry-pick:** Commit `329bce55079` from `DOTCOMPB-7717` applied to this branch — switches `FeaturedDeals` from `CMSPartial` → `CmsPartialSsr` with `:config="{ bookingUrl }"`. `FeaturedDeals` now accepts `bookingUrl` prop (String, default `''`). Currently investigating `partial-featured-services-v2` behavior on this branch.
 
@@ -562,10 +567,10 @@ HcbLocationPageV2 (page orchestrator)
 
 ### 3.5 DOTCOMPB-7463: Navigation Redesign
 
-**Created:** 2026-03-16 | **Last updated:** 2026-03-27
+**Created:** 2026-03-16 | **Last updated:** 2026-04-06
 **Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-03-16-043543-dotcompb_7463.org`
 **Branch:** `DOTCOMPB-7463` (main PR) + `DOTCOMPB-7463-nav-bug-fixes` (post-PR bug fixes)
-**PR:** [#20210](https://github.com/MadisonReed/mr/pull/20210) | **Status:** OPEN. CI failing (`core_integration_tests` + `core_tests`). Reviews dismissed (re-review needed). Tophat `featuredTools.title` field pending. QA not done.
+**PR:** [#20210](https://github.com/MadisonReed/mr/pull/20210) | **Status:** **MERGED**. Bug fixes also merged (PR #20309). Font size merged (PR #20294).
 
 **(2026-03-24) Bug fixes on `DOTCOMPB-7463-nav-bug-fixes`:**
 - **Sentry fix in `siteNav.js`** — `res.data || {}` guard before destructuring prevents `TypeError` on null response
@@ -654,7 +659,7 @@ SsrApp.vue
 
 ### 3.6 DOTCOMPB-7652: Madi Overlapping with Sticky CTA
 
-**Created:** 2026-03-17 | **Status:** Complete — committed, roam node with commit/PR sections.
+**Created:** 2026-03-17 | **Status:** **MERGED** (PR #20203).
 **Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-03-17-065717-dotcompb_7652.org`
 **Branch:** `DOTCOMPB-7652`
 
@@ -666,7 +671,7 @@ SsrApp.vue
 
 ### 3.7 DOTCOMPB-7555: Remove Non-functional "Photos" Button from Location Hero
 
-**Created:** 2026-03-18 | **Status:** Complete — committed on branch, 13 tests passing, PR description in roam node.
+**Created:** 2026-03-18 | **Status:** **MERGED** (PR #20218). 13 tests passing.
 **Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-03-18-121233-dotcompb_7555.org`
 **Branch:** `DOTCOMPB-7555`
 
@@ -870,7 +875,7 @@ Labels: DOTCOM TEAM, Pending Code Review
 **Created:** 2026-03-24
 **Roam Node:** Documented in `~/.brain.d/roam-nodes/madison_reed/2026-03-16-043543-dotcompb_7463.org` (§ Bug Fix Branch — Mar 24, 2026)
 **Branch:** `DOTCOMPB-7463-nav-bug-fixes`
-**Status:** Font size bump done. CTA implementation pending. Do NOT create PR until CTA work is complete.
+**Status:** **MERGED** (PR #20294). Font size bump + nav bug fixes.
 
 **Font size change — `SiteNavDesktopV2.vue`:** All 5 nav title elements (Shop button, navItems loop, About button, navLinks `<a>`, Extole `.site-nav-title`) bumped one step:
 - `xs-f-small` → `xs-f-medium` (14px → 16px)
@@ -889,7 +894,7 @@ Labels: DOTCOM TEAM, Pending Code Review
 **Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-03-27-120100-dotcompb_7742.org`
 **Branch:** `DOTCOMPB-7742` (based on `master`, Maxi's `set-service-from-cookie-in-new-booking-flow` merged)
 **PR Dependency:** [#20308](https://github.com/MadisonReed/mr/pull/20308) (Maxi — cookie-based service pre-selection in V2 booking flow)
-**Status:** **COMPLETE** (2026-03-30). Implemented, code reviewed, 19 tests passing, full suite clean (5263/5263). Changes UNSTAGED — needs commit + PR.
+**Status:** **PR #20368 OPEN** (2026-03-30). Implemented, code reviewed, 19 tests passing, full suite clean (5263/5263).
 
 #### Problem Statement
 
@@ -1023,7 +1028,7 @@ Changes:
 **Created:** 2026-03-30 | **Last updated:** 2026-04-03
 **Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-03-30-150000-dotcompb_7712.org`
 **Branch:** `DOTCOMPB-7712`
-**Status:** IN PROGRESS — V1+V2 migration complete. Photos page with hero pair + CSS masonry + DB image merge. 81 tests passing. 2 full code reviews (round 1: 30 findings/5 fixed, round 2: 18 findings/7 fixed). All changes UNSTAGED. **NEXT: PR prep + commit.**
+**Status:** **PR #20423 OPEN** (2026-04-06). Committed (`6d5791497e6`), pushed, PR created. 81 tests passing. 3 code reviews completed.
 
 **Scope:** "+X photos" tag on location hero images (desktop + mobile), new photos gallery page at `/colorbar/locations/{locationCode}/photos`.
 
@@ -1103,6 +1108,35 @@ HcbLocationPageV2 (thin parent — data loading + router-view)
 - Round 2: 8 subagents, 18 findings (0 CRITICAL, 4 HIGH, 7 MEDIUM, 7 LOW). 7 implemented, 10 skipped (1 N/A).
 - Total implemented across both rounds: nested interactive fix, focus-visible, computed alphabetization (×2), hidden h2 removal, utility prefix fixes, magic number constant, CSS alphabetization, nested landmark fix, aria-hidden on icons, skeleton backgrounds.
 
+### 3.13 DOTCOMPB-7527: Dash Hudson UGC Carousel Style Overrides
+
+**Created:** 2026-04-06 | **Last updated:** 2026-04-06
+**Roam Node:** `~/.brain.d/roam-nodes/madison_reed/2026-04-06-160000-dotcompb_7527.org`
+**Branch:** `DOTCOMPB-7527`
+**Status:** **MERGED** (PR #20424, 2026-04-06). 118 tests passing.
+
+**Scope:** Restyle the Dash Hudson UGC module on the RCC PDP to match the 2026 Redesign Figma. CSS overrides, configurable SDK props, event tracking fix, ADA, CTA removal.
+
+**Component chain:** `ColorKitPdpV2/V3` → `DashHudsonScript` (pass-through) → `DashHudsonScriptInner` (SDK loader + styles).
+
+**Changes:**
+*   **`DashHudsonScriptInner.vue`** — 7 new configurable SDK props (`carouselDots`, `gapSize`, `infinite`, `mobileGapSize`, `mobileRowSize`, `rowSize`, `scrollDisabled`) with backward-compatible defaults. CSS `:deep()` overrides under `&.version-2`: `aspect-ratio: 4/5`, `border-radius: 12px`, `object-fit: cover`, `overflow: hidden`. Removed "Explore Similar Shades" CTA + `tryItOn` + `openPlaygroundModal` + `mapActions`. Event tracking fixed: `mix_trackEvent` → `trackMREvent('PDP - UGC module clicked', { isFrontEndEvent: true })`. ADA: `role="region"` + conditional `aria-labelledby`. Scoped `document.querySelector` to `this.$refs.dhUgc`. Code cleanup (single quotes, object class syntax, simplified `showTitle`).
+*   **`DashHudsonScript.vue`** — Pass-through for all 7 new props.
+*   **`ColorKitPdpV2.vue`** + **`ColorKitPdpV3.vue`** — Carousel config: `mobile-row-size="1.5"`, `:infinite="true"`, `:carousel-dots="true"`, `:scroll-disabled="true"`. Title: `h2#ugc-section-title.f-domaine-display-condensed.xs-f-xlarge.md-f-grande.max-at-tweak.brand-color-1.upper`.
+*   **`PdpBottom.test.js.snap`** — Snapshot updated with new prop defaults.
+
+**Key Decisions:**
+
+| Decision | Date | Rationale |
+|---|---|---|
+| CSS `:deep()` for SDK overrides, not `data-media-format` | 2026-04-06 | SDK attribute only supports `"original"`, not custom ratios. `:deep()` gives full control over aspect ratio, radius, and overflow. |
+| Remove CTA for version 2 | 2026-04-06 | Figma has no "Explore Similar Shades" button. QuizResults page has its own button in `NotExactMatchSection`. |
+| `trackMREvent` not `mix_trackEvent` | 2026-04-06 | `trackMREvent` is global mixin standard. `mix_trackEvent` was from deprecated `trackEventMixin`. Event name matches JIRA spec. |
+| Tablet 3.5 items deferred | 2026-04-06 | DH SDK has no `data-tablet-row-size`. Only mobile/desktop split. Tablet override needs `:deep()` CSS media query — requires deployed env to verify SDK breakpoint. |
+| DH SDK empty on localhost | 2026-04-06 | SDK only serves content to whitelisted domains. Style overrides must be verified on deployed QA environment. |
+
+**Tests:** 118 tests across 4 suites (ColorKitPdpV3 76, LightWorksPdp 37, NotExactMatchSection 4, PdpBottom 1). All passing.
+
 ---
 
 ## SECTION 4: FILE INDEX
@@ -1180,6 +1214,11 @@ HcbLocationPageV2 (thin parent — data loading + router-view)
 | `website/src/vuescripts/components/SiteNav/SiteNav.vue` | 7463 |
 | `website/src/vuescripts/store/modules/siteNav.js` | 7463 (mixinKey → sr-top-nav, res.data null guard) |
 | `website/src/vuescripts/components/SierraWidget/SierraWidget.vue` | 7652 |
+| `website/src/vuescripts/components/PDP/DashHudsonScriptInner.vue` | 7527 (7 new props, `:deep()` overrides, event fix, ADA, CTA removal) |
+| `website/src/vuescripts/components/PDP/DashHudsonScript.vue` | 7527 (pass-through for 7 new props) |
+| `website/src/vuescripts/components/PDP/ColorKitPdpV2/ColorKitPdpV2.vue` | 7527 (carousel config + title) |
+| `website/src/vuescripts/components/PDP/ColorKitPdpV3/ColorKitPdpV3.vue` | 7527 (carousel config + title) |
+| `website/src/vuescripts/components/PDP/PdpBottom/__snapshots__/PdpBottom.test.js.snap` | 7527 (snapshot updated) |
 
 ### Roam Nodes
 
@@ -1194,6 +1233,8 @@ HcbLocationPageV2 (thin parent — data loading + router-view)
 | `~/.brain.d/roam-nodes/madison_reed/2026-03-18-121233-dotcompb_7555.org` | DOTCOMPB-7555 (photos btn + parked carousel) |
 | `~/.brain.d/roam-nodes/madison_reed/2026-03-18-135209-site_revolution_redesign.org` | Site Revolution architecture reference (no JIRA ticket) |
 | `~/.brain.d/roam-nodes/madison_reed/2026-03-30-150000-dotcompb_7712.org` | DOTCOMPB-7712 (photos page + gallery) |
+| `~/.brain.d/roam-nodes/madison_reed/2026-04-06-dashhudson_research.org` | DashHudson / Dash Social platform research (8-part doc, CDN inventory, widget internals, API reference, implementation plans) |
+| `~/.brain.d/roam-nodes/madison_reed/2026-04-06-160000-dotcompb_7527.org` | DOTCOMPB-7527 (Dash Hudson UGC carousel overrides) |
 | `~/.brain.d/roam-nodes/2025-11-18-index_madison_reed.org` | Sprint Board Index |
 
 ### Session & Directives
@@ -1209,59 +1250,32 @@ HcbLocationPageV2 (thin parent — data loading + router-view)
 
 > **Start here when resuming.** This section captures the most recent work and immediate next steps.
 
-### What was done last (2026-04-03)
+### What was done last (2026-04-06)
 
-**Session 1 (V2 migration + initial code review):**
-*   **V1+V2 migration fully executed** — 8 V1 steps + 7 V2 steps. Express/Pug removed, section extraction into `HcbLocationSections`, thin parent `HcbLocationPageV2` with `router-view`, HeroV2 updated (galleryImages prop), `HcbLocationPhotosPage` moved to PageV2 folder.
-*   **Photos page layout built per Figma** — Hero pair (first 2 images, stacked mobile / 50% desktop) + CSS masonry grid (column-count 2/3/4). Sticky header (arrow-left, title left-aligned, x-rounded close).
-*   **Hydration mismatch fixed** — JS matchMedia replaced with CSS-only `column-count`. Express URL rewrite removed (caused SSR/client route divergence).
-*   **Code review round 1** — 8 parallel subagents, 30 findings, 5 implemented.
-*   **75 tests, utility prefix rule enforced** (11 classes updated to `xs-` prefix).
-
-**Session 2 (DB image merge + round 2 code review):**
-*   **CMS + DB image merge** — `galleryImages` computed now merges `defaultLocationImages` (CMS, first) + `location.carouselImages` (DB/Tophat uploads, after). New `locationImages` computed normalizes DB flat objects to `{ image: {...} }` shape. Verified: DB images are Tophat manual uploads, NOT DashHudson.
-*   **Aspect ratio fallback** — `getImageAspectStyle(image)` returns inline `aspect-ratio` for images with `width`/`height` (DB images). CMS images without dimensions use natural ratio via `height: auto`.
-*   **Photos page header refined** — Font sizes (xs-f-small title, xs-f-xsmall count), text-color-3 for count, gap-12 between arrow and text, arrow-left icon, x-rounded close icon.
-*   **Code review round 2** — 8 parallel subagents, 18 findings, 7 implemented: computed alphabetization (PageV2), magic number → `MOBILE_MEDIA_QUERY` constant (HeroV2), CSS alphabetization (Sections), nested landmark fix (removed `role="region"` from HeroV2 root — PageIntro owns it), `aria-hidden="true"` on decorative mr-icons (PhotosPage), skeleton `:deep(.image-box)` + `:deep(img)` on carousel main display + thumbnails, hero image skeleton `height 100%`.
-*   **81 tests passing** — PageV2 (17), Sections (12), HeroV2 (10), PhotosPage (18), Carousel (24).
-*   **Code-review skill updated** — Parallel subagent flow documented in SKILL.md. MR checklist (45 rules + 22 Andris) saved to `rules/mr-review-checklist.md`.
+*   **Session reset** — Bulk status update across all tickets. Verified PR/merge state via GitHub API for all 14 tracked tickets.
+*   **Major milestone: 9 of 14 tickets now MERGED** — 7289, 7290, 7556, 7463 (+ bug fixes PR #20309, font size PR #20294), 7652, 7555, 7749, 7763, 7527 all merged to master.
+*   **DOTCOMPB-7712 committed and PR created** — Commit `6d5791497e6`, PR #20423 OPEN. Photos page with +X tag on hero.
+*   **DOTCOMPB-7527 merged** — PR #20424. Dash Hudson UGC carousel overrides.
 
 ### Pending
 
-*   **DOTCOMPB-7712** — Implementation complete. 81 tests, 2 code review rounds. All changes UNSTAGED on branch `DOTCOMPB-7712`. **NEXT: PR prep + commit.** Use `/create-pr` skill.
-*   **DOTCOMPB-7742** — **COMPLETE.** Changes UNSTAGED on branch `DOTCOMPB-7742`. Needs commit + PR. Roam node `2026-03-27-120100-dotcompb_7742.org`.
-*   **DOTCOMPB-7768** — Roam node needed. On branch `DOTCOMPB-7768`.
-*   **DOTCOMPB-7463-nav-bug-fixes** — 5 files UNSTAGED (mobile nav scroll normalization). Need testing then commit. See §3.5.
-*   **DOTCOMPB-7749** — CTA implementation pending on `DOTCOMPB-7463-nav-bug-fixes`. Font size bump done.
-*   **DOTCOMPB-7463** — PR #20210 open. CI failing. Re-review needed.
-*   **DOTCOMPB-7290** — PR #20190 open. `partial-featured-services-v2` rendering root cause in §3.10.
-*   **DOTCOMPB-7555** — Needs PR creation. PR description in roam node.
-*   **DOTCOMPB-7557** — ADA: Cannot tab to Book Services on desktop. Not started.
+*   **DOTCOMPB-7712** — PR #20423 OPEN. In code review. Branch `DOTCOMPB-7712`.
+*   **DOTCOMPB-7742** — PR #20368 OPEN. Cookie-based service pre-selection. In code review.
+*   **DOTCOMPB-7768** — PR #20335 OPEN. Details TBD.
+*   **DOTCOMPB-7717 cleanup** — MarketingBanner dead workaround removal. Not yet implemented. Plan in §3.8.
+*   **DOTCOMPB-7557** — ADA: Cannot tab to Book Services. Not started. Roam node exists.
+*   **DOTCOMPB-7555_full_width** — Parked carousel work. Business confirmation needed.
+*   **DashHudson Integration** — Research complete. Awaiting PM input on open questions.
 
 ### Where to resume
 
-**IMMEDIATE: Create PR for DOTCOMPB-7712.** On branch `DOTCOMPB-7712`. Implementation complete, 2 code review rounds done, 81 tests passing. Use `/create-pr` skill.
-
-**Current git status (all UNSTAGED on `DOTCOMPB-7712`):**
-- Modified: `views.js` (Express 404 route), `mrVueApp.js` (route import), `ssr/router.js` (route import), `HcbLocationPageV2.vue` (thin parent + galleryImages merge), `HcbLocationPageV2.test.js` (17 tests), `HairColorBarLocationHeroV2.vue` (galleryImages prop, no region, MOBILE_MEDIA_QUERY constant), `HairColorBarLocationHeroV2.test.js` (10 tests), `LocationImageCarousel.vue` (ADA fixes, focus-visible, skeleton, no nested interactive)
-- New: `HcbLocationPageV2/routes.js`, `HcbLocationSections/` (vue + test + index), `HcbLocationPhotosPage/` (vue + test + index), `LocationImageCarousel.test.js` (24 tests)
-- Deleted: `HeroV2/routes.js` (moved), `views/desktop/hcb-location-photos/` (Pug), `HairColorBar/HcbLocationPhotosPage/` (moved), global registrations in `mrVueApp.js` + `registerGlobalsSsr.js`
-
-**Before committing, verify:**
-1. Run full test suite: `cd website && npm run test:vue HcbLocationPageV2 HairColorBarLocationHeroV2 LocationImageCarousel` — expect 81 passing
-2. Run lint: `eslint` on changed files
-3. Test manually:
-   - Location page → click "+X photos" → photos page loads (hero pair + masonry)
-   - Photos page back/close button → hard redirect to location page
-   - Direct `/photos` URL → page loads, Express validates location code
-   - Invalid location code on `/photos` → 404
-   - Mobile carousel → "+X photos" overlay → photos page
-   - Verify DB images (location.carouselImages) appear after CMS images in gallery
-
-If user wants to **commit DOTCOMPB-7742**: Use `/create-pr` skill — commit msg and PR body in roam node `2026-03-27-120100-dotcompb_7742.org`. Branch `DOTCOMPB-7742`.
-If user switches to **DOTCOMPB-7768**: Create roam node first using `/mr-roam-node`.
-If user wants to **commit nav scroll work**: Run tests on `DOTCOMPB-7463-nav-bug-fixes`, then commit 5 files.
-If user asks for **Site Revolution architecture**: Read `~/.brain.d/roam-nodes/madison_reed/2026-03-18-135209-site_revolution_redesign.org`.
+If user wants to **check DOTCOMPB-7712 PR**: Branch `DOTCOMPB-7712`. PR #20423. Roam node `2026-03-30-150000-dotcompb_7712.org`.
+If user wants to **check DOTCOMPB-7742 PR**: PR #20368. Roam node `2026-03-27-120100-dotcompb_7742.org`.
+If user switches to **DOTCOMPB-7768**: PR #20335 is open. Check if roam node exists.
+If user wants **DOTCOMPB-7717 cleanup**: Follow §3.8 step-by-step plan.
+If user wants **DOTCOMPB-7557**: Create implementation plan from roam node `2026-03-10-122138-dotcompb_7557.org`.
+If user wants **DashHudson per-location work**: Run validation checklist (roam node Part 8). Option A0 as MVP.
+If user asks for a **new task**: Check Section 2.5 (Pending Work).
 
 <!-- DESCRIPTION AND USER CONTEXT END -->
 
@@ -1474,6 +1488,1071 @@ Reviewed all naming decisions in the Definitive Architecture Plan and the alread
 **Non-blocking recommendations:** 2 items (#5 -- move `HcbLocationPhotosPage` folder in follow-up; #49 -- chunk name casing)
 **Pre-existing bugs discovered:** 1 item (#50 -- `name` property typo in HeroV2)
 **All other decisions (44 of 50):** Correct per session guidelines.
+
+### DASH HUDSON / DASH SOCIAL DEEP RESEARCH (2026-04-05) — Location-Specific Gallery Integration
+
+#### 1. What Is Dash Hudson (Now Dash Social)?
+
+Dash Social (rebranded from Dash Hudson in **January 2025**) is a social media management and social commerce platform. Key capabilities:
+- Social media analytics/reporting across Instagram, TikTok, Facebook, Pinterest, YouTube, LinkedIn, Threads
+- Content scheduling and publishing
+- **Shoppable galleries** — embeddable UGC/social photo galleries on websites
+- **UGC discovery** — aggregates user-generated content, rights management
+- **Content library** with AI-powered engagement predictions, visual search, boards for segmentation
+- **LikeShop** — link-in-bio tool
+
+**Rebrand details:**
+- `dashhudson.com` → 301 redirects to `dashsocial.com`
+- CDN URLs mixed: `cdn.dashsocial.com` (board-embed) + `cdn.dashhudson.com` (product-carousel, board-carousel — still working)
+- API base URL unchanged: `library-backend.dashhudson.com`
+- Auth endpoint: `auth.dashhudson.com`
+- Developer docs: `developer.dashsocial.com`
+
+#### 2. Current Integration in Madison Reed Codebase
+
+**Type:** 100% client-side widget injection. **Zero backend/API integration.**
+
+**Two components, two patterns:**
+
+| Component | File | Used On | How It Works |
+|---|---|---|---|
+| `DashHudsonScriptInner` | `PDP/DashHudsonScriptInner.vue` | All PDPs + V1 HCB location pages | Injects `product-carousel-embed.js` with hardcoded `brand_id=18947`. Shows **brand-wide** UGC — same content everywhere. |
+| `DashHudsonWidget` | `DashHudsonWidget/DashHudsonWidget.vue` | Globally registered (`dash-hudson-widget`) — used in CMS partials | Flexible: supports `board-embed`, `product-carousel-embed`, `board-carousel-embed`. Takes `galleryId` prop — **already supports per-gallery embedding**. |
+
+**Madison Reed's brand_id:** `18947` (hardcoded in `DashHudsonScriptInner.vue` line 76)
+
+**V1 HCB usage (both use `DashHudsonScript`, which wraps `DashHudsonScriptInner`):**
+- `HcbIndividual.vue` line 18: `DashHudsonScript#hair-color-bar-photos` — brand-wide carousel, title "Real clients, really gorgeous results"
+- `HcbLocationPage.vue` line 15: `DashHudsonScript` — same brand-wide carousel, same title
+
+**V2 HCB:** `HcbLocationPageV2` does **NOT** use DashHudson. Uses `galleryImages` from CMS + DB carousel images instead. Session decision #22 (2026-03-15) said "DashHudson NOT integrated into hero gallery — No per-location gallery API."
+
+**Legacy reference — Pixlee:** The predecessor UGC platform. `location.cmsData.pixleeAlbumId` exists in the data model (per-product, per-location album IDs configured in Tophat). `mr_modules/controllers/lib/pixlee.js` has a Dec 2024 comment: "switching over to Dash Hudson." `pixleeUpload` lambda function also flagged for removal. **Pixlee had per-location album IDs — DashHudson currently does not replicate this pattern.**
+
+**No DashHudson fields in location data model:** Searched `mr_modules/dataAccess`, `colorbarCache.js`, `appointments/lib/classes/Location.js` — zero references to `dashHudson`, `dash_hudson`, or `galleryId`. The location object has no DashHudson configuration.
+
+#### 3. Dash Social API — Full Capabilities
+
+**Authentication:** Bearer token in `Authorization` header. Generated in Dash Social admin → Settings → API & Integrations → Developers. Requires brand admin role. **Must never be exposed client-side.**
+
+**Base URLs:**
+
+| Service | URL |
+|---|---|
+| Auth/Self | `https://auth.dashhudson.com` |
+| Library API | `https://library-backend.dashhudson.com` |
+| Developer Docs | `https://developer.dashsocial.com` |
+| Widget CDN | `https://cdn.dashsocial.com` / `https://cdn.dashhudson.com` |
+
+**Gallery API (most relevant):**
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `GET` | `/brands/{brand_id}/galleries` | List ALL galleries for the brand |
+| `GET` | `/brands/{brand_id}/galleries/{gallery_id}` | Get single gallery |
+| `GET` | `/brands/{brand_id}/galleries/{gallery_id}/media` | **Get media items in a gallery** |
+| `POST` | `/brands/{brand_id}/galleries` | Create gallery |
+| `POST` | `/brands/{brand_id}/galleries/{gallery_id}/media` | Add media to gallery |
+
+**Media object structure (from Gallery Media API):**
+```
+{
+  id: integer,
+  brand_media_id: integer,
+  source: "INSTAGRAM" | "TIKTOK" | "UPLOAD" | ...,
+  type: "IMAGE" | "VIDEO" | "CAROUSEL" | "REEL",
+  source_type: "UGC" | "OWNED" | "OTHER",
+  image: {
+    sizes: {
+      original: { url, width, height, size },
+      original_converted: { url, width, height, size },
+      small: { url, width, height, size },
+      small_square: { url, width, height, size },
+      medium_square: { url, width, height, size }
+    }
+  },
+  content_tags: [string],
+  products: [{ coordinates, source_ids, pricing }],
+  caption_sentiment: { positive, negative, neutral },
+  created_at, updated_at
+}
+```
+
+**Gallery object:** `{ id, brand_id, name, label, description, gallery_type, gallery_size, live, tags: [{name, color}], latest_media, created_at, updated_at }`
+
+**Other relevant endpoints:**
+- `PUT /brands/{brand_id}/media/v2` — List/filter media objects (bulk)
+- `GET /brands/{brand_id}/campaigns/{campaign_id}/ugc` — Campaign UGC
+- `GET /organizations/{org_id}/content-tags` — List content tags
+
+**Rate limits:** Referenced in docs but specific numbers not publicly documented.
+**Pagination:** `paging` object with `count`, `next`, `previous`.
+
+#### 4. Location-Based Content — The Key Question
+
+**There is NO native "location" concept in Dash Social galleries.** But the architecture supports location-based segmentation through:
+
+**Option A — One Gallery Per Location (Widget approach, client-side):**
+- Create a gallery in Dash Social admin for each HCB location (e.g., "HCB - West Village", "HCB - Beverly Hills")
+- Each gallery gets a numeric `gallery_id`
+- Store the `gallery_id` in the location's data (Tophat CMS or DB field)
+- Use existing `DashHudsonWidget` component: `<dash-hudson-widget script-type="board-embed" :gallery-id="location.dashHudsonGalleryId">`
+- **Pros:** No API key exposure, no backend changes, existing component already works
+- **Cons:** Renders a DashHudson-controlled widget (not custom Vue), requires Tophat field, requires manual gallery curation in Dash Social admin
+
+**Option B — Gallery API (Server-side, custom rendering):**
+- Call `GET /brands/18947/galleries/{gallery_id}/media` server-side with Bearer token
+- Fetch images for the location's gallery, cache in Redis
+- Merge into `galleryImages` alongside CMS + DB images
+- Render in existing custom masonry grid (HcbLocationPhotosPage) and hero carousel
+- **Pros:** Full control, renders in our own components, can cache, no third-party DOM injection
+- **Cons:** Requires API key management (secureConfig), new backend endpoint, rate limit management
+
+**Option C — Content Tags (Advanced, single gallery):**
+- Tag all media in one brand gallery with location codes as content tags
+- Query `PUT /brands/18947/media/v2` with tag filters
+- **Pros:** Single gallery management, flexible filtering
+- **Cons:** Most complex, relies on consistent tagging, requires server-side API
+
+#### 5. Widget Types Available
+
+| Type | Script | Config ID | Description |
+|---|---|---|---|
+| Board (grid) | `board-embed.js` | `data-gallery-id` | Static grid gallery |
+| Board Carousel | `board-carousel-embed.js` | `data-gallery-id` | Carousel gallery |
+| Product Carousel | `product-carousel-embed.js` | `data-id` + `data-id-type` | Brand-wide product carousel (current MR usage) |
+| LikeShop | `embed.js` | `data-id` + `data-id-type` | Link-in-bio gallery |
+
+**Key insight:** The current `DashHudsonScriptInner` uses **product-carousel-embed** with `brand_id` — this is always brand-wide. To get per-location content, you need **board-embed** or **board-carousel-embed** with a location-specific `gallery_id`. The `DashHudsonWidget` component already supports this.
+
+#### 6. Implementation Plan — DashHudson Per-Location Photos (API — Option B)
+
+**SUPERSEDES Session Decision #22** — That decision was based on "No per-location gallery API." Research confirms galleries CAN be location-specific via `gallery_id`. Revising.
+
+**Architecture model:** Follows the verified Birdeye reviews full-stack pattern (17 extracted patterns, P1-P17). See Birdeye trace below for the source of truth.
+
+##### 6.1 Current State: Zero Auth, Client-Side Only
+
+The existing DashHudson integration uses **zero authentication**. There is no `config.dashHudson` in secureConfig, no API keys, no Bearer tokens, no server-side calls. The entire integration is a `<script>` tag injection:
+
+```javascript
+// DashHudsonScriptInner.vue (line 73-77) — what runs today on V1 HCB + all PDPs
+tag.src = "https://cdn.dashhudson.com/web/js/product-carousel-embed.js";
+tag.setAttribute("data-id", "18947");        // brand ID, public in HTML source
+tag.setAttribute("data-id-type", "brand_id"); // tells widget to load brand-wide content
+```
+
+DashHudson's CDN JavaScript loads, reads `data-*` attributes, renders a widget in its own DOM. No API key needed for widget embedding — the brand ID `18947` is public.
+
+**`DashHudsonWidget.vue`** (the globally registered component) already supports per-gallery rendering via `galleryId` prop — also client-side, also no auth:
+```javascript
+script.setAttribute("data-gallery-id", this.galleryId); // prop-driven, per gallery
+```
+
+**All 21 DashHudson files in codebase (by role):**
+
+| Role | Files |
+|---|---|
+| **Core components** | `DashHudsonWidget/DashHudsonWidget.vue`, `DashHudsonWidget/index.js`, `PDP/DashHudsonScriptInner.vue`, `PDP/DashHudsonScript.vue` |
+| **Global registration** | `mrVueApp.js` (L87 import, L747 `app.component('dash-hudson-widget')`), `ssr/registerGlobalsSsr.js` (L115 async import, L271 register) |
+| **V1 HCB pages** | `HcbIndividual/HcbIndividual.vue` (L18, L48), `HcbLocationPage/HcbLocationPage.vue` (L15, L36) |
+| **PDPs (8 files)** | `DefaultPdp.vue`, `DefaultPdpV2.vue`, `ColorKitPdp.vue`, `ColorKitPdpV2.vue`, `LightWorksPdp.vue`, `MisterPdp.vue`, `PerfectPairPdp.vue`, `PdpBottom.vue` |
+| **Quiz** | `HairColorQuizResultsPage.vue`, `NotExactMatchSection.vue`, `NotExactMatchSection.test.js` |
+| **Snapshots** | `PdpBottom.test.js.snap`, `LightWorksPdp.test.js.snap` |
+
+**V2 HCB (`HcbLocationPageV2`):** Does NOT use DashHudson at all. Uses `galleryImages` from CMS + DB.
+
+**No backend files.** No `mr_modules/dashHudson/`. No `config.dashHudson`. No webservice endpoints. No controllers. No services.
+
+##### 6.2 Why API (Option B) Needs secureConfig
+
+The widget approach (current) loads DashHudson's JavaScript which renders its own DOM — we have zero control over the images, their order, or how they display. To merge DashHudson images into our own `galleryImages` array (appearing in the masonry grid, hero +X count, photos page), we need the **raw image URLs and dimensions**. That data only comes from the Dash Social REST API:
+
+```
+GET https://library-backend.dashhudson.com/brands/18947/galleries/{galleryId}/media
+Authorization: Bearer {token}
+```
+
+This Bearer token is generated in Dash Social admin (Settings → API & Integrations → Developers), shown once, and must be stored securely. In MR's infrastructure, that means AWS SSM Parameter Store, loaded at startup by `mr_modules/secureConfig.js` and accessible as `require('config').dashHudson`.
+
+**This is the same pattern as every other third-party API in the codebase:**
+
+| Integration | Config Key | Auth Method |
+|---|---|---|
+| Birdeye | `config.birdeye` → `{ baseURL, apiKey }` | `?api_key=X` in URL |
+| Iterable | `config.iterable` | API key |
+| Facebook | `config.facebook` | OAuth |
+| SmartyStreets | `config.smartystreets` | Auth ID + token |
+| Stripe | `config.stripe` | Secret key |
+| **DashHudson (proposed)** | **`config.dashHudson`** → **`{ baseURL, apiKey, brandId }`** | **`Authorization: Bearer X`** |
+
+##### 6.3 Birdeye Full-Stack Architecture (Verified Source of Truth)
+
+**Layer-by-layer trace of the working Birdeye reviews integration — this is the pattern we replicate:**
+
+```
+Layer 1: Vue Component
+  HairColorBarLocationReviews.vue
+  └── mounted() → this.getLocationReviews(this.location.code)
+  └── mapState('colorbar', ['location', 'locationReviews'])
+  └── Tri-state loading: null=loading | {}=no data | populated=ready
+  └── Guard: v-if="location.birdeyeId"
+
+Layer 2: Vuex Store
+  colorbar.js
+  └── state: { locationReviews: null }
+  └── action: getLocationReviews({ commit }, code)
+      commit('setLocationReviews', null)  ← loading state
+      try { data = await service({ code }); commit(data) }
+      catch { commit({ avgRating: 0, reviewCount: 0, reviews: [] }) }  ← graceful fallback
+  └── mutation: setLocationReviews(state, reviews) { state.locationReviews = reviews }
+
+Layer 3: Frontend Service
+  vueColorbarSvc.js
+  └── getLocationReviews(params) → mrApi.get('/api/colorbar/getLocationReviews', { params })
+  └── params: { code: 'location-code-string' }
+
+Layer 4: Webservice (Thin pass-through)
+  webservices/lib/colorbar.js
+  └── function getLocationReviews(params, req, callback)
+  └── locationCtl.getLocationReviews(params.code, callback)  ← NO business logic
+  └── .allowAgentImpostor = true
+  └── .params = { code: { type: 'string' } }
+
+Layer 5: Location Controller (Orchestrator)
+  appointments/lib/location.js
+  └── getLocationReviews(code, callback)
+      1. getLocationByCode(code) → location object (from colorbarCache)
+      2. Guard: if (!location || !location.birdeyeId) → return empty fallback
+      3. birdeyeCtl.getReviewsByBirdeyeId(location.birdeyeId, callback)
+      4. On error → return empty fallback (NOT propagate error)
+      5. Assemble response:
+         - avgRating, reviewCount from location.reviewData (MongoDB cached summary)
+         - reviews from live Birdeye API call (fresh data)
+
+Layer 6: Integration Controller (Data transformation)
+  controllers/lib/birdeye.js
+  └── getReviewsByBirdeyeId(birdeyeId, callback)
+      1. new BirdeyeAPI(config.birdeye, birdeyeId)
+      2. birdeyeApi.getReviews({ statuses: ['published'] })
+      3. Normalize response array (handles multiple response shapes)
+      4. Filter qualified reviews (has author, non-empty comment, has photo)
+      5. Fisher-Yates shuffle (variety on page reload)
+      6. Slice to DISPLAY_REVIEW_COUNT (3)
+      7. Map to frontend schema: { rating, content, author, profilePhotoUrl, date, sourceName }
+      8. Normalize photo URLs (relative → absolute with CDN prefix)
+
+Layer 7: API Client (HTTP transport)
+  birdeye/BirdeyeAPI.js
+  └── class BirdeyeAPI
+      Private fields: #baseURL, #apiKey, #businessId
+      Constructor(config, businessId) ← config from secureConfig, businessId per-location
+      _makeApiRequest(path, method, params):
+        - url.resolve(#baseURL, path) for full URL
+        - ThirdPartyAPILog for request/response logging
+        - Retry loop: 8 attempts prod, 3 test (async.whilst)
+        - Success: 200-299 → resolve data
+        - Failure: log.error + retry, after max attempts → reject
+        - GET params in querystring, POST params in JSON body
+        - Accept: application/json header
+      getReviews(filters, startIndex, count):
+        - POST /resources/v1/review/businessId/{businessId}?api_key={apiKey}&sindex=0&count=20
+        - body: { statuses: ['published'] }
+```
+
+##### 6.4 Extracted Backend Patterns (P1-P17)
+
+| # | Pattern | Birdeye Reference | DashHudson Application |
+|---|---|---|---|
+| **P1** | **Module structure: dedicated directory** | `mr_modules/birdeye/` with `package.json`, `index.js`, `BirdeyeAPI.js` | `mr_modules/dashHudson/` with `package.json`, `index.js`, `DashHudsonAPI.js` |
+| **P2** | **API client as ES class with private fields** | `class BirdeyeAPI { #baseURL; #businessId; #apiKey; }` | `class DashHudsonAPI { #baseURL; #apiKey; #brandId; }` |
+| **P3** | **Config from secureConfig** | `config.birdeye` → `{ baseURL, apiKey }` | `config.dashHudson` → `{ baseURL, apiKey, brandId }` |
+| **P4** | **ThirdPartyAPILog** | `ThirdPartyAPILog.CONFIG.BIRDEYE` | Register `DASH_HUDSON` in `ThirdPartyAPILog.js` CONFIG |
+| **P5** | **Retry with async.whilst** | 8 prod / 3 test attempts | Same retry logic |
+| **P6** | **Auth per-request** | `?api_key=X` in URL | `Authorization: Bearer X` in headers |
+| **P7** | **Webservice = thin pass-through** | `locationCtl.getLocationReviews(params.code, callback)` | `locationCtl.getLocationDashHudsonMedia(params.code, callback)` |
+| **P8** | **Location controller orchestrates** | lookup → guard birdeyeId → call controller → assemble | lookup → guard dashHudsonGalleryId → call controller → return |
+| **P9** | **Guard ID before API call** | `if (!location.birdeyeId) return fallback` | `if (!location.dashHudsonGalleryId) return { media: [] }` |
+| **P10** | **3-layer graceful fallback** | API → controller → Vuex all catch errors | Same: DH fails → controller returns [] → Vuex commits [] → CMS+DB images still show |
+| **P11** | **Controller transforms response** | birdeye.js: filter, shuffle, slice, map | dashHudson.js: filter IMAGE type, limit, map to MR media shape |
+| **P12** | **Normalize foreign data to MR schema** | `review.reviewer.nickName` → `author` | `media.image.sizes.original.url` → `url`. Map to `{ _id, url, width, height, alt_text, file_type }` |
+| **P13** | **Fetch in mounted(), not SSR** | Reviews load client-side | DH images load client-side. CMS+DB render SSR. |
+| **P14** | **Per-location ID on location object** | `location.birdeyeId` (MongoDB, Tophat) | `location.dashHudsonGalleryId` (new Tophat field) |
+| **P15** | **Log module** | `new Log('BirdeyeController')` | `new Log('DashHudsonController')` |
+| **P16** | **Lazy-load require()** | `controllers.birdeye` | `controllers.dashHudson` |
+| **P17** | **async function + callback bridge** | `async function getReviewsByBirdeyeId(id, callback)` with try/catch | `async function getMediaByGalleryId(id, callback)` with try/catch |
+
+##### 6.5 Birdeye vs DashHudson API Comparison
+
+| Aspect | Birdeye (Current) | Dash Social (Proposed) | Compatible? |
+|---|---|---|---|
+| **Auth method** | `?api_key=X` in URL querystring | `Authorization: Bearer X` in header | Yes — add to `headers` in `_makeApiRequest` options |
+| **Request library** | `request` (Node.js) | Same `request` library | Exact match — supports Bearer natively |
+| **API base URL** | `https://api.birdeye.com` | `https://library-backend.dashhudson.com` | Same pattern — `config.dashHudson.baseURL` |
+| **Per-location ID** | `birdeyeId` (numeric, on location doc) | `galleryId` (numeric, new field) | Same — need Tophat field |
+| **Brand-level ID** | N/A (each location = own businessId) | `brandId=18947` (shared, all locations) | Different — DH uses brandId+galleryId, Birdeye uses only businessId |
+| **Endpoint structure** | `/resources/v1/review/businessId/{id}` | `/brands/{brandId}/galleries/{galleryId}/media` | Same RESTful pattern |
+| **HTTP method** | POST (body: filter object) | GET (query params) | Different — minor: `qs` vs `json` in options |
+| **Response shape** | `{ reviews: [...] }` or raw array | `{ data: [...], paging: { count, next, previous } }` | Different — extract `.data`, handle pagination |
+| **Media URLs** | Relative or absolute (CDN prefix needed) | Always absolute | Simpler — no normalization |
+| **Image sizes** | Single thumbnail URL | Multiple: `original`, `small`, `medium_square`, `small_square` | Better — use `original` for masonry, `medium_square` for thumbs |
+| **Rate limits** | Not documented | Not publicly documented | Same — retry handles both |
+| **Caching** | No cache (fresh each load) | Should add Redis (TTL: 1hr) | Enhancement — images change less than reviews |
+| **Data volume** | 20 fetched, 3 displayed | Unknown per gallery (5-500). Cap at `count=50` | Must handle pagination or set limit |
+
+##### 6.6 Prerequisites (Non-code, BLOCKING)
+
+| # | Task | Owner | Why Blocking | How to Unblock |
+|---|---|---|---|---|
+| 0.1 | **Confirm Dash Social plan includes REST API access** | PM/Marketing | API requires paid plan tier. Without it, Option B is impossible. | Check plan at dashsocial.com or contact Dash Social account rep. |
+| 0.2 | **Generate API Bearer token** | Marketing/Admin | No token = no auth = no API calls. Token shown once at creation. | Dash Social admin → Settings → API & Integrations → Developers → Create token. |
+| 0.3 | **Add `config.dashHudson` to AWS SSM secureConfig** | DevOps | `require('config').dashHudson` must resolve at runtime. Without it, `new DashHudsonAPI(config.dashHudson, brandId)` throws `undefined`. | Add 3 SSM params: `dashHudson.baseURL` = `https://library-backend.dashhudson.com`, `dashHudson.apiKey` = Bearer token from 0.2, `dashHudson.brandId` = `18947`. |
+| 0.4 | **Create location-specific galleries in Dash Social** | Marketing | No galleries = no gallery IDs = no data to fetch. Each HCB location needs its own gallery with curated photos. | In Dash Social admin: Content Library → Galleries → Create. Name: "HCB - {Location Name}". Add 10-30 photos per gallery. Record the numeric `gallery_id` from the URL. |
+| 0.5 | **Add `dashHudsonGalleryId` field to location data model** | Tophat team | `location.dashHudsonGalleryId` does not exist in the location document. Without it, Phase 1 code has nothing to read. | Add field in Tophat admin config for HCB locations. String type, nullable. Similar to existing `location.cmsData.pixleeAlbumId` (Pixlee predecessor). Verify field propagates through `colorbarCache.getLocation()` → Vuex `colorbar.location`. |
+| 0.6 | **Populate gallery IDs for pilot locations** | Marketing/Ops | Even with the field, empty values mean the guard (`!location.dashHudsonGalleryId`) returns `{ media: [] }`. | Enter numeric gallery IDs from 0.4 into Tophat for each pilot location. |
+| 0.7 | **Decide image count limit** | PM/Engineering | Birdeye shows 3 reviews. Gallery photos could be 5-500. Need max for photos page. | Recommend: 30-50 images max. Set in `MAX_GALLERY_IMAGES` constant (controller). |
+| 0.8 | **Content rights clearance** | Marketing/Legal | UGC photos need rights before public display. Dash Social has built-in rights management. | Confirm all gallery images are rights-cleared in Dash Social before going live. |
+
+##### 6.7 Implementation Phases (All Code — Option B API)
+
+**Phase 1: API Client Module** — `mr_modules/dashHudson/`
+
+New files (following `mr_modules/birdeye/` structure exactly — P1):
+
+```
+mr_modules/dashHudson/
+├── package.json          ← { "name": "dashHudson", "version": "0.0.1", "main": "./index.js" }
+├── index.js              ← module.exports = { DashHudsonAPI: require('./DashHudsonAPI') }
+└── DashHudsonAPI.js      ← class DashHudsonAPI (see skeleton below)
+```
+
+`DashHudsonAPI.js` — full implementation skeleton (P2, P4, P5, P6):
+```javascript
+const request = require('request');
+const url = require('url');
+const async = require('async');
+require('MRUtils').promise;
+const Log = require('Log');
+const log = new Log('DashHudsonAPI');
+const MRError = require('error').madisonReed;
+const ThirdPartyAPILog = require('ThirdPartyAPILog');
+const thirdPartyAPILog = new ThirdPartyAPILog(ThirdPartyAPILog.CONFIG.DASH_HUDSON);
+
+/** @enum {string} */
+const HttpMethod = { GET: 'GET', POST: 'POST' };
+Object.freeze(HttpMethod);
+
+class DashHudsonAPI {
+  /** @private @type {string} */ #baseURL;
+  /** @private @type {string} */ #apiKey;
+  /** @private @type {number} */ #brandId;
+
+  /**
+   * @param {{ baseURL: string, apiKey: string }} config from secureConfig
+   * @param {number} brandId Madison Reed brand ID (18947)
+   */
+  constructor(config, brandId) {
+    this.#baseURL = config.baseURL;
+    this.#apiKey = config.apiKey;
+    this.#brandId = brandId;
+  }
+
+  /**
+   * Make authenticated request to Dash Social API with retry logic.
+   * Mirrors BirdeyeAPI._makeApiRequest (P5) with Bearer auth (P6).
+   *
+   * @param {string} path API path
+   * @param {HttpMethod} method HTTP method
+   * @param {object} params query params (GET) or body (POST)
+   * @returns {Promise<object>}
+   */
+  _makeApiRequest(path, method, params) {
+    const requestMethod = (method === HttpMethod.GET ? request.get : request.post);
+
+    const options = {
+      url: url.resolve(this.#baseURL, path),
+      method,
+      [method === HttpMethod.GET ? 'qs' : 'json']: { ...params },
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${this.#apiKey}`,  // ← P6: Bearer instead of URL param
+      },
+    };
+    options.json = options.json || true;
+
+    const requestLog = thirdPartyAPILog.info({
+      timePerformed: new Date(),
+      endpoint: options.url,
+      requestMethod: options.method,
+      requestParams: options.json || options.qs,
+    });
+
+    return new Promise((resolve, reject) => {
+      let attempt = 0;
+      let makeRequest = true;
+      const maxRequestAttempts = process.env.NODE_ENV === 'test' ? 3 : 8;
+
+      async.whilst(() => attempt < maxRequestAttempts && makeRequest, cb => {
+        attempt++;
+        requestMethod(options, (error, response, data) => {
+          if (error) {
+            requestLog.patch({
+              additionalInfo: { clientRequestError: error.toString() },
+            });
+            return cb(new MRError(500, error)());
+          }
+
+          requestLog.patch({
+            timeCompleted: new Date(),
+            requestHeaders: response.req._headers,
+            responseHeaders: response.headers,
+            responseBody: typeof response.body === 'string' ? response.body : JSON.stringify(response.body),
+          });
+
+          if (response.statusCode >= 200 && response.statusCode < 300) {
+            makeRequest = false;
+            return cb(null, data);
+          }
+
+          const errorMessage = response.body?.message || response.body?.error;
+          const err = new MRError(response.statusCode, `DashHudson request failed with ${response.statusCode}, ${errorMessage || 'UNKNOWN ERROR'}`)();
+          log.error(err);
+          cb(err);
+        });
+      }, (err, data) => {
+        if (err) {
+          return reject(err);
+        }
+        resolve(data);
+      });
+    });
+  }
+
+  /**
+   * Get media items from a specific gallery.
+   * Endpoint: GET /brands/{brandId}/galleries/{galleryId}/media
+   * Docs: https://developer.dashsocial.com/reference
+   *
+   * @param {number|string} galleryId gallery ID from Dash Social
+   * @param {number} [count=50] max items to return
+   * @returns {Promise<{ data: Array, paging: { count: number, next: string|null, previous: string|null } }>}
+   */
+  getGalleryMedia(galleryId, count = 50) {
+    return this._makeApiRequest(
+      `/brands/${this.#brandId}/galleries/${galleryId}/media`,
+      HttpMethod.GET,
+      { count }
+    );
+  }
+
+  /**
+   * List all galleries for the brand.
+   * Useful for discovery/admin — find which gallery IDs exist.
+   *
+   * @returns {Promise<{ data: Array }>}
+   */
+  listGalleries() {
+    return this._makeApiRequest(
+      `/brands/${this.#brandId}/galleries`,
+      HttpMethod.GET,
+      {}
+    );
+  }
+}
+
+module.exports = DashHudsonAPI;
+```
+
+**Phase 2: ThirdPartyAPILog Registration**
+
+File: `mr_modules/ThirdPartyAPILog/ThirdPartyAPILog.js`
+
+Add to `LOG_CONFIG` object (after `BIRDEYE` entry, line ~53):
+```javascript
+DASH_HUDSON: {
+  name: 'dashHudson',
+},
+```
+
+**Phase 3: Integration Controller** — `mr_modules/controllers/lib/dashHudson.js`
+
+New file (P11, P12, P15, P17):
+```javascript
+const config = require('config');
+const Log = require('Log');
+const log = new Log('DashHudsonController');
+
+const { DashHudsonAPI } = require('../../dashHudson');
+
+const MAX_GALLERY_IMAGES = 30;
+
+exports.getMediaByGalleryId = getMediaByGalleryId;
+
+/**
+ * Fetch gallery media from Dash Social API, filter to images only,
+ * normalize to MR media object shape for ImgBox compatibility.
+ *
+ * @param {string|number} galleryId Dash Social gallery ID
+ * @param {Function} callback (err, { media: Array })
+ */
+async function getMediaByGalleryId(galleryId, callback) {
+  const dashHudsonApi = new DashHudsonAPI(config.dashHudson, config.dashHudson.brandId);
+  try {
+    const data = await dashHudsonApi.getGalleryMedia(galleryId, MAX_GALLERY_IMAGES);
+
+    // P11: Normalize response shape (DH returns { data: [...] } or array)
+    const mediaList = Array.isArray(data) ? data : (data?.data || []);
+
+    // P12: Filter + transform to MR media object shape
+    const images = mediaList
+      .filter((item) => item.type === 'IMAGE' && item.image?.sizes?.original?.url)
+      .slice(0, MAX_GALLERY_IMAGES)
+      .map((item) => ({
+        _id: `dh_${item.id}`,
+        url: item.image.sizes.original.url,
+        width: item.image.sizes.original.width || 0,
+        height: item.image.sizes.original.height || 0,
+        alt_text: '',
+        file_type: 'image/jpeg',
+        source: 'dashhudson',
+        thumbnailUrl: item.image.sizes.medium_square?.url || item.image.sizes.original.url,
+      }));
+
+    callback(null, { media: images });
+  } catch (err) {
+    log.error(err);
+    callback(err);
+  }
+}
+```
+
+**Phase 4: Location Controller** — `mr_modules/appointments/lib/location.js`
+
+Add function + export (P8, P9, P10). Mirrors `getLocationReviews` exactly:
+```javascript
+// Export (add to exports block ~line 102):
+exports.getLocationDashHudsonMedia = getLocationDashHudsonMedia;
+
+// Function (add after getLocationReviews, ~line 1201):
+/**
+ * Get Dash Hudson gallery media for a location.
+ * Looks up location by code, checks for dashHudsonGalleryId,
+ * calls DashHudson controller. Graceful fallback on any error.
+ *
+ * @param {string} code location code
+ * @param {Function} callback (err, { media: Array })
+ */
+function getLocationDashHudsonMedia(code, callback) {
+  const dashHudsonCtl = controllers.dashHudson;
+
+  getLocationByCode(code, (err, location) => {
+    if (err) {
+      return callback(err);
+    }
+    if (!location || !location.dashHudsonGalleryId) {
+      return callback(null, { media: [] });
+    }
+
+    dashHudsonCtl.getMediaByGalleryId(location.dashHudsonGalleryId, (err, mediaData) => {
+      if (err) {
+        return callback(null, { media: [] });
+      }
+      callback(null, { media: mediaData?.media || [] });
+    });
+  });
+}
+```
+
+**Phase 5: Webservice Endpoint** — `mr_modules/webservices/lib/colorbar.js`
+
+Add export + function (P7). Thin pass-through, mirrors `getLocationReviews`:
+```javascript
+// Export (add to exports block ~line 47):
+exports.getLocationDashHudsonMedia = getLocationDashHudsonMedia;
+
+// Function (add after getLocationReviews, ~line 256):
+function getLocationDashHudsonMedia(params, req, callback) {
+  locationCtl.getLocationDashHudsonMedia(params.code, callback);
+}
+getLocationDashHudsonMedia.allowAgentImpostor = true;
+getLocationDashHudsonMedia.params = {
+  code: { type: 'string' },
+};
+```
+→ Auto-exposed at: `GET /api/colorbar/getLocationDashHudsonMedia?code=X`
+
+**Phase 6: Frontend Service** — `website/src/vuescripts/services/vueColorbarSvc.js`
+
+Add export + function. Mirrors `getLocationReviews`:
+```javascript
+// Add to default export object:
+getLocationDashHudsonMedia,
+
+// Add function:
+export function getLocationDashHudsonMedia(params) {
+  return mrApi.get('/api/colorbar/getLocationDashHudsonMedia', { params });
+}
+```
+
+**Phase 7: Vuex Store** — `website/src/vuescripts/store/modules/colorbar.js`
+
+Add state + action + mutation. Mirrors `locationReviews` pattern:
+```javascript
+// Import (add to import from vueColorbarSvc):
+import { getLocationDashHudsonMedia } from '@services/vueColorbarSvc';
+
+// State (add after locationReviews: null):
+dashHudsonMedia: [],
+
+// Action (add after getLocationReviews):
+async getDashHudsonMedia({ commit }, code) {
+  try {
+    const { data } = await getLocationDashHudsonMedia({ code });
+    commit('setDashHudsonMedia', data?.media || []);
+  } catch {
+    commit('setDashHudsonMedia', []);
+  }
+},
+
+// Mutation (add after setLocationReviews):
+setDashHudsonMedia(state, media) {
+  state.dashHudsonMedia = media;
+},
+```
+
+**Phase 8: Component Integration** — `website/src/vuescripts/components/HairColorBar/HcbLocationPageV2/HcbLocationPageV2.vue`
+
+Fetch in `mounted()` (P13), merge into `galleryImages`:
+```javascript
+// mapState — add dashHudsonMedia:
+...mapState('colorbar', ['location', 'dashHudsonMedia']),
+
+// mapActions — add getDashHudsonMedia:
+...mapActions('colorbar', ['loadLocation', 'getDashHudsonMedia']),
+
+// mounted() — fetch DashHudson media client-side only:
+mounted() {
+  if (this.location?.dashHudsonGalleryId) {
+    this.getDashHudsonMedia(this.location.code);
+  }
+},
+
+// galleryImages computed — add DashHudson as third source:
+galleryImages() {
+  // CMS images first (hero primary/secondary — always render in SSR)
+  const cmsImages = (this.defaultLocationImages || [])
+    .filter(item => item?.image?.url)
+    .map(item => ({ ...item, image: { ...item.image, url: item.image.url.split('?')[0] } }));
+  // DB images second (Tophat uploads — render in SSR)
+  const dbImages = this.locationImages;
+  // DashHudson images third (social/UGC — appends client-side after mounted fetch)
+  const dhImages = (this.dashHudsonMedia || [])
+    .map(item => ({ image: item }));
+  return [...cmsImages, ...dbImages, ...dhImages];
+},
+```
+
+**SSR behavior:** CMS + DB images render during SSR (available from `serverPrefetch`). DashHudson images are `[]` during SSR (action fires in `mounted()`). After mount, `dashHudsonMedia` populates reactively → `galleryImages` recomputes → hero "+X photos" count updates → photos page masonry rerenders with additional images. Zero hydration mismatch because DH images append, never replace.
+
+**Phase 9: Testing**
+
+| Layer | Test File | What to Test |
+|---|---|---|
+| API Client | `mr_modules/dashHudson/DashHudsonAPI.test.js` | Constructor stores config. `getGalleryMedia` calls `_makeApiRequest` with correct path/method. Retry on failure. Bearer header present. |
+| Controller | `mr_modules/controllers/lib/dashHudson.test.js` | Filters non-IMAGE types. Normalizes to MR shape. Respects MAX_GALLERY_IMAGES. Handles empty/null response. Error → callback(err). |
+| Webservice | (Covered by integration tests) | Thin pass-through — no unit test needed per codebase pattern. |
+| Vuex Store | `colorbar.js` existing test file | `getDashHudsonMedia` action commits data on success, `[]` on error. |
+| Component | `HcbLocationPageV2.test.js` | `galleryImages` computed includes DH images after `dashHudsonMedia` state. `mounted()` calls action when `dashHudsonGalleryId` exists. Does NOT call when missing. |
+
+**Phase 10: Tracking Events**
+
+| Event | When | Properties |
+|---|---|---|
+| `HCB Location Photos - DashHudson Gallery Loaded` | After `getDashHudsonMedia` resolves with images | `{ locationCode, imageCount, isFrontEndEvent: true }` |
+| `HCB Location Photos - DashHudson Image Clicked` | When user clicks a DH-sourced image on photos page | `{ locationCode, imageSource: 'dashhudson', isFrontEndEvent: true }` |
+
+##### 6.8 Complete File Manifest (Option B API)
+
+**New files (7):**
+
+| File | Purpose | Pattern Source |
+|---|---|---|
+| `mr_modules/dashHudson/package.json` | Module metadata | `mr_modules/birdeye/package.json` |
+| `mr_modules/dashHudson/index.js` | Barrel export `{ DashHudsonAPI }` | `mr_modules/birdeye/index.js` |
+| `mr_modules/dashHudson/DashHudsonAPI.js` | API client class (auth, retry, logging) | `mr_modules/birdeye/BirdeyeAPI.js` |
+| `mr_modules/controllers/lib/dashHudson.js` | Integration controller (filter, normalize) | `mr_modules/controllers/lib/birdeye.js` |
+| `mr_modules/dashHudson/DashHudsonAPI.test.js` | API client unit tests | Birdeye test patterns |
+| `mr_modules/controllers/lib/dashHudson.test.js` | Controller unit tests | Birdeye test patterns |
+| *(No new frontend service file)* | Reuse `vueColorbarSvc.js` — add function | Same file as `getLocationReviews` |
+
+**Modified files (6):**
+
+| File | Change | Lines Affected |
+|---|---|---|
+| `mr_modules/ThirdPartyAPILog/ThirdPartyAPILog.js` | Add `DASH_HUDSON` to `LOG_CONFIG` | ~2 lines (after BIRDEYE entry) |
+| `mr_modules/appointments/lib/location.js` | Add `getLocationDashHudsonMedia` export + function | ~20 lines (after `getLocationReviews`) |
+| `mr_modules/webservices/lib/colorbar.js` | Add `getLocationDashHudsonMedia` export + function | ~8 lines (after `getLocationReviews`) |
+| `website/src/vuescripts/services/vueColorbarSvc.js` | Add `getLocationDashHudsonMedia` export + function | ~5 lines |
+| `website/src/vuescripts/store/modules/colorbar.js` | Add state + action + mutation for `dashHudsonMedia` | ~15 lines |
+| `website/src/vuescripts/components/HairColorBar/HcbLocationPageV2/HcbLocationPageV2.vue` | Add mapState/mapActions, mounted() fetch, galleryImages merge | ~15 lines |
+
+**Infrastructure (non-code):**
+
+| Item | Change | Owner |
+|---|---|---|
+| AWS SSM Parameter Store | Add `dashHudson.baseURL`, `dashHudson.apiKey`, `dashHudson.brandId` | DevOps |
+| Tophat location config | Add `dashHudsonGalleryId` field (String, nullable) | Tophat team |
+| Dash Social admin | Create per-location galleries, curate photos | Marketing |
+
+##### 6.9 CORRECTION (2026-04-06): `DashHudsonWidget` is a CMS Partial Component — No Tophat Field Needed
+
+**Finding:** `dash-hudson-widget` is globally registered (`mrVueApp.js` L747, `registerGlobalsSsr.js` L271) but **never referenced in any Vue template in the codebase**. It exists solely for use inside **CMS partial HTML authored in Tophat** — the same pattern as `marketing-banner` and `featured-services-v2`.
+
+**How it works (existing CMS partial pattern):**
+1. Tophat admin authors HTML in a partial textarea (identified by `mixin-key`)
+2. That HTML references globally registered Vue components with props inline: `<dash-hudson-widget script-type="board-embed" gallery-id="12345">`
+3. `CMSPartial.vue` fetches the HTML via `/api/cmsSvc/getPartial`, compiles it as a Vue template at runtime
+4. Globally registered components resolve and render as live Vue components
+
+**Evidence:**
+- `marketing-banner` — globally registered, never imported locally in any `.vue` file. Props (`title`, `theme`, `ctaUrl`) come from Tophat partial HTML.
+- `featured-services-v2` — same pattern. Used inside `partial-featured-services-v2` Tophat partial.
+- `dash-hudson-widget` — same pattern. `galleryId` prop would come from Tophat partial HTML, not a database field.
+
+**What this means for Option A:**
+- **No `dashHudsonGalleryId` database field needed** — the gallery ID lives in the CMS partial HTML, not in the location data model
+- **No Tophat schema changes** — just create a new CMS partial in Tophat with the widget HTML
+- Tophat admin creates partial with mixin-key like `"partial-dashhudson-gallery"`, HTML body contains `<dash-hudson-widget script-type="board-embed" gallery-id="XXXXX">`
+- Page references it via `CMSPartial(mixin-key="partial-dashhudson-gallery")`
+
+**Per-location gallery IDs via CMS Partials — two sub-options:**
+
+**A1 — Shared partial (brand-wide, same gallery for all locations):**
+- One partial in Tophat: `mixin-key="partial-dashhudson-gallery"` with a single `gallery-id`
+- Every location shows the same DashHudson gallery
+- Simplest — same content as V1 `DashHudsonScript` but using the board-embed grid instead of product-carousel
+
+**A2 — Per-location partial (different gallery per location):**
+- Add a new `cmsSettings` field in Tophat (like `marketingPartialLight`/`marketingPartialDark`) — e.g., `cmsSettings.dashHudsonPartial`
+- Each location's Tophat page config points to a different partial mixin-key
+- Each partial has a different `gallery-id` in its HTML
+- Component reads: `CMSPartial(v-if="dashHudsonPartial" :mixin-key="dashHudsonPartial")`
+- **This is exactly how marketing modules already work per-location** — no new infrastructure pattern
+
+**A3 — `CmsPartialSsr` with `clientConfig` (per-location, one partial):**
+- One shared partial in Tophat, HTML uses: `<dash-hudson-widget script-type="board-embed" :gallery-id="clientConfig.galleryId">`
+- Page passes `clientConfig` with the location's gallery ID: `CmsPartialSsr(:mixin-key="..." :config="{ galleryId: location.dashHudsonGalleryId }")`
+- **This requires `dashHudsonGalleryId` on the location object** (Tophat field) — but only one partial to manage
+- Same pattern as Andris's `clientConfig.bookingUrl` fix (session decision #40)
+
+**A0 — Simplest possible (zero config, matches V1 exactly):**
+- Use `DashHudsonScript` directly (not `DashHudsonWidget`) — brand-wide product carousel
+- No CMS partial, no gallery ID, no Tophat changes — just import and render
+- Every location shows the same brand-wide DashHudson content
+- This is literally what V1 does on `HcbIndividual.vue` and `HcbLocationPage.vue`
+
+##### 6.10 Option A — Widget Plan (No API, No Backend, No Auth)
+
+**When to use:** If API access is unavailable, if the team wants a fast MVP, or if DashHudson-controlled rendering is acceptable.
+
+**Key difference from Option B:** DashHudson's JavaScript renders its own DOM inside the page. We do NOT get raw image URLs. Images do NOT merge into `galleryImages`. The widget is a **separate section** on the page, not part of the photo gallery or hero.
+
+**What we get:**
+- Per-location social/UGC photo grid on location pages
+- Zero backend code
+- Zero auth / API key / secureConfig
+- Existing `DashHudsonWidget` component already works — just pass `galleryId`
+
+**What we DON'T get:**
+- Images in the photos page masonry grid
+- Images in the hero "+X photos" count
+- Control over image order, sizing, aspect ratios
+- Ability to deduplicate against CMS/DB images
+- SSR rendering (widget is always client-side)
+
+###### 6.10.1 Sub-Options Summary
+
+| Sub-Option | Gallery Scope | Tophat Changes | Code Changes | Prerequisites |
+|---|---|---|---|---|
+| **A0** | Brand-wide (same for all locations) | None | 1 file (~10 lines) | None |
+| **A1** | Brand-wide (same gallery, grid layout) | Create 1 CMS partial | 1 file (~15 lines) | 1 Tophat partial |
+| **A2** | Per-location (different gallery per location) | Create N CMS partials + 1 `cmsSettings` field | 1 file (~20 lines) | N partials + Tophat page config |
+| **A3** | Per-location (one partial + `clientConfig`) | Create 1 CMS partial + 1 location field | 1 file (~20 lines) | 1 partial + Tophat location field |
+
+**Recommendation:** Start with **A0** (zero config, 10 lines) to validate the section placement and UX. Then upgrade to **A2** or **A3** for per-location galleries once Marketing creates location-specific galleries in Dash Social.
+
+###### 6.10.2 Prerequisites by Sub-Option
+
+**A0 (brand-wide, matches V1):**
+- None. Zero Tophat changes. Zero Dash Social changes.
+
+**A1 (brand-wide, grid layout via CMS Partial):**
+- Create 1 CMS partial in Tophat with `mixin-key="partial-dashhudson-gallery"`. HTML: `<dash-hudson-widget script-type="board-embed" gallery-id="XXXXX">`. Get any gallery ID from Dash Social admin.
+
+**A2 (per-location via N CMS partials):**
+- Create a gallery per location in Dash Social admin → get `gallery_id` per location.
+- Create a CMS partial per location in Tophat, each with its gallery ID.
+- Add a `cmsSettings` field (like `marketingPartialLight`) that points to the partial mixin-key per location page.
+
+**A3 (per-location via `clientConfig`):**
+- Create a gallery per location in Dash Social admin → get `gallery_id` per location.
+- Create 1 shared CMS partial in Tophat. HTML uses `:gallery-id="clientConfig.galleryId"`.
+- Add `dashHudsonGalleryId` field to location data model in Tophat.
+- Populate gallery IDs per location.
+
+**NOT needed for any Option A sub-option:**
+- ~~Dash Social API plan tier~~ — widget is free
+- ~~Bearer token~~ — no auth
+- ~~secureConfig / AWS SSM~~ — no server-side calls
+- ~~Redis caching~~ — nothing to cache
+- ~~New backend files~~ — zero `mr_modules/` changes
+
+###### 6.10.3 Architecture — Where the Widget Goes
+
+**V1 reference** — both V1 pages place `DashHudsonScript` (brand-wide carousel) in the main content flow:
+```pug
+//- HcbLocationPage.vue (V1) — between Reviews and FAQs:
+.row.xs-mb-200m
+  DashHudsonScript
+    template(#title="")
+      h3.bold.upper.xs-f-small.md-f-small.lg-f-large.max-at-tweak.text-center Real clients, really gorgeous results
+```
+
+**V2 placement** — add to `HcbLocationSections.vue`, after Reviews and before FAQs (same position as V1). Uses the globally registered `dash-hudson-widget` (which is `DashHudsonWidget.vue`) — NOT `DashHudsonScript/DashHudsonScriptInner` (that's the brand-wide carousel).
+
+```
+V2 layout with Option A:
+
+.main-column
+  ├── HairColorBarLocationAbout
+  ├── CMSPartial (marketingPartialLight)
+  ├── HairColorBarLocationServices
+  ├── CMSPartial (marketingPartialDark)
+  ├── .getting-here-section
+  ├── .payments-section
+  ├── HairColorBarLocationReviews
+  ├── .dashhudson-section ← NEW (Option A widget, between Reviews and FAQs)
+  └── HairColorBarLocationFAQs
+```
+
+**Why between Reviews and FAQs:**
+- Matches V1 position (DashHudsonScript sits between Reviews and FAQs)
+- Social photos are "social proof" — logically groups with reviews
+- FAQs + footer components (MoreLocations, RegionList, MoreInfo) are page-end content
+
+###### 6.10.4 Implementation — All Sub-Options
+
+---
+
+**SUB-OPTION A0: Brand-Wide (Matches V1 Exactly)**
+
+Zero Tophat changes. Import `DashHudsonScript` (the same component V1 uses). Shows brand-wide product carousel with `brand_id=18947`.
+
+Template addition in `HcbLocationSections.vue` (between Reviews and FAQs):
+```pug
+      HairColorBarLocationReviews
+
+      .dashhudson-section.bottom-divider-light.xs-py-150m(role="region" aria-labelledby="dashhudson-section-title")
+        h2#dashhudson-section-title.color-mr-purple.f-secondary.xs-mb-25m.sm-f-xxlarge.max-at-tweak.upper Real clients, really gorgeous results
+        DashHudsonScript
+
+      HairColorBarLocationFAQs(:faqs="faqsList" :title="faqsTitle")
+```
+
+Script changes:
+```javascript
+// Import (add to imports):
+import DashHudsonScript from '@components/PDP/DashHudsonScript.vue';
+
+// Components (add to components):
+DashHudsonScript,
+```
+
+**Files modified: 1** (`HcbLocationSections.vue` — ~10 lines: template + import + component registration)
+**Tophat changes: 0**
+**Per-location content: NO** — same brand-wide carousel everywhere, identical to V1
+
+---
+
+**SUB-OPTION A1: Brand-Wide Grid via CMS Partial**
+
+One CMS partial in Tophat. Shows a specific gallery in grid layout (not product carousel).
+
+Tophat partial (created in Tophat admin, `mixin-key="partial-dashhudson-gallery"`):
+```html
+<dash-hudson-widget script-type="board-embed" gallery-id="XXXXX" row-size="4" gap-size="4" mobile-row-size="2" mobile-gap-size="2" call-to-action="book_now"></dash-hudson-widget>
+```
+
+Template addition in `HcbLocationSections.vue`:
+```pug
+      HairColorBarLocationReviews
+
+      .dashhudson-section.bottom-divider-light.xs-py-150m(role="region" aria-labelledby="dashhudson-section-title")
+        h2#dashhudson-section-title.color-mr-purple.f-secondary.xs-mb-25m.sm-f-xxlarge.max-at-tweak.upper Real clients, really gorgeous results
+        CMSPartial(mixin-key="partial-dashhudson-gallery")
+
+      HairColorBarLocationFAQs(:faqs="faqsList" :title="faqsTitle")
+```
+
+No new imports — `CMSPartial` is already imported in Sections. `dash-hudson-widget` is already globally registered.
+
+**Files modified: 1** (`HcbLocationSections.vue` — ~8 lines: template only)
+**Tophat changes: 1** (create partial)
+**Per-location content: NO** — same gallery for all locations
+
+---
+
+**SUB-OPTION A2: Per-Location via CMS Partials (Same Pattern as Marketing Modules)**
+
+One `cmsSettings` field + N CMS partials. Each location points to its own partial with its own `gallery-id`.
+
+Tophat setup:
+- Add `cmsSettings.dashHudsonPartial` field (same type as `marketingPartialLight` — object with `cms_partial` string)
+- Create a partial per location: `partial-dashhudson-nyc-flat`, `partial-dashhudson-beverly-hills`, etc.
+- Each partial's HTML: `<dash-hudson-widget script-type="board-embed" gallery-id="{location-specific-id}" ...>`
+- Each location's Tophat page config sets `dashHudsonPartial.cms_partial` to its partial mixin-key
+
+Template addition in `HcbLocationSections.vue`:
+```pug
+      HairColorBarLocationReviews
+
+      .dashhudson-section.bottom-divider-light.xs-py-150m(v-if="dashHudsonPartial" role="region" aria-labelledby="dashhudson-section-title")
+        h2#dashhudson-section-title.color-mr-purple.f-secondary.xs-mb-25m.sm-f-xxlarge.max-at-tweak.upper Real clients, really gorgeous results
+        CMSPartial(:mixin-key="dashHudsonPartial")
+
+      HairColorBarLocationFAQs(:faqs="faqsList" :title="faqsTitle")
+```
+
+Computed addition:
+```javascript
+dashHudsonPartial() {
+  return this.cmsSettings?.dashHudsonPartial?.cms_partial || '';
+},
+```
+
+**Files modified: 1** (`HcbLocationSections.vue` — ~12 lines: template + computed)
+**Tophat changes: N+1** (1 field + N partials, one per location)
+**Per-location content: YES** — each location has its own gallery
+
+---
+
+**SUB-OPTION A3: Per-Location via `CmsPartialSsr` + `clientConfig`**
+
+One CMS partial + one location field. Gallery ID passed via `clientConfig` (same pattern as Andris's booking URL fix, session decision #40).
+
+Tophat setup:
+- Create 1 shared partial: `partial-dashhudson-location-gallery`. HTML: `<dash-hudson-widget script-type="board-embed" :gallery-id="clientConfig.galleryId" row-size="4" gap-size="4" mobile-row-size="2" mobile-gap-size="2" call-to-action="book_now">`
+- Add `dashHudsonGalleryId` field to location data model (String, nullable)
+- Populate gallery IDs per location
+
+Template addition in `HcbLocationSections.vue`:
+```pug
+      HairColorBarLocationReviews
+
+      .dashhudson-section.bottom-divider-light.xs-py-150m(v-if="location.dashHudsonGalleryId" role="region" aria-labelledby="dashhudson-section-title")
+        h2#dashhudson-section-title.color-mr-purple.f-secondary.xs-mb-25m.sm-f-xxlarge.max-at-tweak.upper Real clients, really gorgeous results
+        CmsPartialSsr(mixin-key="partial-dashhudson-location-gallery" :config="{ galleryId: location.dashHudsonGalleryId }")
+
+      HairColorBarLocationFAQs(:faqs="faqsList" :title="faqsTitle")
+```
+
+No new imports — `CmsPartialSsr` is globally registered (auto-stubbed in tests).
+
+**Files modified: 1** (`HcbLocationSections.vue` — ~10 lines: template only)
+**Tophat changes: 2** (1 partial + 1 location field with per-location values)
+**Per-location content: YES** — each location has its own gallery, but only 1 partial to manage
+
+---
+
+**Design decisions shared across all sub-options:**
+- **Placement:** Between Reviews and FAQs — matches V1 position, groups with social proof
+- **Self-contained landmark** (SS1.5): `role="region"` + `aria-labelledby="dashhudson-section-title"` + `h2#dashhudson-section-title`
+- **Section title style:** `.color-mr-purple.f-secondary.sm-f-xxlarge.max-at-tweak.upper` — matches Getting Here, Payments headings (SS1.16)
+- **Title text:** "Real clients, really gorgeous results" — matches V1 exactly (`HcbIndividual.vue` L20, `HcbLocationPage.vue` L17)
+- **`.bottom-divider-light.xs-py-150m`** — self-sufficient spacing (SS1.11)
+- **`v-if` guard:** Section hidden when no gallery data configured. Zero impact on unconfigured locations.
+
+###### 6.10.5 Complete File Manifest (Option A — all sub-options)
+
+**Modified files: 1**
+
+| File | Change | Lines Affected |
+|---|---|---|
+| `HcbLocationSections.vue` | Template: add `.dashhudson-section` with `dash-hudson-widget`. Methods: add `handleDashHudsonMounted`. Style: add overflow guard. | ~20 lines |
+
+**New files: 0**
+
+**Backend files: 0**
+
+**Infrastructure (non-code): 2**
+
+| Item | Change | Owner |
+|---|---|---|
+| Tophat location config | Add `dashHudsonGalleryId` field (String, nullable) | Tophat team |
+| Dash Social admin | Create per-location galleries, curate photos | Marketing |
+
+###### 6.10.6 What Does NOT Change (Option A — any sub-option)
+
+- `galleryImages` computed — untouched. DashHudson images are NOT in the gallery array.
+- `HcbLocationPhotosPage` — untouched. Photos page masonry shows CMS + DB images only.
+- `HairColorBarLocationHeroV2` — untouched. Hero "+X photos" count reflects CMS + DB only.
+- `colorbar.js` Vuex store — no new state, actions, or mutations.
+- `vueColorbarSvc.js` — no new service functions.
+- `mr_modules/` — zero backend changes.
+- `mrVueApp.js` / `registerGlobalsSsr.js` — `dash-hudson-widget` is already globally registered.
+
+###### 6.10.7 Testing (Option A)
+
+| Test | File | What to Assert |
+|---|---|---|
+| Section renders when `dashHudsonGalleryId` exists | `HcbLocationSections.test.js` | Mount with `location: { dashHudsonGalleryId: '12345' }` → `.dashhudson-section` exists. `dash-hudson-widget` stub exists with correct props (`script-type`, `gallery-id`). |
+| Section hidden when `dashHudsonGalleryId` is falsy | `HcbLocationSections.test.js` | Mount with `location: { }` → `.dashhudson-section` does not exist. |
+| Section hidden when `dashHudsonGalleryId` is empty string | `HcbLocationSections.test.js` | Mount with `location: { dashHudsonGalleryId: '' }` → `.dashhudson-section` does not exist. |
+| Heading text matches V1 | `HcbLocationSections.test.js` | Assert `h2#dashhudson-section-title` text is "Real clients, really gorgeous results". |
+| Tracking fires on widget mount | `HcbLocationSections.test.js` | Trigger `dashhudsonMounted` emit on stub → assert `trackMREvent` called with `'HCB Location Page - DashHudson Gallery Viewed'`. |
+| ADA: landmark structure | `HcbLocationSections.test.js` | `.dashhudson-section` has `role="region"` + `aria-labelledby="dashhudson-section-title"`. `h2` has matching `id`. |
+
+All tests use `shallowMount` — `dash-hudson-widget` is a stub (globally registered component is auto-stubbed). Assert `.exists()` and `.props()` on the stub, never its internal rendering (SS1.6 testing rules).
+
+###### 6.10.8 Option A → Option B Upgrade Path
+
+If Option A validates the concept and the team later wants images merged into `galleryImages`:
+
+1. Remove `.dashhudson-section` from `HcbLocationSections.vue` template
+2. Remove `handleDashHudsonMounted` method and scoped style
+3. Implement Option B phases 1-8 (backend API → Vuex → `galleryImages` merge)
+4. `dashHudsonGalleryId` field in Tophat stays — both options use it
+5. Gallery curation in Dash Social stays — both options use same galleries
+
+The Tophat field and Dash Social galleries are shared infrastructure. Switching from A→B is purely a code swap — no re-curation, no re-configuration.
+
+###### 6.10.9 Decision: Option A vs Option B
+
+| Criteria | Option A (Widget) | Option B (API) |
+|---|---|---|
+| **Time to implement** | 1-2 days (1 file changed) | 5-7 days (7 new + 6 modified files) |
+| **Backend changes** | 0 | 7 new files + 3 modified |
+| **Prerequisites** | 2 (Tophat field + galleries) | 6 (+ secureConfig + API token + plan confirmation) |
+| **Auth/secrets needed** | None | Bearer token in AWS SSM |
+| **Rendering control** | DashHudson controls DOM | Full custom (ImgBox, masonry) |
+| **Merges into galleryImages** | No (separate section) | Yes |
+| **In hero +X count** | No | Yes |
+| **In photos page masonry** | No | Yes |
+| **SSR** | No (client-side widget) | Yes (mounted() fetch, reactive merge) |
+| **Upgrade difficulty** | Easy → Option B | N/A |
+
+**Recommendation:** Start with Option A. Validate with 2-3 pilot locations. If stakeholders want tighter integration (masonry, hero count), upgrade to Option B. The Tophat field and Dash Social galleries carry over.
+
+##### 6.11 Open Questions for PM/Stakeholders
+
+1. **Does Madison Reed have API access on their Dash Social plan?** If not, Option B is impossible.
+2. **Who curates location-specific galleries?** Marketing? Store managers? This determines operational feasibility.
+3. **How many locations need galleries initially?** Pilot (2-3) or full rollout (~60+ HCBs)?
+4. **Image count limit per gallery?** Recommend 30-50 max for performance.
+5. **Is there an existing Dash Social gallery structure?** Check if MR already has location-specific boards/galleries created.
+6. **Content rights:** Are UGC photos rights-cleared in Dash Social before they appear in galleries?
+7. **Who has Dash Social admin access?** Need brand admin role to generate API token.
+8. **Redis caching desired?** Birdeye doesn't cache reviews. DashHudson images change less frequently — 1hr TTL recommended but not required for initial launch.
 
 <!-- Local Variables: -->
 <!-- gptel-model: gemini-pro-paid -->

@@ -1,119 +1,391 @@
 ---
-title: Madison Reed Code Review Checklist (45 Rules + Andris Patterns)
+title: Madison Reed Vue Component Review Checklist — 82 Rules Across 9 Categories
 impact: HIGH
-impactDescription: The definitive checklist for reviewing Vue components in the Madison Reed website. Combines session-validated rules with Andris review patterns extracted from 56 PR comments.
-tags: code-review, checklist, rules, andris, vue, pug, stylus, vuex, accessibility, naming, tracking, styling, template, script
+impactDescription: The definitive checklist for reviewing Vue components in the MR website. Without it, reviews miss project-specific conventions validated through 56+ PR comments, 10+ code review cycles, and session-graduated patterns.
+tags: code-review, checklist, vue, pug, stylus, vuex, accessibility, naming, tracking, styling, template, script, components, mrbtn, backend, madison-reed, options-api, utility-classes, aria, keyboard, responsive, breakpoint, spacing
 ---
 
-## Code Review Checklist (45 Rules)
+Definitive checklist for reviewing Vue components in the Madison Reed website. 82 rules organized into 9 categories that map to the parallel subagent review flow in SKILL.md. Each category is self-contained.
 
-Reference this table when running `/code-review` on any component in the MR website. Each row maps to a source rule. Load the referenced skill/section before reviewing.
+Rules `1-45` are core checklist. Rules `ad-*` are senior reviewer patterns (56 PR comments, 10 PRs). Rules `sg-*` are session-graduated patterns (validated across 10+ components, 3+ code review cycles).
 
-| # | Category | Pattern | Source |
+## Categories
+
+| # | Category           | Rules | Section                                    |
+|---|--------------------|-------|--------------------------------------------|
+| 1 | Template           | 7     | [Template](#1-template)                    |
+| 2 | Script Structure   | 15    | [Script Structure](#2-script-structure)    |
+| 3 | Styling            | 13    | [Styling](#3-styling)                      |
+| 4 | Naming             | 5     | [Naming](#4-naming)                        |
+| 5 | ADA Accessibility  | 13    | [ADA Accessibility](#5-ada-accessibility)  |
+| 6 | Images + Tracking  | 8     | [Images + Tracking](#6-images--tracking)   |
+| 7 | Code Style         | 6     | [Code Style](#7-code-style)                |
+| 8 | MrBtn + Components | 8     | [MrBtn + Components](#8-mrbtn--components) |
+| 9 | Backend / API      | 4     | [Backend / API](#9-backend--api)           |
+
+---
+
+## 1. Template
+
+| Rule | Pattern                                                         |
+|------|-----------------------------------------------------------------|
+| 1    | All templates use Pug (`lang="pug"`), no HTML                   |
+| 2    | Vue components in kebab-case in Pug (`mr-btn` not `MrBtn`)      |
+| 3    | Heading text inline, not multi-line `\|`. [Details](#rule-3)    |
+| 4    | `v-if` guards on all sections/images where data may be null     |
+| sg-1 | Always use curly braces for `if` — no one-line conditionals     |
+| ad-6 | Single `<h1>` per page — section components use `<h2>` or lower |
+| ad-7 | Omit redundant `div` in Pug. [Details](#ad-7)                   |
+
+#### Rule 3
+
+Use inline heading text: `h2.f-secondary.upper My Title`
+
+**Incorrect:** `h2.f-secondary.upper` + newline + `| My Title`
+**Correct:** `h2.f-secondary.upper My Title`
+
+Dynamic interpolation: `h2.upper about {{ location.name }}`
+
+#### AD-7
+
+`.my-class` auto-creates a `<div>`. Only include the tag name for non-div elements.
+
+**Incorrect:** `div.my-class`
+**Correct:** `.my-class`
+**Non-div:** `section.my-class`, `span.label`
+
+---
+
+## 2. Script Structure
+
+| Rule  | Pattern                                                             |
+|-------|---------------------------------------------------------------------|
+| 5     | Options API only — no Composition API, no `<script setup>`          |
+| 6     | Canonical field order. [Details](#rule-6)                           |
+| 7     | `emits` declared explicitly when component emits events             |
+| 8     | Computed properties alphabetized                                    |
+| 9     | Vuex helpers at top of sections. [Details](#rule-9)                 |
+| 10    | No unused imports, methods, computed, data                          |
+| 11    | Optional chaining (`?.`) always — no `getObjProperty`               |
+| 12    | Module-level constants for static data. [Details](#rule-12)         |
+| 13    | No inline event logic — `@click` calls a single method              |
+| sg-2  | Props API before `:deep()` for child styling                        |
+| sg-3  | Parent prepares data in computed before passing props               |
+| sg-4  | `window.resize` forbidden — use `matchMedia`. [Details](#sg-4)      |
+| sg-5  | Centralized `global/isDesktop` for 960px+. [Details](#sg-5)         |
+| ad-4  | Every Pug method must trace to `methods`, `mapActions`, or a mixin  |
+| ad-15 | Keep simple expressions on one line — no multi-line trivial returns |
+
+#### Rule 6
+
+`name → components → emits → props → data → computed → watch → lifecycle → methods`
+
+#### Rule 9
+
+`...mapState()`/`...mapGetters()` go **first** in `computed`.
+`...mapActions()`/`...mapMutations()` go **first** in `methods`.
+Local definitions follow, alphabetized.
+
+#### Rule 12
+
+Module-level `UPPER_SNAKE_CASE` constants for non-reactive data. Expose to templates via `camelCase` computed wrapper.
+
+**Incorrect:** `v-for="i in 3"` (magic number in template)
+
+**Correct:**
+```javascript
+const SKELETON_CARD_COUNT = 3;
+export default {
+  computed: {
+    skeletonCardCount() { return SKELETON_CARD_COUNT; },
+  },
+};
+// Template: v-for="i in skeletonCardCount"
+```
+
+#### SG-4
+
+Use `window.matchMedia` for responsive detection. Store `MediaQueryList` in `data` (SSR-safe — `window` undefined during SSR). Add listener in `mounted`, remove in `beforeUnmount`.
+
+**Incorrect:**
+```javascript
+mounted() { window.addEventListener('resize', this.checkWidth); }
+```
+
+**Correct:**
+```javascript
+mounted() {
+  this.mobileQuery = window.matchMedia('(max-width: 559px)');
+  this.mobileQuery.addEventListener('change', this.onMediaChange);
+}
+```
+
+#### SG-5
+
+For show/hide at the standard desktop threshold (960px+), use `mapGetters('global', ['isDesktop'])`. Only use local `matchMedia` when the breakpoint differs from 960px.
+
+---
+
+## 3. Styling
+
+| Rule  | Pattern                                                                 |
+|-------|-------------------------------------------------------------------------|
+| 14    | Scoped Stylus (`<style scoped lang="stylus">`)                          |
+| 15    | Utility-first with breakpoint prefixes. [Details](#rule-15)             |
+| 16    | Do NOT use utility classes for flex — keep flex layout in Stylus        |
+| 17    | `.max-at-tweak` mandatory on every responsive font class                |
+| 18    | Design system variables for colors — no hardcoded hex unless no match   |
+| 19    | CSS properties alphabetized within style blocks                         |
+| 20    | No padding/margin in Stylus when a utility class handles it             |
+| 21    | Stylus nesting mirrors template hierarchy                               |
+| sg-6  | Font sizes, font-family, text color in templates only. [Details](#sg-6) |
+| sg-7  | `.upper` mandatory on every `.f-secondary` heading                      |
+| sg-8  | Units: `rem`/`em` for spacing, `px` for borders/shadows only            |
+| ad-14 | All styles inside the SFC — no external `.styl`/`.css` files            |
+| ad-16 | Comment third-party CSS overrides (Swiper, Maps, Stripe)                |
+
+#### Rule 15
+
+Utility-first: if a utility class exists for a CSS property, use it instead of Stylus. Stylus only for structural layouts, pseudo-elements, transitions, `:deep()`, and custom media queries.
+
+**Common non-spacing replacements:**
+
+| Stylus                  | Utility                  |
+|-------------------------|--------------------------|
+| `overflow hidden`       | `.overflow-hidden`       |
+| `width 100%`            | `.full-width`            |
+| `height 100%`           | `.full-height`           |
+| `flex 1`                | `.flex-1`                |
+| `margin 0 auto`         | `.div-center`            |
+| `font-weight 600/700`   | `.semi-bold` / `.bold`   |
+| `display inline-block`  | `.inline-block`          |
+| `flex-direction column` | Keep in Stylus (Rule 16) |
+
+#### Rule 15a: Padding/Margin Breakpoint Prefix Rule
+
+**All padding/margin utility classes MUST use a breakpoint prefix.** The unprefixed form (`.pt-50m`) and the `xs-` form (`.xs-pt-50m`) are both generated inside `@media mq-mobile-plus` and are functionally equivalent — but `xs-` is mandatory for consistency and explicit mobile-first intent.
+
+**Breakpoint prefixes:**
+
+| Prefix | Media Query          | Breakpoint                                 |
+|--------|----------------------|--------------------------------------------|
+| `xs-`  | `mq-mobile-plus`     | Base / mobile (always use this as default) |
+| `sm-`  | `mq-tablet-plus`     | 560px+                                     |
+| `md-`  | `mq-desktop-md-plus` | 760px+                                     |
+| `lg-`  | `mq-desktop-plus`    | 960px+                                     |
+| `xl-`  | `mq-max`             | 1200px+                                    |
+
+**Available properties:**
+
+| Type        | Prefixes                                       | Example                      |
+|-------------|------------------------------------------------|------------------------------|
+| Individual  | `pt`, `pr`, `pb`, `pl`, `mt`, `mr`, `mb`, `ml` | `.xs-pt-50m`, `.lg-mb-100m`  |
+| Shorthand   | `py`, `px`, `my`, `mx`                         | `.xs-py-150m`, `.xl-px-400m` |
+| Auto margin | `ml-auto`, `mr-auto`                           | `.xs-ml-auto`                |
+
+**Value scale and unit calculation:**
+
+| Values | Unit suffix | Formula | Example |
 |---|---|---|---|
-| 1 | **Template** | All templates use Pug (`lang="pug"`), no HTML | `mr-dotcom-dev/rules/pug-templates.md` |
-| 2 | **Template** | Vue components in kebab-case in Pug (`mr-btn`, not `MrBtn`) — project uses PascalCase for local refs (skip) | `mr-dotcom-dev/rules/pug-templates.md` |
-| 3 | **Template** | Heading inline text (`h2.classes Title`), not multi-line `\|` | Session §1.2 |
-| 4 | **Template** | `v-if` guards on all sections/images where data may be null | Session §1.3 |
-| 5 | **Script** | Options API only — no Composition API, no `<script setup>` | Session §1.1 |
-| 6 | **Script** | Canonical field order: `name -> components -> emits -> props -> data -> computed -> watch -> lifecycle -> methods` | Session §1.3 |
-| 7 | **Script** | `emits` declared explicitly when component emits events | Session §1.3 |
-| 8 | **Script** | Computed properties alphabetized | Session §1.3 |
-| 9 | **Script** | Vuex helpers at top of `computed`/`methods` | andris-10 |
-| 10 | **Script** | No unused imports, methods, computed, data | Session §1.3 |
-| 11 | **Script** | Optional chaining (`?.`) always — no `getObjProperty` | Session §1.3 |
-| 12 | **Script** | Module-level constants for static data | Session §1.3 |
-| 13 | **Script** | No inline event logic — `@click` calls a single method | Session §1.3 |
-| 14 | **Styling** | Scoped Stylus (`style scoped lang="stylus"`) | Session §1.2 |
-| 15 | **Styling** | Utility-first for padding, margin, color, font-size, text-align, border-radius, font-weight, text-transform. **Padding/margin utility classes MUST use breakpoint prefix** (`.xs-pt-50m` not `.pt-50m`). Mobile-first: always use `xs-` as the base. | Session §1.2 |
-| 16 | **Styling** | Do NOT use utility classes for flex layout — keep in Stylus | Memory: `feedback_no_flex_utility.md` |
-| 17 | **Styling** | `.max-at-tweak` mandatory on every responsive font class | Session §1.2 |
-| 18 | **Styling** | Design system variables for colors — no hardcoded hex unless no match | Session §1.2 |
-| 19 | **Styling** | CSS properties alphabetized within style blocks | Session §1.2 |
-| 20 | **Styling** | No padding/margin in Stylus when utility handles it. Stylus only for `@media` overrides | Session §1.2 |
-| 21 | **Styling** | Stylus nesting mirrors template hierarchy | `mr-style` |
-| 22 | **Naming** | Root class: short component prefix | Session §1.14 |
-| 23 | **Naming** | Remove redundant prefixes from parent context | Session §1.14 |
-| 24 | **Naming** | Card children: `{parent}-{element}` pattern | Session §1.15 |
-| 25 | **Naming** | Grid columns: `{role}-column` | Session §1.15 |
-| 26 | **Naming** | No BEM `__` or `--` — hyphens only | `mr-style` |
-| 27 | **ADA** | Self-contained landmarks in same component | Session §1.5 |
-| 28 | **ADA** | `aria-hidden="true"` on decorative images adjacent to text | Session §1.5 |
-| 29 | **ADA** | `role="list"` on `<ul>` with `list-style: none` | ADA review finding |
-| 30 | **ADA** | Heading levels: no jumps (`h1` -> `h2` -> `h3`) | WCAG 1.3.1 |
-| 31 | **ADA** | `:focus-visible` outline on custom interactive elements | Session §1.5 |
-| 32 | **ADA** | No nested interactive elements | Session §1.5 |
-| 33 | **ADA** | No duplicate landmarks when nested | ADA review finding |
-| 34 | **Images** | Use `ImgBox` for all images — no raw `<img>` | Session §1.8 |
-| 35 | **Images** | Skeleton via `:deep(.image-box)` with `background-color ui-color-4` | Session §1.8 |
-| 36 | **Images** | `:deep(img)` for aspect-ratio, border-radius, object-fit | Session §1.8 |
-| 37 | **Tracking** | `trackMREvent` for fire-and-forget, `trackMREventAndRedirect` for navigation | Session §1.7 |
-| 38 | **Tracking** | Every template method must be traceable | andris-4 |
-| 39 | **Code Style** | One blank line between logical blocks | andris-3 |
-| 40 | **Code Style** | No info-only comments | andris-2 |
-| 41 | **Code Style** | Minimal-touch on unrelated code | andris-5 |
-| 42 | **MrBtn** | Use variants (`secondary`, `tertiary`, `light`) before custom CSS | andris-8 |
-| 43 | **MrBtn** | `:deep(.mrbtn)` for color overrides | Code review pattern |
-| 44 | **Components** | Shared components at appropriate shared level | Decision 37 |
-| 45 | **Components** | Thin wrapper pattern: mobile wrapper + shared content | Architecture decision |
+| 0, 10, 15, 25, 30, 50, 75, 100, 125, 150, 175, 200, 225, 250, 275, 300, 350, 400, 450, 500, 600, 700 | `m` (em) | `value / 100 = em` | `50m` = 0.5em, `100m` = 1em, `200m` = 2em |
+| Same scale | `pct` (%) | `value / 10 = %` | `50pct` = 5%, `100pct` = 10% |
 
-## Andris Review Patterns (22 Rules)
+**Incorrect:**
+```pug
+//- Missing breakpoint prefix
+.content.pt-50m.pb-100m.px-200m
+```
 
-Extracted from 56 review comments by `andris310` across 10 PRs (#19523-#20064). 34 comments (61%) were already covered by the 45-rule checklist. These 22 are patterns not covered elsewhere.
+**Correct:**
+```pug
+//- Explicit xs- prefix on all spacing utilities
+.content.xs-pt-50m.xs-pb-100m.xs-px-200m
+```
 
-### Frontend Architecture & Templates
+**Responsive override pattern:**
+```pug
+//- Mobile padding, larger on desktop
+.section.xs-py-100m.lg-py-200m.xs-px-50m.xl-px-400m
+```
 
-| # | Pattern |
-|---|---|
-| andris-6 | Single `<h1>` per page. Section components use `<h2>` or lower. Components must never assume they own the page title. |
-| andris-7 | Omit redundant `div` in Pug. `.my-class` auto-creates a `<div>`. Only include the tag name for non-div elements (`section.my-class`, `span.label`). |
-| andris-8 | Use existing MrBtn variants. `MrBtn` default uses `cta-color-1`. Before adding custom button CSS, check if `secondary`, `tertiary`, or `light` variant already works. |
-| andris-12 | Extract, don't bloat. When adding new functionality, create a standalone component instead of cramming mode flags into an existing one. |
-| andris-15 | Keep simple expressions on one line. Don't break trivial return statements or short values across multiple lines. |
+#### SG-6
 
-### Code Quality & Style
+All `font-size`, `font-family`, and text `color` must use utility classes in Pug (`.xs-f-small`, `.bold`, `.text-color-2`). Never in `<style>` blocks — those belong to the utility class system.
 
-| # | Pattern |
-|---|---|
-| andris-2 | No info-only comments. Don't add comments that merely describe what code does. Keep only: `// TODO:` with ticket refs, `// eslint-disable`, explanations of genuinely non-obvious logic. |
-| andris-3 | One blank line between logical blocks. Exactly one blank line between methods, computed properties, data fields, template sections, and style rules. No consecutive blanks, no zero-separation. |
-| andris-4 | Template methods must be traceable. Every method called in the Pug template must be defined in `methods`, mapped via `mapActions`/`mapMutations`, or be a known global mixin method. |
-| andris-5 | No formatting-only changes in unrelated files. Don't include auto-lint/format corrections on files with no functional changes. |
-| andris-20 | Clean programmatic strings. No whitespace in programmatic string values (error codes, flags). If a string is used once and is self-explanatory, inline it. |
+#### SG-7
 
-### Component Design
+Kapra Neue (`.f-secondary`) is an uppercase font. Pattern: `h2.color-mr-purple.f-secondary.sm-f-xxlarge.max-at-tweak.upper`
 
-| # | Pattern |
-|---|---|
-| andris-10 | Vuex helpers at top of sections. `...mapState()`/`...mapGetters()` go first in `computed`. `...mapActions()`/`...mapMutations()` go first in `methods`. Local definitions follow, alphabetized. |
-| andris-11 | No hardcoded route paths in reusable components. Use `$route.path`, a prop, or a URL key. Hardcoded routes create hidden coupling. Exception: page-specific (non-reusable) components. |
-| andris-14 | Styles inside the SFC. All Vue component styles live in `<style scoped lang="stylus">`. No external `.styl`/`.css` files. |
-| andris-16 | Comment third-party CSS overrides. When overriding library classes (Swiper, Google Maps, Stripe) in `<style>`, add a comment identifying the library. |
-| andris-22 | Use existing validation systems. When a component has Vuelidate or another validation system, integrate new rules into it. Don't add a parallel error display mechanism. |
+---
 
-### Accessibility & UX
+## 4. Naming
 
-| # | Pattern |
-|---|---|
-| andris-1 | Meaningful alt text. Never use `alt=""` unless the image is purely decorative. Content images must have descriptive alt text. |
-| andris-17 | Verify error messages match user intent. Before implementing error messages, verify the copy aligns with the user's action context. |
+| Rule | Pattern                                                                         |
+|------|---------------------------------------------------------------------------------|
+| 22   | Short root class prefix (`.hcb-hero-v2` not `.hair-color-bar-location-hero-v2`) |
+| 23   | Remove redundant prefixes from parent context                                   |
+| 24   | Card children: `{parent}-{element}` (`.service-card`, `.service-image`)         |
+| 25   | Grid columns: `{role}-column` (`.main-column`, `.sidebar-column`)               |
+| 26   | No BEM `__` or `--` — hyphens only                                              |
 
-### Backend / API Patterns
+---
 
-| # | Pattern |
-|---|---|
-| andris-18 | No `console.error` on backend. Use `log.error()` for server logging and return structured error responses. |
-| andris-19 | Backend returns error codes, not HTML. Return structured codes (`MISSING_INFO`, `UPDATE_ERROR`) and let the Vue component handle display. |
-| andris-21 | Never string-match response messages. Don't check `response.message.includes('...')` for control flow. Use `response.success`, `response.errorCode`, or HTTP status codes. |
+## 5. ADA Accessibility
 
-### Images & Assets
+| Rule  | Pattern                                                              |
+|-------|----------------------------------------------------------------------|
+| 27    | Self-contained landmarks — same component. [Details](#rule-27)       |
+| 28    | `aria-hidden="true"` on decorative images adjacent to text           |
+| 29    | `role="list"` on `<ul>` with `list-style: none`                      |
+| 30    | Heading levels: no jumps (`h1 → h2 → h3`, never skip)                |
+| 31    | `:focus-visible` outline on custom interactive elements              |
+| 32    | No nested interactive elements (`<a>` inside `role="button"`)        |
+| 33    | No duplicate landmarks when components nest                          |
+| sg-9  | Keyboard nav on non-native interactives. [Details](#sg-9)            |
+| sg-10 | `aria-expanded` with `!!` on toggle buttons. [Details](#sg-10)       |
+| sg-11 | Dynamic `aria-label` for repeated identical links. [Details](#sg-11) |
+| sg-12 | No fake interactive roles on tracking-only elements                  |
+| ad-1  | Meaningful alt text — never `alt=""` unless purely decorative        |
+| ad-17 | Verify error message copy matches user's action context              |
 
-| # | Pattern |
-|---|---|
-| andris-9 | No static images in the codebase. Never commit PNG/JPG/GIF to the repo. Use CMS Media Gallery (Tophat) for all images. Only exception: SVG icons in `src/assets/svg-icons/`. |
+#### Rule 27
 
-### Experiments
+Component owns its landmark: `role="region"` + `aria-labelledby` + heading `id` in the **same template**. Parent wrappers are purely structural — NO ARIA attributes.
 
-| # | Pattern |
-|---|---|
-| andris-13 | Track experiment exposure explicitly. When implementing A/B experiments, explicitly call tracking when the customer sees a variant. Branching logic alone is not enough. |
+**Incorrect — parent owns ARIA:**
+```pug
+.section-wrapper(aria-labelledby="my-title")
+  MyComponent
+```
+
+**Correct — component owns ARIA:**
+```pug
+//- MyComponent.vue
+.my-component(v-if="hasData" role="region" aria-labelledby="my-section-title")
+  h2#my-section-title.color-mr-purple.f-secondary Title Text
+```
+
+Key constraints:
+- `aria-labelledby` → heading IDs only, never root element IDs
+- Root elements use classes, not IDs
+- `v-if` on root guards heading + aria together
+
+#### SG-9
+
+Non-native interactive elements need: `tabindex="0"` + `@keydown.enter.prevent` + `@keydown.space.prevent`.
+
+#### SG-10
+
+Buttons controlling expandable content: `:aria-expanded="!!stateVar"`. The `!!` coerces `undefined` → `false` so the attribute always renders.
+
+#### SG-11
+
+When multiple identical-text links exist (e.g., multiple "Book Now"), add context via `aria-label`:
+
+```pug
+a(:aria-label="`Book ${service.name}`") Book Now
+```
+
+---
+
+## 6. Images + Tracking
+
+| Rule  | Pattern                                                            |
+|-------|--------------------------------------------------------------------|
+| 34    | `ImgBox` for all images — no raw `<img>`                           |
+| 35    | Skeleton: `:deep(.image-box)` + `background-color ui-color-4`      |
+| 36    | `:deep(img)` for aspect-ratio, border-radius, object-fit           |
+| 37    | Correct tracking function per navigation type. [Details](#rule-37) |
+| 38    | Every template method must trace to `methods` or `mapActions`      |
+| sg-13 | CMS SVG icons via `ImgBox`, not `mr-icon`. [Details](#sg-13)       |
+| ad-9  | No static images (PNG/JPG/GIF) in repo — use CMS. SVG icons only   |
+| ad-13 | Track A/B experiment exposure explicitly, not just branching       |
+
+#### Rule 37
+
+| Function                                    | Use When           | Behavior                    |
+|---------------------------------------------|--------------------|-----------------------------|
+| `trackMREvent(name, props)`                 | User stays on page | Fire-and-forget             |
+| `trackMREventAndRedirect(name, url, props)` | Hard redirect      | 300ms delay, then navigates |
+
+**Anti-pattern:** `trackMREvent()` + `goToPath()` — event may not flush before navigation. Use `trackMREventAndRedirect` for any hard redirect.
+
+#### SG-13
+
+CMS SVG icons come in `{ icon: { file_type: 'svg+xml', svg_data } }` format. Use `ImgBox(:media-obj="item.icon")` — it detects `isNewSvg` internally. Use `mr-icon` only for locally bundled SVGs from `src/assets/svg-icons/`.
+
+---
+
+## 7. Code Style
+
+| Rule  | Pattern                                                            |
+|-------|--------------------------------------------------------------------|
+| 39    | One blank line between logical blocks — no consecutive, no zero    |
+| 40    | No info-only comments. [Details](#rule-40)                         |
+| 41    | Minimal-touch: format only lines you're modifying                  |
+| ad-4  | Every Pug method must trace to `methods`, `mapActions`, or a mixin |
+| ad-15 | Simple expressions on one line — no multi-line trivial returns     |
+| ad-20 | Clean programmatic strings — no whitespace in codes/flags          |
+
+#### Rule 40
+
+Don't add comments that describe what code does. Keep only:
+- `// TODO:` with ticket refs
+- `// eslint-disable` with reason
+- Genuinely non-obvious logic explanations
+
+---
+
+## 8. MrBtn + Components
+
+| Rule  | Pattern                                                                 |
+|-------|-------------------------------------------------------------------------|
+| 42    | Use MrBtn variants (`secondary`, `tertiary`, `light`) before custom CSS |
+| 43    | `:deep(.mrbtn)` for color overrides on MrBtn                            |
+| 44    | Shared components at appropriate shared level                           |
+| 45    | Thin wrapper pattern: mobile wrapper + shared content                   |
+| sg-14 | Self-sufficient component spacing. [Details](#sg-14)                    |
+| ad-11 | No hardcoded route paths in reusable components. [Details](#ad-11)      |
+| ad-12 | Extract, don't bloat — new feature = new component                      |
+| ad-22 | Use existing validation systems, don't add parallel ones                |
+
+#### SG-14
+
+Every component handles its own spacing internally. Parent page does NOT add wrapper divs or spacing classes around imported components.
+
+**Incorrect:**
+```pug
+.main-column
+  .about-section.pb-100m
+    HairColorBarLocationAbout
+```
+
+**Correct:**
+```pug
+//- Component root owns its spacing
+.main-column
+  HairColorBarLocationAbout
+//- Inside HairColorBarLocationAbout.vue:
+.hcb-about.pb-150m
+```
+
+#### AD-11
+
+Use `$route.path`, a prop, or a URL key. Hardcoded routes create hidden coupling. **Exception:** page-specific (non-reusable) components may hardcode paths.
+
+---
+
+## 9. Backend / API
+
+Applies to Express routes, controllers, or webservices — not Vue components.
+
+| Rule  | Pattern                                                       |
+|-------|---------------------------------------------------------------|
+| ad-18 | No `console.error` — use `log.error()` + structured responses |
+| ad-19 | Return error codes, not HTML. [Details](#ad-19)               |
+| ad-21 | Never string-match `response.message` for control flow        |
+| ad-9  | No static images in repo (also applies to backend templates)  |
+
+#### AD-19
+
+Return structured codes (`MISSING_INFO`, `UPDATE_ERROR`) and let the Vue component handle display. Use `response.success`, `response.errorCode`, or HTTP status codes for control flow.

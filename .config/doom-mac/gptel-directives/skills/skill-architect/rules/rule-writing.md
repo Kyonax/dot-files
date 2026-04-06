@@ -107,6 +107,24 @@ The body must be an **exhaustive, explicit reference** for the Worker AI. This i
 | Marketing consent | Before sending promotional emails | CAN-SPAM / GDPR |
 ```
 
+**IMPORTANT — Keep table cells short. Extract verbose content to detail blocks:**
+
+Table cells must be scannable by both humans and AI. If a cell exceeds ~15 words, put a short summary in the cell and reference a named detail block below the table.
+
+```markdown
+## Pattern: Short Cell + Detail Reference
+
+| Rule | Description |
+|---|---|
+| 12 | Module-level constants for static data. [Details](#rule-12) |
+| 13 | No inline event logic — `@click` calls a single method |
+
+#### Rule 12
+Full explanation with code examples, correct/incorrect pairs, etc.
+```
+
+**Why:** Long table cells break column alignment, hurt readability, and cause AI agents to misparse boundaries between cells. Short cells with `[Details](#anchor)` links keep tables scannable while preserving depth in the referenced sections.
+
 **Use correct/incorrect example pairs:**
 
 ```markdown

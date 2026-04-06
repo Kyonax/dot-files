@@ -51,6 +51,7 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 *   **Cross-domain linking:** Index nodes link to child nodes. Child nodes can back-link to indices.
 *   **No orphan nodes:** Every node must be reachable from at least one index.
 *   **Prefer linking over duplicating:** If knowledge exists in another node, link to it — don't copy.
+*   **Orphan validation method:** To find true orphans, grep each node's `:ID:` across ALL `.org` files — not just indices. Nodes may be linked from child nodes (e.g., index → JS node → ReactJS node). Only nodes whose ID appears in no other file are true orphans.
 
 ### 1.5 Index Formatting & Content Lifecycle
 
@@ -72,6 +73,15 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 
 *   **External disk dependency:** `~/.config/doom/` symlinks (`config.org`, `gptel-directives`, `snippets`, `templates`) originate from `/run/media/kyonax/Da_ Disk/dev/github-kyonax/dot-files/.config/doom-mac/`.
 *   **Skills symlinks:** GPTel skills in `~/.config/doom/gptel-directives/skills/` are symlinked into `~/.claude/skills/` so both Doom Emacs GPTel and Claude Code share the same skill definitions.
+
+### 1.7 Madison Reed Index — Sprint Board & Backlog Conventions
+
+*   **Two-layer structure:** SPRINT BOARD uses `file:` links with `::anchor` references; BACKLOG uses `[[id:UUID][Title]]` links with `<<anchor>>` targets. Sprint board entries point to backlog anchors.
+*   **JIRA status mapping:** Sprint board sections map to JIRA workflow: IN TODO, IN PROGRESS, IN CODE REVIEW, IN TEST, ALL DONE. Tickets move between sections as status changes.
+*   **Backlog entries:** Format `- [X/space] [[id:UUID][(TYPE) Ticket #DOTCOMPB-NNNN]] <<type-NNNN>> :: Description`. Checked `[X]` = done, unchecked `[ ]` = open.
+*   **Sprint board entries:** Format `- [X/space] [[file:./index_file.org::anchor][(TYPE) Short Title]] :: Description`.
+*   **Counter updates:** Both `** ALL DONE [N/N]` and `* BACKLOG [%%] [N/N]` counters must be updated when adding/removing entries.
+*   **JIRA verification:** When adding tickets to the index, verify current status via JIRA MCP (`madison-reed.atlassian.net` as cloudId) before placing in the correct section.
 
 ---
 
@@ -97,6 +107,10 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 | Coding Knowledge content extraction | Refactor     | Extracted 3 inline content blocks into separate nodes               | **DONE**        |
 | Author orcidlink standardization  | Refactor       | Applied Zerønet Labs orcidlink author format to all 12 index/node files | **DONE**    |
 | Session reset (2nd)               | Documentation  | Second session reset capturing all refinement work                  | **DONE**        |
+| Orphan node discovery & validation | Audit         | Full graph trace to find true orphan nodes across 80+ .org files    | **DONE**        |
+| MR index — JIRA ticket integration | Refactor      | Added 6 orphan JIRA ticket nodes to Madison Reed index via MCP      | **DONE**        |
+| Therapy node creation             | New node       | Personal therapy tracking node with Carta de Sanacion linked         | **DONE**        |
+| Session reset (3rd)               | Documentation  | Third session reset capturing orphan audit + JIRA integration work  | **DONE**        |
 
 ### 2.3 Key Decisions (Session-Wide)
 
@@ -114,10 +128,16 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
 12. **(2026-04-05)** Completed tasks in indices should be cleaned up (e.g., Content Creation `[5/5]` social accounts task removed).
 13. **(2026-04-05)** Empty index sections (NOTEs, TASKs with no content) should be removed rather than left as empty headings.
 14. **(2026-04-05)** Doom Emacs Comprehensive Guide section removed from Documentation index — was inline TODO with empty sub-sections. Can be recreated as its own node if needed.
+15. **(2026-04-05)** Orphan validation requires full graph trace — grep each node's `:ID:` across ALL `.org` files, not just index files. Nodes linked from child nodes (e.g., index → JS → ReactJS) are not orphans. Initial scan found 23 candidates; full trace reduced to 1 true orphan.
+16. **(2026-04-05)** 5 Nav Redesign bugs (DOTCOMPB-7749, 7756, 7759, 7760, 7761) confirmed Done via JIRA MCP and added to MR index ALL DONE + BACKLOG as checked. DOTCOMPB-7290 added to BACKLOG unchecked — JIRA returned permission error.
+17. **(2026-04-05)** DOTCOMPB-7759 has `:FASTFOLLOW:` FILETAG but JIRA confirms Finalizada — FILETAGS discrepancy pending user update.
+18. **(2026-04-05)** Therapy node created for weekly psychological treatment tracking. Placed in `personal_stuff/` with `:KYO:PERSONAL:` tags. Linked from master index HOME & PERSONAL (now 6 items).
+19. **(2026-04-05)** Carta de Sanacion - Culpa (only true orphan found) linked from new Terapia Psicologica node — graph integrity restored, zero orphans remaining.
 
 ### 2.4 Pending Work
 
-- [ ] No pending tasks — session up to date after full refinement pass
+- [ ] Update DOTCOMPB-7759 node FILETAGS from `:MR:TICKET:BUG:FASTFOLLOW:` to `:MR:TICKET:BUG:DONE:` — JIRA confirms Finalizada
+- [ ] Verify DOTCOMPB-7290 JIRA status when access is restored — currently unchecked in BACKLOG due to permission error
 
 ---
 
@@ -154,7 +174,8 @@ This file is the **single source of truth** for the `.brain.d` Org-Roam Knowledg
     *   Cyber Code Syndicate → WORK & PROJECTs section
     *   Gentleman Staff → WORK & PROJECTs section (with `=[REVIEW: pending removal]=`)
     *   Documentation → New DOCUMENTATION section (between CONTENT CREATION and DIARY)
-*   **Final structure (8 sections):** HOME & PERSONAL (4 items), WORK & PROJECTs (3 items), KNOWLEDGE & LEARNING (1 item), CONTENT CREATION (1 item), DOCUMENTATION (1 item), DIARY (1 item), FINANCE INFO (table), QUICK NOTEs.
+*   **Phase 3 — Therapy node addition (2026-04-05):** Added Terapia Psicologica to HOME & PERSONAL section (6th item).
+*   **Final structure (8 sections):** HOME & PERSONAL (6 items), WORK & PROJECTs (3 items), KNOWLEDGE & LEARNING (1 item), CONTENT CREATION (1 item), DOCUMENTATION (1 item), DIARY (1 item), FINANCE INFO (table), QUICK NOTEs.
 
 ### 3.4 Full Index Refinement Pass
 
@@ -202,7 +223,62 @@ Per-index specifics:
     *   3 extracted nodes: JS Yasnippets, Senior Interview Q&A, Design Patterns
 *   **Session guideline updated:** Section 1.3 now mandates orcidlink format for all nodes.
 
-### 3.7 Domain: Madison Reed (32 nodes — ACTIVE)
+### 3.7 Orphan Node Discovery & Graph Validation
+
+**Created:** 2026-04-05 | **Last updated:** 2026-04-05
+**Status:** DONE
+
+*   **Problem:** User created new roam nodes (JIRA tickets, personal notes) that were not linked from any index — violating Section 1.4 "no orphan nodes" rule.
+*   **Phase 1 — Initial scan:** Cross-referenced all `.org` file IDs against index files. Found 23 candidate orphans across knowledge (13), MR tickets (6), content creation (1), community (1), personal (1), master index (1, self-referential).
+*   **Phase 2 — Full graph trace:** Grepped each candidate's `:ID:` across ALL `.org` files (not just indices). Discovered most were linked through child node chains:
+    *   Knowledge nodes (ReactJS, JS, VueJS, etc.) → linked from Coding Knowledge index or from child nodes (e.g., JavaScript node links to ReactJS, NodeJS, NextJS, LeetCode)
+    *   Brand Identity @is.kyonax → linked from `content_creation_is_kyonax.org` (child of Content Creation index)
+    *   DOC GS Dynamic Roles → linked from `all_docs_gentleman_staff.org` (child of GS index)
+    *   DOTCOMPB-6571 docs (2 nodes) → linked from `docs_madison.org` (child of MR index DA' DOCs)
+*   **Result:** 23 candidates → **1 true orphan** (Carta de Sanacion - Culpa). 6 JIRA ticket nodes were also unlinked and needed integration (see Section 3.8).
+
+### 3.8 Madison Reed Index — JIRA Ticket Integration
+
+**Created:** 2026-04-05 | **Last updated:** 2026-04-05
+**Status:** DONE
+
+*   **Problem:** 6 JIRA ticket roam nodes existed but were not in the Madison Reed index.
+*   **JIRA verification via MCP** (cloudId: `madison-reed.atlassian.net`):
+
+| Ticket         | Type | JIRA Status      | Node ID                                |
+|----------------|------|------------------|----------------------------------------|
+| DOTCOMPB-7749  | Bug  | Finalizada (Done)| `a3f8c211-4e7b-4c12-9d85-3b7f2e910c44` |
+| DOTCOMPB-7756  | Bug  | Finalizada (Done)| `b7d2e405-8a1c-4f3e-b692-5c8d9f120d77` |
+| DOTCOMPB-7759  | Bug  | Finalizada (Done)| `c1e9b307-2f6a-4d8c-a541-7e3b6c204e88` |
+| DOTCOMPB-7760  | Bug  | Finalizada (Done)| `d4a7f509-6e3b-4a1d-c823-9f2e8d316f99` |
+| DOTCOMPB-7761  | Bug  | Finalizada (Done)| `e8b3c612-1f4d-4e7a-d954-2a5c7e428b00` |
+| DOTCOMPB-7290  | N/A  | Error (no perm)  | `f8b24883-5442-4e45-9dea-55c0f4f0fc92` |
+
+*   **Changes to `index_madison_reed.org`:**
+    *   **ALL DONE section:** Added 5 Nav Redesign bugs as checked entries. Counter updated `[9/9]` → `[14/14]`.
+    *   **BACKLOG section:** Added 5 Nav Redesign bugs as `[X]` + DOTCOMPB-7290 as `[ ]`. Counter updated `[9/21]` → `[14/27]`.
+*   **All 5 Nav Redesign bugs** are children of DOTCOMPB-7463 (Navigation Redesign parent ticket).
+*   **Pending:** DOTCOMPB-7759 FILETAGS say `:FASTFOLLOW:` but JIRA says Done. DOTCOMPB-7290 needs re-verification when JIRA access is restored.
+
+### 3.9 Therapy Node Creation
+
+**Created:** 2026-04-05 | **Last updated:** 2026-04-05
+**Status:** DONE
+
+*   **Context:** User follows weekly psychological therapy. The only true orphan node (Carta de Sanacion - Culpa) was a therapy exercise with no parent.
+*   **Created:** `roam-nodes/personal_stuff/2026-04-05-terapia_psicologica.org` (ID: `4de20b88-5805-4d21-b430-13db7ebd8623`)
+*   **FILETAGS:** `:KYO:PERSONAL:`
+*   **Email:** `iam@kyonax.com` (personal node convention)
+*   **Sections:**
+    1.  CARTAS DE SANACION — healing letters (Carta de Sanacion - Culpa linked here)
+    2.  ACUERDOS TERAPEUTICOS — commitments/agreements from sessions
+    3.  SESIONES SEMANALES — chronological session log
+    4.  REFLEXIONES — insights between sessions
+    5.  NOTAS RAPIDAS — quick capture space
+*   **Linked from:** Master index HOME & PERSONAL (6th item)
+*   **Graph integrity:** Carta de Sanacion - Culpa now reachable via Master Index → Terapia Psicologica → Carta. Zero orphans remaining.
+
+### 3.10 Domain: Madison Reed (38 nodes — ACTIVE)
 
 **Created:** 2025-11-18 | **Last updated:** 2026-04-05
 **Status:** ACTIVE
@@ -214,11 +290,15 @@ Per-index specifics:
 
 **Active work:**
 *   Site Revolution Redesign — long-lived feature branch with HCB Booking Flow V2, Location Detail V2, Locations List
-*   Navigation Redesign
+*   Navigation Redesign (DOTCOMPB-7463) — parent ticket with 5 completed child bugs (7749, 7756, 7759, 7760, 7761)
 *   ADA accessibility compliance
-*   Multiple JIRA tickets (DOTCOMPB-6943 through DOTCOMPB-7652)
+*   Multiple JIRA tickets (DOTCOMPB-6943 through DOTCOMPB-7768)
 
-### 3.8 Domain: Knowledge Base (14 nodes — REFERENCE)
+**Index state (as of 2026-04-05):**
+*   SPRINT BOARD: ALL DONE [14/14], IN PROGRESS [0/6], IN CODE REVIEW [0/2], IN TEST [0/3], IN TODO [0/1]
+*   BACKLOG: [14/27] — 14 checked, 13 open
+
+### 3.11 Domain: Knowledge Base (14 nodes — REFERENCE)
 
 **Created:** 2024-12-18 | **Last updated:** 2026-04-05
 **Status:** REFERENCE
@@ -228,7 +308,7 @@ Per-index specifics:
 **Purpose:** Senior engineer interview preparation and continuous learning reference.
 **Note:** 3 new nodes added (2026-04-05) via content extraction — Senior Interview Q&A, Design Patterns, JavaScript Yasnippets. Node count increased from 11 to 14.
 
-### 3.9 Domain: Content Creation (2 nodes — ACTIVE)
+### 3.12 Domain: Content Creation (2 nodes — ACTIVE)
 
 **Created:** 2024-09-16 | **Last updated:** 2026-04-05
 **Status:** ACTIVE
@@ -237,7 +317,7 @@ Per-index specifics:
 **Brands:** `@is.kyonax` (main personal), `@kyonax_on` (gaming/lore), `@kyonax_on_tech` (tech/programming), `Discord Creed` (Discord content), `Datomanía` (data/facts).
 **Strategy:** Simultaneous shorts-based growth across YouTube, TikTok, Twitter, Instagram, Twitch, Facebook with cross-promotion.
 
-### 3.10 Domain: Cyber Code Syndicate (4 nodes — IN DEVELOPMENT)
+### 3.13 Domain: Cyber Code Syndicate (4 nodes — IN DEVELOPMENT)
 
 **Created:** 2025-11-01 | **Last updated:** 2026-04-05
 **Status:** IN DEVELOPMENT
@@ -247,7 +327,7 @@ Per-index specifics:
 **Code style:** `snake_case` variables, `kebab-case` files, `UPPER_SNAKE_CASE` constants.
 **Pending:** Manifesto creation, community launch.
 
-### 3.11 Domain: Gentleman Staff (1 node — ACTIVE, REVIEW)
+### 3.14 Domain: Gentleman Staff (1 node — ACTIVE, REVIEW)
 
 **Created:** 2025-12-23 | **Last updated:** 2026-04-05
 **Status:** ACTIVE (pending removal from master index)
@@ -256,14 +336,15 @@ Per-index specifics:
 **Role:** Discord server moderator for `@gentlemanprogramming` YouTube community.
 **Note:** Linked to master index with `=[REVIEW: pending removal]=` label per user decision.
 
-### 3.12 Domain: Personal (12 nodes — LIVING)
+### 3.15 Domain: Personal (13 nodes — LIVING)
 
 **Created:** ~2023-04-19 | **Last updated:** 2026-04-05
 **Status:** LIVING
 
-**Contents:** CVs (English, Spanish, JS-focused), family info (partner: Leidy Johana Guerrero), baby/family planning, career planning, birthday reminders, hiring interview notes.
+**Contents:** CVs (English, Spanish, JS-focused), family info (partner: Leidy Johana Guerrero), baby/family planning, career planning, birthday reminders, hiring interview notes, therapy tracking (Terapia Psicologica node with Carta de Sanacion - Culpa).
+**Note:** Node count increased from 12 to 13 with addition of therapy node (2026-04-05).
 
-### 3.13 Domain: Documentation (REFERENCE)
+### 3.16 Domain: Documentation (REFERENCE)
 
 **Created:** 2024-09-16 | **Last updated:** 2026-04-05
 **Status:** REFERENCE
@@ -272,7 +353,7 @@ Per-index specifics:
 **Contents:** Brain Dump guide, Work Liquidation reference, Maritz/Softtek work docs, CVs (EN/ES), Invoice templates.
 **Note:** Doom Emacs Comprehensive Guide section removed during refinement (was empty TODO stubs). Can be recreated as its own node when ready.
 
-### 3.14 Domain: Omarchy / Arch Linux (ACTIVE — Separate Session)
+### 3.17 Domain: Omarchy / Arch Linux (ACTIVE — Separate Session)
 
 **Created:** 2026-03-20 | **Last updated:** 2026-04-05
 **Status:** ACTIVE (tracked in `sessions/omarchy-installation.md`)
@@ -306,7 +387,24 @@ Per-index specifics:
 | `roam-nodes/knowledge/2026-04-05-design_patterns.org`          | Coding Knowledge      |
 | `roam-nodes/knowledge/2026-04-05-javascript_yasnippets.org`    | Coding Knowledge      |
 
-### 4.3 Templates
+### 4.3 New Nodes (2026-04-05)
+
+| File                                                           | Domain                |
+|----------------------------------------------------------------|-----------------------|
+| `roam-nodes/personal_stuff/2026-04-05-terapia_psicologica.org` | Personal — therapy    |
+
+### 4.4 JIRA Ticket Nodes Added to MR Index (2026-04-05)
+
+| File                                                                | Ticket          |
+|---------------------------------------------------------------------|-----------------|
+| `roam-nodes/madison_reed/2026-03-25-dotcompb_7749.org`              | DOTCOMPB-7749   |
+| `roam-nodes/madison_reed/2026-03-25-dotcompb_7756.org`              | DOTCOMPB-7756   |
+| `roam-nodes/madison_reed/2026-03-25-dotcompb_7759.org`              | DOTCOMPB-7759   |
+| `roam-nodes/madison_reed/2026-03-25-dotcompb_7760.org`              | DOTCOMPB-7760   |
+| `roam-nodes/madison_reed/2026-03-25-dotcompb_7761.org`              | DOTCOMPB-7761   |
+| `roam-nodes/madison_reed/2026-03-12-114716-dotcompb_7290.org`       | DOTCOMPB-7290   |
+
+### 4.5 Templates
 
 | File                                         | Key | Purpose                  |
 |----------------------------------------------|-----|--------------------------|
@@ -315,7 +413,7 @@ Per-index specifics:
 | `templates/new-node-invoice.org`             | `v` | Invoice                  |
 | `templates/new-node-sentinel-inspection.org` | `i` | Inspection report        |
 
-### 4.4 LaTeX & Exports
+### 4.6 LaTeX & Exports
 
 | File                             | Purpose                     |
 |----------------------------------|-----------------------------|
@@ -325,7 +423,7 @@ Per-index specifics:
 | `latex/ticket-mr-export.org`     | Madison Reed ticket export  |
 | `latex/latex-macros.tex`         | Reusable LaTeX macros       |
 
-### 4.5 Infrastructure
+### 4.7 Infrastructure
 
 | File                             | Purpose                     |
 |----------------------------------|-----------------------------|
@@ -333,7 +431,7 @@ Per-index specifics:
 | `bookmarks/bookmarks`           | URL bookmarks               |
 | `roam-nodes/.virtual_brain`     | Archived project links      |
 
-### 4.6 Symlinks (Claude Code ← GPTel Skills)
+### 4.8 Symlinks (Claude Code ← GPTel Skills)
 
 | Source (`~/.config/doom/gptel-directives/skills/`) | Target (`~/.claude/skills/`) |
 |----------------------------------------------------|------------------------------|
@@ -345,7 +443,7 @@ Per-index specifics:
 | `session-reset/`                                   | `session-reset`              |
 | `skill-architect/`                                 | `skill-architect`            |
 
-### 4.7 Session Files (GPTel Directives)
+### 4.9 Session Files (GPTel Directives)
 
 | File                                                                     | Domain                 |
 |--------------------------------------------------------------------------|------------------------|
@@ -363,21 +461,24 @@ Per-index specifics:
 
 ### What was done last
 
-*   Linked 4 additional indices to master index: Arch Linux (HOME & PERSONAL), CCS (WORK & PROJECTs), Gentleman Staff (WORK & PROJECTs, with REVIEW label), Documentation (new DOCUMENTATION section).
-*   Ran full refinement pass on all 8 linked indices — fixed headers, FILETAGS, structure, content lifecycle violations across every index.
-*   Extracted 400+ lines of inline content from Coding Knowledge index into 3 new nodes (Senior Interview Q&A, Design Patterns, JavaScript Yasnippets).
-*   Standardized author tag to Zerønet Labs orcidlink format across all 12 files (9 indices + 3 extracted nodes).
-*   Performed session reset to capture all work.
+*   Ran full orphan audit: scanned 80+ .org files, found 23 candidate orphans, traced full graph via ID grep — reduced to 1 true orphan (Carta de Sanacion - Culpa) + 6 unlinked JIRA ticket nodes.
+*   Verified 6 JIRA tickets via MCP: 5 Nav Redesign bugs confirmed Finalizada, DOTCOMPB-7290 returned permission error.
+*   Updated Madison Reed index: added 5 bugs to ALL DONE [14/14] + 6 entries to BACKLOG [14/27].
+*   Created therapy node (`terapia_psicologica.org`) with 5 sections, linked Carta de Sanacion - Culpa, added to master index HOME & PERSONAL.
+*   Performed 3rd session reset.
 
 ### Pending / Not yet started
 
-*   No pending tasks — all refinement work complete.
+*   Update DOTCOMPB-7759 FILETAGS from `:FASTFOLLOW:` to `:DONE:` (JIRA confirms Finalizada)
+*   Re-verify DOTCOMPB-7290 JIRA status when access is restored
 
 ### Where to resume
 
+If the user asks to **update a JIRA ticket status**: follow Section 1.7 conventions, verify via MCP, update both Sprint Board and Backlog sections in MR index.
 If the user asks to **create a new node**: apply Section 1 naming/tagging rules + Section 1.3 orcidlink author + Section 1.5 formatting rules, use appropriate template (Section 1.2), place in correct subdirectory.
 If the user asks to **edit an index**: follow Section 1.5 conventions (list items, `:: descriptions`, bold/italic markup, content lifecycle).
 If the user asks to **work on a specific domain**: load the relevant Section 3 subsection for context, check the domain's index node.
+If the user asks to **run an orphan audit**: follow Section 1.4 orphan validation method — grep IDs across all .org files, not just indices.
 If the user asks to **remove Gentleman Staff**: remove the link from master index WORK & PROJECTs (it has the REVIEW label).
 If the user asks about **infrastructure**: reference Section 3.2 (skill symlinks) for prior decisions.
 If the user asks for a **new task**: check Section 2.4 (Pending Work).
