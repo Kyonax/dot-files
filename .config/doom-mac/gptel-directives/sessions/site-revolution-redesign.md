@@ -389,16 +389,19 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 | `DOTCOMPB-7289` | Story | Specific Location page updates — HCB details                 | **MERGED** (PR #20137). Hero, about, page scaffolding.                  |
 | `DOTCOMPB-7290` | Story | Specific Location page updates — Services + additional info  | **MERGED** (PR #20190). 143 tests. Services, FAQs, reviews, marketing modules. |
 | `DOTCOMPB-7556` | Bug   | Add sticky Book Services button to location page             | **MERGED** (PR #20166). FixedCtaBar component.                          |
-| `DOTCOMPB-7557` | Bug   | ADA: Cannot tab to Book Services on desktop                  | Roam node created, not yet implemented                                  |
+| `DOTCOMPB-7557` | Bug   | ADA: Cannot tab to Book Services on desktop                  | **MERGED** (2026-04-08, JIRA: Finalizada). Roam node exists.           |
 | `DOTCOMPB-7463` | Story | Navigation Redesign                                          | **MERGED** (PR #20210). Bug fixes also merged (PR #20309). Font size merged (PR #20294). |
 | `DOTCOMPB-7652` | Bug   | Madi overlapping with sticky CTA                             | **MERGED** (PR #20203). MountedFlag + SierraWidget CSS fix.            |
 | `DOTCOMPB-7555` | Bug   | Remove non-functional "Photos" button from location hero     | **MERGED** (PR #20218). 13 tests passing.                              |
 | `DOTCOMPB-7749` | Story | Nav title font size increase + CTA implementation            | **MERGED** (PR #20294). Font size bump + nav bug fixes.                 |
 | `DOTCOMPB-7763` | Bug   | Mobile Shop submenu not fully scrollable — iOS Safari overlap | **MERGED** (PR #20317, 2026-03-26). iOS scroll fix + header spacing + double-tracking fix. |
-| `DOTCOMPB-7742` | Bug   | Featured service CTA on location page doesn't pre-select service in booking flow | **PR #20368 OPEN** (2026-03-30). Cookie-based pre-selection + serverPrefetch fix. See §3.10. |
-| `DOTCOMPB-7712` | Story | New page to display location photos                          | **PR #20423 OPEN** (2026-04-06). Committed on branch `DOTCOMPB-7712`. 81 tests, 3 code review rounds. See §3.11. |
+| `DOTCOMPB-7742` | Bug   | Featured service CTA on location page doesn't pre-select service in booking flow | **IN TEST** (2026-04-08, JIRA: Pruebas). PR #20368. Cookie-based pre-selection + serverPrefetch fix. See §3.10. |
+| `DOTCOMPB-7712` | Story | New page to display location photos                          | **IN CODE REVIEW** (2026-04-08). PR #20423. Branch `DOTCOMPB-7712`. 81 tests, 3 code review rounds. See §3.11. |
 | `DOTCOMPB-7527` | Story | Dash Hudson Module Updates — UGC carousel style overrides   | **MERGED** (PR #20424, 2026-04-06). CSS `:deep()` overrides, configurable SDK props, event tracking fix, ADA. 118 tests. See §3.13. |
-| `DOTCOMPB-7768` | Bug   | (TBD — PR open)                                              | **PR #20335 OPEN**.                                                     |
+| `DOTCOMPB-7768` | Bug   | Mobile nav dropdowns not scrollable with subcopy text        | **MERGED** (2026-04-08, JIRA: Finalizada). PR #20335.                  |
+| `DOTCOMPB-7903` | Bug   | Fix Shop All link not tappable on mobile devices             | **IN PROGRESS** (2026-04-08). `100vh` → `100dvh` fix + removed no-op `env(safe-area-inset-bottom)`. PR #20481 OPEN. See §3.14. |
+| `DOTCOMPB-7886` | Story | Go to services page when clicking location                   | **IN PROGRESS** (2026-04-08). Roam node created. Not yet implemented.  |
+| `DOTCOMPB-7466` | Story | Shade Shop Page Redesign                                     | **IN PROGRESS** (2026-04-08). Roam node created. Not yet implemented.  |
 | DashHudson Research | Research | Platform research + per-location gallery integration plan    | **COMPLETE** (2026-04-06). Full platform analysis documented. Roam node: `2026-04-06-dashhudson_research.org`. |
 
 ### 2.3 Key Architectural Decisions (Session-Wide)
@@ -476,6 +479,7 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 71. **(2026-04-06)** **Conditional `aria-labelledby` for slotted headings** — When a heading `id` is in a slot (defined by parent), use `:aria-labelledby="showTitle ? 'ugc-section-title' : null"` on the component root. Vue removes the attribute when value is `null`. Prevents dangling reference when heading hasn't rendered yet.
 72. **(2026-04-06)** **`isFrontEndEvent: true` is explicitly passed** — Despite `segmentTracking.js` auto-adding it, the team convention (validated across HcbLocationPageV2, Services, FAQs, Reviews, SiteNav) is to explicitly include `{ isFrontEndEvent: true }` in `trackMREvent` properties. JIRA specs also list it. Follow the convention.
 73. **(2026-04-06)** **Scope `document.querySelector` to component ref** — When polling for SDK-injected DOM via `waitForElement`, use `container.querySelector()` (scoped to `this.$refs`) not `document.querySelector()`. Prevents wrong element match when multiple widget instances exist. — Decision #22 said "No per-location gallery API." Research confirms Dash Social (rebranded from DashHudson Jan 2025) HAS a Gallery API: `GET /brands/{brand_id}/galleries/{gallery_id}/media`. Per-location segmentation is possible via one gallery per location with a `gallery_id` stored in the location data model (new Tophat field `dashHudsonGalleryId`). Two implementation paths: Option A (widget — client-side, `DashHudsonWidget` component, separate section) or Option B (API — server-side fetch, merge into `galleryImages`, appears in hero +X count and photos page masonry). Full research and plan in session appendix "DASH HUDSON / DASH SOCIAL DEEP RESEARCH".
+74. **(2026-04-08, SUPERSEDES decisions #46, #47, #49)** **`100dvh` for mobile nav, not `100vh` + `env(safe-area-inset-bottom)`** — `100vh` on iOS includes area behind URL bar, Dynamic Island, and home indicator — content overflows past the visible viewport. `100dvh` (Dynamic Viewport Height) matches the actual visible area. The `env(safe-area-inset-bottom)` padding hacks in SiteNavShopContent and SiteNavMobileWrapper were no-ops because the site's viewport meta tag lacks `viewport-fit=cover` (without it, `env()` always resolves to `0px`). Fix: `SiteNavMobileV2.vue` `height: 100vh` → `height: 100dvh`. Removed all `padding-bottom: calc(Nem + env(safe-area-inset-bottom))` from ShopContent and MobileWrapper. Browser support: iOS Safari 15.4+, Chrome 108+, Firefox 101+. Branch: `DOTCOMPB-7903`.
 
 ### 2.4 PR Review Resolutions (DOTCOMPB-7289)
 
@@ -483,13 +487,14 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 
 ### 2.5 Pending Work
 
-*   **DOTCOMPB-7712** — **PR #20423 OPEN** (2026-04-06). In code review. 81 tests, 3 code review rounds. Branch `DOTCOMPB-7712`.
-*   **DOTCOMPB-7742** — **PR #20368 OPEN** (2026-03-30). Cookie-based service pre-selection. In code review. Roam node `2026-03-27-120100-dotcompb_7742.org`.
-*   **DOTCOMPB-7768** — **PR #20335 OPEN**. Details TBD.
-*   **DOTCOMPB-7717 cleanup** — MarketingBanner dead workaround removal. Plan in §3.8. Andris's PR #20229 still OPEN. Our cleanup not implemented.
-*   **DOTCOMPB-7557** — ADA: Cannot tab to Book Services on desktop. Roam node exists, not started.
+*   **DOTCOMPB-7903** — PR #20481 OPEN (2026-04-08). `100dvh` fix for mobile nav viewport. Branch `DOTCOMPB-7903`. Changes staged, not yet committed.
+*   **DOTCOMPB-7712** — PR #20423 OPEN. In Code Review (JIRA). Branch `DOTCOMPB-7712`. 81 tests, 3 code review rounds.
+*   **DOTCOMPB-7742** — PR #20368. In Test (JIRA: Pruebas). Cookie-based service pre-selection.
+*   **DOTCOMPB-7886** — In Progress (JIRA). Go to services page when clicking location. Roam node created, not yet implemented.
+*   **DOTCOMPB-7466** — In Progress (JIRA). Shade Shop Page Redesign. Roam node created, not yet implemented.
+*   **DOTCOMPB-7717 cleanup** — MarketingBanner dead workaround removal. Plan in §3.8. Not yet implemented.
 *   **DOTCOMPB-7555_full_width** — Parked carousel work. Activate only when business confirms desktop banner carousel for location hero.
-*   **DashHudson Integration** — **RESEARCH COMPLETE** (2026-04-06). Validation checklist (12 items) in roam node Part 8. Need PM/stakeholder input. Recommended: A0 first → A2/A3 → Option B. No code until validation done.
+*   **DashHudson Integration** — **RESEARCH COMPLETE** (2026-04-06). Awaiting PM input on open questions.
 
 ---
 
@@ -1139,6 +1144,27 @@ HcbLocationPageV2 (thin parent — data loading + router-view)
 
 ---
 
+### 3.14 DOTCOMPB-7903: Fix Shop All Link Not Tappable on Mobile Devices
+
+**Created:** 2026-04-08 | **Last updated:** 2026-04-08
+**Branch:** `DOTCOMPB-7903`
+**PR:** #20481 | **Status:** OPEN. Changes staged, PR description updated.
+
+**Root cause:** `SiteNavMobileV2.vue` used `height: 100vh`, which on iOS includes the area behind the URL bar, Dynamic Island, and home indicator. The flex container was taller than the visible viewport, pushing bottom nav items (Shop All) behind the home indicator into an untappable zone. Additionally, `SiteNavShopContent` and `SiteNavMobileWrapper` had `padding-bottom: calc(Nem + env(safe-area-inset-bottom))` — these were no-ops because the site's viewport meta tag lacks `viewport-fit=cover`, so `env(safe-area-inset-bottom)` always resolved to `0px`.
+
+**Fix (3 files):**
+- **`SiteNavMobileV2.vue`** — `height: 100vh` → `height: 100dvh` (the actual fix)
+- **`SiteNavShopContent.vue`** — Removed `padding-bottom: calc(4em + env(safe-area-inset-bottom))` from `@media mq-desktop-md-less` and `@media mq-mobile`
+- **`SiteNavMobileWrapper.vue`** — Removed `padding-bottom: calc(4em + env(safe-area-inset-bottom))` from `.mobile-wrapper`
+
+**Key Decision:**
+
+| Decision | Date | Rationale |
+|---|---|---|
+| `100dvh` over `viewport-fit=cover` + `env()` | 2026-04-08 | Adding `viewport-fit=cover` to the viewport meta is a site-wide change affecting all pages. `100dvh` solves the container sizing problem without global side effects. `dvh` support: iOS Safari 15.4+, Chrome 108+, Firefox 101+. |
+
+---
+
 ## SECTION 4: FILE INDEX
 
 > Quick reference for all files created or modified during this session.
@@ -1235,6 +1261,8 @@ HcbLocationPageV2 (thin parent — data loading + router-view)
 | `~/.brain.d/roam-nodes/madison_reed/2026-03-30-150000-dotcompb_7712.org` | DOTCOMPB-7712 (photos page + gallery) |
 | `~/.brain.d/roam-nodes/madison_reed/2026-04-06-dashhudson_research.org` | DashHudson / Dash Social platform research (8-part doc, CDN inventory, widget internals, API reference, implementation plans) |
 | `~/.brain.d/roam-nodes/madison_reed/2026-04-06-160000-dotcompb_7527.org` | DOTCOMPB-7527 (Dash Hudson UGC carousel overrides) |
+| `~/.brain.d/roam-nodes/madison_reed/2026-04-08-120000-dotcompb_7886.org` | DOTCOMPB-7886 |
+| `~/.brain.d/roam-nodes/madison_reed/2026-04-08-120100-dotcompb_7466.org` | DOTCOMPB-7466 |
 | `~/.brain.d/roam-nodes/2025-11-18-index_madison_reed.org` | Sprint Board Index |
 
 ### Session & Directives
@@ -1250,31 +1278,29 @@ HcbLocationPageV2 (thin parent — data loading + router-view)
 
 > **Start here when resuming.** This section captures the most recent work and immediate next steps.
 
-### What was done last (2026-04-06)
+### What was done last (2026-04-08)
 
-*   **Session reset** — Bulk status update across all tickets. Verified PR/merge state via GitHub API for all 14 tracked tickets.
-*   **Major milestone: 9 of 14 tickets now MERGED** — 7289, 7290, 7556, 7463 (+ bug fixes PR #20309, font size PR #20294), 7652, 7555, 7749, 7763, 7527 all merged to master.
-*   **DOTCOMPB-7712 committed and PR created** — Commit `6d5791497e6`, PR #20423 OPEN. Photos page with +X tag on hero.
-*   **DOTCOMPB-7527 merged** — PR #20424. Dash Hudson UGC carousel overrides.
+*   **DOTCOMPB-7903 bug fix** — Diagnosed and fixed mobile nav viewport issue. Root cause: `100vh` on iOS includes URL bar/home indicator area. Fix: `SiteNavMobileV2.vue` `100vh` → `100dvh`. Removed no-op `env(safe-area-inset-bottom)` padding from SiteNavShopContent and SiteNavMobileWrapper (viewport meta lacks `viewport-fit=cover` so `env()` always returned `0px`). PR #20481 description updated. Changes staged on branch `DOTCOMPB-7903`, not committed (user commits manually).
+*   **Roam node creation** — Created nodes for DOTCOMPB-7886 (1 AC, location click → services page) and DOTCOMPB-7466 (31 ACs, 5 event tracking entries, Shade Shop Page Redesign). Both added to index in IN PROGRESS lane.
+*   **Full index JIRA sync** — Audited all 32 tickets in the Sprint Board index against live JIRA status. Found 14 items in wrong lanes. Moved 9 tickets to ALL DONE (7889, 7527, 7463, 7556, 7768, 7652, 7555, 7289, 7557). Moved 3 to IN TEST (6853, 7742, 7763). Fixed 7763's broken `id:` link in Sprint Board (should be `file:` link) + added missing BACKLOG entry. BACKLOG now 69% [23/33]. Flagged DOTCOMPB-6571 and DOTCOMPB-7290 as JIRA-inaccessible.
 
 ### Pending
 
-*   **DOTCOMPB-7712** — PR #20423 OPEN. In code review. Branch `DOTCOMPB-7712`.
-*   **DOTCOMPB-7742** — PR #20368 OPEN. Cookie-based service pre-selection. In code review.
-*   **DOTCOMPB-7768** — PR #20335 OPEN. Details TBD.
-*   **DOTCOMPB-7717 cleanup** — MarketingBanner dead workaround removal. Not yet implemented. Plan in §3.8.
-*   **DOTCOMPB-7557** — ADA: Cannot tab to Book Services. Not started. Roam node exists.
-*   **DOTCOMPB-7555_full_width** — Parked carousel work. Business confirmation needed.
-*   **DashHudson Integration** — Research complete. Awaiting PM input on open questions.
+*   **DOTCOMPB-7903** — Changes staged, not committed. PR #20481 description updated. User needs to commit and push.
+*   **DOTCOMPB-7712** — PR #20423 OPEN. In Code Review. Branch `DOTCOMPB-7712`. 81 tests.
+*   **DOTCOMPB-7742** — In Test (JIRA: Pruebas). PR #20368.
+*   **DOTCOMPB-7886** — In Progress. Roam node created, not yet implemented.
+*   **DOTCOMPB-7466** — In Progress. Roam node created (31 ACs), not yet implemented.
+*   **DOTCOMPB-7717 cleanup** — Not yet implemented. Plan in §3.8.
+*   **DashHudson Integration** — Research complete. Awaiting PM input.
 
 ### Where to resume
 
+If user wants to **finish DOTCOMPB-7903**: Changes staged on branch. Commit and push. PR #20481 exists with updated description.
+If user wants to **start DOTCOMPB-7886**: Read roam node `2026-04-08-120000-dotcompb_7886.org`. 1 AC — route location click to services screen.
+If user wants to **start DOTCOMPB-7466**: Read roam node `2026-04-08-120100-dotcompb_7466.org`. 31 ACs, Figma link in RELEVANT LINKs. Major feature — plan implementation before coding.
 If user wants to **check DOTCOMPB-7712 PR**: Branch `DOTCOMPB-7712`. PR #20423. Roam node `2026-03-30-150000-dotcompb_7712.org`.
-If user wants to **check DOTCOMPB-7742 PR**: PR #20368. Roam node `2026-03-27-120100-dotcompb_7742.org`.
-If user switches to **DOTCOMPB-7768**: PR #20335 is open. Check if roam node exists.
 If user wants **DOTCOMPB-7717 cleanup**: Follow §3.8 step-by-step plan.
-If user wants **DOTCOMPB-7557**: Create implementation plan from roam node `2026-03-10-122138-dotcompb_7557.org`.
-If user wants **DashHudson per-location work**: Run validation checklist (roam node Part 8). Option A0 as MVP.
 If user asks for a **new task**: Check Section 2.5 (Pending Work).
 
 <!-- DESCRIPTION AND USER CONTEXT END -->

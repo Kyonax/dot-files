@@ -191,6 +191,11 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 ;; (unpin! t)
 #+end_src
 
+*** ACE-JUMP-MODE
+#+begin_src emacs-lisp :tangle packages.el
+(package! ace-jump-mode)
+#+end_src
+
 *** BEACON
 #+begin_src emacs-lisp :tangle packages.el
 (package! beacon)
@@ -216,6 +221,11 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 *** CLIPPY
 #+begin_src emacs-lisp :tangle packages.el
 (package! clippy)
+#+end_src
+
+*** CRYSTAL-POINT
+#+begin_src emacs-lisp :tangle packages.el
+(package! crystal-point)
 #+end_src
 
 *** CORFU
