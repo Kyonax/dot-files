@@ -400,8 +400,8 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 | `DOTCOMPB-7527` | Story | Dash Hudson Module Updates — UGC carousel style overrides   | **MERGED** (PR #20424, 2026-04-06). CSS `:deep()` overrides, configurable SDK props, event tracking fix, ADA. 118 tests. See §3.13. |
 | `DOTCOMPB-7768` | Bug   | Mobile nav dropdowns not scrollable with subcopy text        | **MERGED** (2026-04-08, JIRA: Finalizada). PR #20335.                  |
 | `DOTCOMPB-7903` | Bug   | Fix Shop All link not tappable on mobile devices             | **IN PROGRESS** (2026-04-08). `100vh` → `100dvh` fix + removed no-op `env(safe-area-inset-bottom)`. PR #20481 OPEN. See §3.14. |
-| `DOTCOMPB-7886` | Story | Go to services page when clicking location                   | **IN PROGRESS** (2026-04-08). Roam node created. Not yet implemented.  |
-| `DOTCOMPB-7466` | Story | Shade Shop Page Redesign                                     | **IN PROGRESS** (2026-04-08). Roam node created. Not yet implemented.  |
+| `DOTCOMPB-7886` | Story | Go to services page when clicking location                   | **IMPLEMENTED** (2026-04-10). Included in DOTCOMPB-7466 branch. LocationCard + LocationsDirectory redirect when `BookingFlowSiteRevolution` experiment B. 2 tests. See §3.15. |
+| `DOTCOMPB-7466` | Story | Shade Shop Page Redesign                                     | **IN PROGRESS** (2026-04-10). All phases done + sections refactor + CMS Data Tool integration (`sr_shop_categories_config`). 67 tests. Branch `DOTCOMPB-7466`. Staged changes pending commit. See §3.15. |
 | DashHudson Research | Research | Platform research + per-location gallery integration plan    | **COMPLETE** (2026-04-06). Full platform analysis documented. Roam node: `2026-04-06-dashhudson_research.org`. |
 
 ### 2.3 Key Architectural Decisions (Session-Wide)
@@ -477,9 +477,13 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 69. **(2026-04-05)** **DashHudson per-location gallery integration — REVISES decision #22**
 70. **(2026-04-06)** **`:deep()` for third-party SDK DOM overrides** — When the Dash Hudson (or any third-party) SDK injects its own DOM inside a Vue component, use scoped `:deep()` selectors to override styles. Target SDK class names (`.aspect-ratio-box`, `.ls-slider-item`) directly. Pattern validated on `DashHudsonScriptInner.vue` under `&.version-2`.
 71. **(2026-04-06)** **Conditional `aria-labelledby` for slotted headings** — When a heading `id` is in a slot (defined by parent), use `:aria-labelledby="showTitle ? 'ugc-section-title' : null"` on the component root. Vue removes the attribute when value is `null`. Prevents dangling reference when heading hasn't rendered yet.
-72. **(2026-04-06)** **`isFrontEndEvent: true` is explicitly passed** — Despite `segmentTracking.js` auto-adding it, the team convention (validated across HcbLocationPageV2, Services, FAQs, Reviews, SiteNav) is to explicitly include `{ isFrontEndEvent: true }` in `trackMREvent` properties. JIRA specs also list it. Follow the convention.
+72. **(2026-04-06, CORRECTED 2026-04-10)** **~~`isFrontEndEvent: true` is explicitly passed~~ → DO NOT pass `isFrontEndEvent: true`** — `segmentTracking.js` (`trackSegmentEvent`) auto-adds it for all frontend events. Passing manually is redundant. Coding standard rule in `.claude/rules/coding-standards.md` explicitly forbids it. DOTCOMPB-7466 removed it from all 4 tracking calls.
 73. **(2026-04-06)** **Scope `document.querySelector` to component ref** — When polling for SDK-injected DOM via `waitForElement`, use `container.querySelector()` (scoped to `this.$refs`) not `document.querySelector()`. Prevents wrong element match when multiple widget instances exist. — Decision #22 said "No per-location gallery API." Research confirms Dash Social (rebranded from DashHudson Jan 2025) HAS a Gallery API: `GET /brands/{brand_id}/galleries/{gallery_id}/media`. Per-location segmentation is possible via one gallery per location with a `gallery_id` stored in the location data model (new Tophat field `dashHudsonGalleryId`). Two implementation paths: Option A (widget — client-side, `DashHudsonWidget` component, separate section) or Option B (API — server-side fetch, merge into `galleryImages`, appears in hero +X count and photos page masonry). Full research and plan in session appendix "DASH HUDSON / DASH SOCIAL DEEP RESEARCH".
-74. **(2026-04-08, SUPERSEDES decisions #46, #47, #49)** **`100dvh` for mobile nav, not `100vh` + `env(safe-area-inset-bottom)`** — `100vh` on iOS includes area behind URL bar, Dynamic Island, and home indicator — content overflows past the visible viewport. `100dvh` (Dynamic Viewport Height) matches the actual visible area. The `env(safe-area-inset-bottom)` padding hacks in SiteNavShopContent and SiteNavMobileWrapper were no-ops because the site's viewport meta tag lacks `viewport-fit=cover` (without it, `env()` always resolves to `0px`). Fix: `SiteNavMobileV2.vue` `height: 100vh` → `height: 100dvh`. Removed all `padding-bottom: calc(Nem + env(safe-area-inset-bottom))` from ShopContent and MobileWrapper. Browser support: iOS Safari 15.4+, Chrome 108+, Firefox 101+. Branch: `DOTCOMPB-7903`.
+74. **(2026-04-08, SUPERSEDES decisions #46, #47, #49)** **`100dvh` for mobile nav, not `100vh` + `env(safe-area-inset-bottom)`**
+75. **(2026-04-10)** **Experiment-gated redirect inside existing component (not new routes)** — When adding a redesigned variant of an existing page (e.g., Shade Shop replacing `ShopProductCategory` for color family keys), DO NOT create new Vue Router routes. Instead, add a `v-if` inside the existing component that checks the experiment flag and renders the new component. This follows the established `Splitter.vue` pattern. The existing CMS pipeline, Pug templates, and route definitions remain untouched. The redirect is a `defineAsyncComponent` import + 3 computed properties + 1 template `v-if`. Validated: `ShopProductCategory` → `ShadeShopPage` for `ShadeShopSiteRevolution` experiment.
+76. **(2026-04-10)** **Experiment-gated components have no SSR** — `this.experiments` (from `globalMixins.data()`) is `{}` during SSR and populated in `mounted()` via `window.experiments`. Experiment B components only render after client `mounted()` — `serverPrefetch()` never runs on them. Data loading must be in `created()` only. Brief V1→V2 flash is the established pattern across all experiment splitters.
+77. **(2026-04-10)** **`useScroll` composable for scroll-triggered UI (not `position: sticky`, not polling)** — The codebase has `website/src/vuescripts/composables/useScroll.js` — modern, reactive, 200ms throttled with passive listeners, SSR-safe. Use for sticky headers, scroll-triggered animations, etc. The codebase avoids CSS `position: sticky`. `StickyWrap` (polling-based) exists but `useScroll` is recommended for new code.
+78. **(2026-04-10, CORRECTED 2026-04-10)** **~~Coverage data is boolean flags~~ → `grayCoverage` is a single string field** — Runtime API validation confirmed `grayCoverage` is a single string: `"100%"`, `"Gray Blending"`, `"Knockout"`, `"No Gray"`, `"Superior"`, or `undefined`. The boolean flags (`grayCoverageGauranteed`, `noGrayCoverage`, `lowGrayProduct`) exist in PAT field configs but are NOT the source for V2 shop API data. Filter logic uses direct string comparison. — `100vh` on iOS includes area behind URL bar, Dynamic Island, and home indicator — content overflows past the visible viewport. `100dvh` (Dynamic Viewport Height) matches the actual visible area. The `env(safe-area-inset-bottom)` padding hacks in SiteNavShopContent and SiteNavMobileWrapper were no-ops because the site's viewport meta tag lacks `viewport-fit=cover` (without it, `env()` always resolves to `0px`). Fix: `SiteNavMobileV2.vue` `height: 100vh` → `height: 100dvh`. Removed all `padding-bottom: calc(Nem + env(safe-area-inset-bottom))` from ShopContent and MobileWrapper. Browser support: iOS Safari 15.4+, Chrome 108+, Firefox 101+. Branch: `DOTCOMPB-7903`.
 
 ### 2.4 PR Review Resolutions (DOTCOMPB-7289)
 
@@ -490,8 +494,8 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 *   **DOTCOMPB-7903** — PR #20481 OPEN (2026-04-08). `100dvh` fix for mobile nav viewport. Branch `DOTCOMPB-7903`. Changes staged, not yet committed.
 *   **DOTCOMPB-7712** — PR #20423 OPEN. In Code Review (JIRA). Branch `DOTCOMPB-7712`. 81 tests, 3 code review rounds.
 *   **DOTCOMPB-7742** — PR #20368. In Test (JIRA: Pruebas). Cookie-based service pre-selection.
-*   **DOTCOMPB-7886** — In Progress (JIRA). Go to services page when clicking location. Roam node created, not yet implemented.
-*   **DOTCOMPB-7466** — In Progress (JIRA). Shade Shop Page Redesign. Roam node created, not yet implemented.
+*   **DOTCOMPB-7886** — Implemented (2026-04-10). Included in DOTCOMPB-7466 branch. LocationCard + LocationsDirectory experiment redirect. 2 tests.
+*   **DOTCOMPB-7466** — Implementation complete + sections refactor + CMS Data Tool (2026-04-10). 67 tests. Branch `DOTCOMPB-7466`. Commit 1 pushed (`f42de1b`). Commit 2 staged (sections + CMS). Needs: commit, PR creation, QA. See §3.15.
 *   **DOTCOMPB-7717 cleanup** — MarketingBanner dead workaround removal. Plan in §3.8. Not yet implemented.
 *   **DOTCOMPB-7555_full_width** — Parked carousel work. Activate only when business confirms desktop banner carousel for location hero.
 *   **DashHudson Integration** — **RESEARCH COMPLETE** (2026-04-06). Awaiting PM input on open questions.
@@ -1165,6 +1169,89 @@ HcbLocationPageV2 (thin parent — data loading + router-view)
 
 ---
 
+### 3.15 DOTCOMPB-7466: Shade Shop Page Redesign
+
+**Created:** 2026-04-08 | **Last updated:** 2026-04-10
+**Branch:** `DOTCOMPB-7466`
+**Status:** Implementation complete. 67 tests passing. Commit 1 pushed (`f42de1b`), Commit 2 staged (sections + CMS). Ready for commit + PR.
+**Roam node:** `~/.brain.d/roam-nodes/madison_reed/2026-04-08-120100-dotcompb_7466.org`
+
+**Architecture:**
+- *Route:* New route `/shop/:colorFamily(brown|blonde|red|black)` in `Shop/routes.js` before the generic `:keyA` catch-all. No changes to `ShopProductCategory.vue`. CMS pipeline untouched.
+- *Data:* V2 shop API (`shopCategoriesForKeysV2`). `grayCoverage` is a single string field (values: `"100%"`, `"Gray Blending"`, `"Knockout"`, `"No Gray"`, `"Superior"`). ALL 7 product types displayed as sections (not filtered).
+- *CMS Data Tool:* Section headers (title, description, image) from `sr_shop_categories_config` (Data Object ID: 49). Fetched via `dataToolSvc.getData()` in `Promise.all` with V2 shop API. Falls back to API `product_type_display_name` when missing.
+- *Product type sections:* 7 sections: color_kit, colorwonder, root_perfection, gray_escape, root_touch_up, gloss, hair_masks. Each with header (title + description + image), product grid, SEE MORE/LESS toggle (responsive: 10 mobile, 14 desktop).
+- *Filter logic:* AND (`every`) — single filter exact match, 2+ filters → zero results → empty state + closest shades (OR via `some`, sorted by rarity). Filters apply within each section; empty sections hidden.
+- *Sticky header:* CSS `position: sticky` with `top: var(--mr-navigation-height)` (BookingFlow pattern, not `useScroll`).
+- *Breadcrumbs:* Existing `Breadcrumbs` component via Vuex `global/setBreadcrumbs`, v3 variant auto-selects when `RCC Site Revolution` experiment is B.
+
+**Component tree:**
+```
+ShadeShopPage/
+├── ShadeShopPage.vue       — Page: quiz banner, H1, sections (header + grid + toggle), empty state, skeleton
+├── ShadeShopPage.test.js   — 52 tests
+├── index.js
+└── components/
+    ├── FilterButtons.vue    — Reusable toggle filter buttons
+    └── FilterButtons.test.js — 15 tests
+```
+
+**Key decisions (2026-04-10):**
+| Decision | Date | Rationale |
+|---|---|---|
+| Route-level swap, not experiment gate in component | 2026-04-10 | Avoids SSR flash — Vue Router resolves directly |
+| `grayCoverage` is a string, not boolean flags | 2026-04-10 | Runtime API validation confirmed |
+| AND filter logic with closest shades fallback | 2026-04-10 | Multi-select triggers empty state by design |
+| CSS `position: sticky`, not `useScroll` composable | 2026-04-10 | Matches BookingFlowSiteRevolution pattern |
+| Card markup inline, not separate component | 2026-04-10 | Not complex enough for extraction |
+| `COVERAGE_LABELS` derived from `COVERAGE_OPTIONS` | 2026-04-10 | Single source of truth |
+| No meta overrides in component | 2026-04-10 | Handled by Tophat/CMS |
+| Breadcrumb v3 requires `RCC Site Revolution` experiment B | 2026-04-10 | Deployment dependency documented in roam node |
+| All 7 product types as sections, not just color_kit + colorwonder | 2026-04-10 | Business requirement — match previous design's product type grouping |
+| CMS Data Tool `sr_shop_categories_config` for section headers | 2026-04-10 | Titles, descriptions, images managed in Tophat — not hardcoded |
+| SEE MORE/LESS per section (10 mobile, 14 desktop) | 2026-04-10 | Responsive visible count prevents overwhelming grids |
+| Section header `v-if` guard for all three fields | 2026-04-10 | Hides header entirely when title + description + image all missing |
+| `flushPromises` in tests (not `$nextTick`) | 2026-04-10 | `Promise.all` in `created()` needs extra microtask ticks to resolve |
+
+**CMS Data Tool dependency (CRITICAL):**
+- `mixinKey: "sr_shop_categories_config"` (Data Object ID: 49)
+- Must be created/published in each Tophat environment before QA
+- 7 entries keyed by `productType` with `title`, `description`, `image` fields
+- Images must be transparent PNGs (no background, no baked-in shadow — CSS adds `drop-shadow`)
+- Full verification checklist in roam node under DEPLOYMENT NOTEs
+
+**Files created:**
+- `website/src/vuescripts/components/Shop/ShadeShopPage/ShadeShopPage.vue`
+- `website/src/vuescripts/components/Shop/ShadeShopPage/ShadeShopPage.test.js`
+- `website/src/vuescripts/components/Shop/ShadeShopPage/index.js`
+- `website/src/vuescripts/components/Shop/ShadeShopPage/components/FilterButtons.vue`
+- `website/src/vuescripts/components/Shop/ShadeShopPage/components/FilterButtons.test.js`
+- `website/src/assets/svg-icons/close-thin.svg`
+
+**Files modified:**
+- `website/src/vuescripts/components/Shop/routes.js` — added 1 route
+- `website/src/vuescripts/components/ColorBarLocationSectionV1/LocationCard.vue` — DOTCOMPB-7886 experiment redirect
+- `website/src/vuescripts/components/ColorBarLocationSectionV1/LocationCard.test.js` — 2 new experiment tests
+- `website/src/vuescripts/components/ColorBarMapSection/LocationsDirectory.vue` — DOTCOMPB-7886 experiment redirect
+
+**DOTCOMPB-7886 (included in same branch):**
+- `LocationCard.vue`: `detailsUrl` returns `/colorbar/booking/{code}/services` when `BookingFlowSiteRevolution` experiment B, else `/colorbar/locations/{code}`
+- `LocationsDirectory.vue`: `getLocationUrl()` method + `isBookingFlowExperiment` computed for same conditional redirect
+
+**Commits:**
+1. `f42de1b` — `feat: Shade Shop Page Redesign + Location click redirect to services` (pushed)
+2. Staged — `feat: Product type sections with CMS Data Tool integration` (pending commit)
+
+**PR:** Title `[DOTCOMPB-7466]: Shade Shop Page Redesign + Location Click Redirect`. Labels: `DOTCOM TEAM`, `Pending Code Review`. Full PR body + commit message documented in roam node.
+
+**AI review bot responses (2026-04-10):**
+- *Missing `props` on route:* Not valid — `keys` prop populated by CMS/SSR pipeline, not Vue Router `props: true`.
+- *AND filter logic bug:* Not valid — AND producing zero results on multi-select is by design; empty state + closest shades fallback is the specified behavior.
+
+**Tests:** 67 total (52 ShadeShopPage + 15 FilterButtons + 2 LocationCard experiment tests).
+
+---
+
 ## SECTION 4: FILE INDEX
 
 > Quick reference for all files created or modified during this session.
@@ -1262,7 +1349,16 @@ HcbLocationPageV2 (thin parent — data loading + router-view)
 | `~/.brain.d/roam-nodes/madison_reed/2026-04-06-dashhudson_research.org` | DashHudson / Dash Social platform research (8-part doc, CDN inventory, widget internals, API reference, implementation plans) |
 | `~/.brain.d/roam-nodes/madison_reed/2026-04-06-160000-dotcompb_7527.org` | DOTCOMPB-7527 (Dash Hudson UGC carousel overrides) |
 | `~/.brain.d/roam-nodes/madison_reed/2026-04-08-120000-dotcompb_7886.org` | DOTCOMPB-7886 |
-| `~/.brain.d/roam-nodes/madison_reed/2026-04-08-120100-dotcompb_7466.org` | DOTCOMPB-7466 |
+| `~/.brain.d/roam-nodes/madison_reed/2026-04-08-120100-dotcompb_7466.org` | DOTCOMPB-7466 (31 ACs, 10 mockups, data pipeline investigation, CMS architecture, experiment design, 8-phase plan) |
+| `~/.brain.d/roam-nodes/madison_reed/assets/mobile_shop:brown*.jpg` (5 files) | DOTCOMPB-7466 Figma mockups (mobile) |
+| `~/.brain.d/roam-nodes/madison_reed/assets/desktop_shop*.png` (5 files) | DOTCOMPB-7466 Figma mockups (desktop) |
+| `website/src/vuescripts/components/Shop/ShadeShopPage/*` (3 files + components/) | DOTCOMPB-7466 (page, index, tests) |
+| `website/src/vuescripts/components/Shop/ShadeShopPage/components/*` (2 files) | DOTCOMPB-7466 (FilterButtons + tests) |
+| `website/src/assets/svg-icons/close-thin.svg` | DOTCOMPB-7466 (dismiss icon for filter buttons) |
+| `website/src/vuescripts/components/Shop/routes.js` | DOTCOMPB-7466 (added shade shop route) |
+| `website/src/vuescripts/components/ColorBarLocationSectionV1/LocationCard.vue` | DOTCOMPB-7886 (experiment redirect) |
+| `website/src/vuescripts/components/ColorBarLocationSectionV1/LocationCard.test.js` | DOTCOMPB-7886 (2 experiment tests) |
+| `website/src/vuescripts/components/ColorBarMapSection/LocationsDirectory.vue` | DOTCOMPB-7886 (experiment redirect) |
 | `~/.brain.d/roam-nodes/2025-11-18-index_madison_reed.org` | Sprint Board Index |
 
 ### Session & Directives
@@ -1278,28 +1374,31 @@ HcbLocationPageV2 (thin parent — data loading + router-view)
 
 > **Start here when resuming.** This section captures the most recent work and immediate next steps.
 
-### What was done last (2026-04-08)
+### What was done last (2026-04-10)
 
-*   **DOTCOMPB-7903 bug fix** — Diagnosed and fixed mobile nav viewport issue. Root cause: `100vh` on iOS includes URL bar/home indicator area. Fix: `SiteNavMobileV2.vue` `100vh` → `100dvh`. Removed no-op `env(safe-area-inset-bottom)` padding from SiteNavShopContent and SiteNavMobileWrapper (viewport meta lacks `viewport-fit=cover` so `env()` always returned `0px`). PR #20481 description updated. Changes staged on branch `DOTCOMPB-7903`, not committed (user commits manually).
-*   **Roam node creation** — Created nodes for DOTCOMPB-7886 (1 AC, location click → services page) and DOTCOMPB-7466 (31 ACs, 5 event tracking entries, Shade Shop Page Redesign). Both added to index in IN PROGRESS lane.
-*   **Full index JIRA sync** — Audited all 32 tickets in the Sprint Board index against live JIRA status. Found 14 items in wrong lanes. Moved 9 tickets to ALL DONE (7889, 7527, 7463, 7556, 7768, 7652, 7555, 7289, 7557). Moved 3 to IN TEST (6853, 7742, 7763). Fixed 7763's broken `id:` link in Sprint Board (should be `file:` link) + added missing BACKLOG entry. BACKLOG now 69% [23/33]. Flagged DOTCOMPB-6571 and DOTCOMPB-7290 as JIRA-inaccessible.
+*   **DOTCOMPB-7466 product type sections refactor** — Expanded from 2 product types (color_kit + colorwonder) to ALL 7 product types as separate sections. Each section has a 2-column header (title + description | promotional image) pulled from CMS Data Tool `sr_shop_categories_config`.
+*   **CMS Data Tool integration** — Created `sr_shop_categories_config` (Data Object ID: 49) in Tophat. Component fetches via `dataToolSvc.getData()` in `Promise.all` with V2 shop API. Lookup map keyed by `productType`. Falls back to API display name when CMS missing.
+*   **SEE MORE / SEE LESS toggle** — Per-section expand/collapse with responsive visible count (10 mobile via `MOBILE_VISIBLE_COUNT`, 14 desktop via `DESKTOP_VISIBLE_COUNT`). `MrBtn` with `aria-expanded`.
+*   **Section header `v-if` guard** — `.section-header` hidden when `displayName`, `description`, and `image` are all missing. `h2` also guarded individually.
+*   **Test updates** — 67 tests total (52 ShadeShopPage + 15 FilterButtons). Added `flushPromises` for `Promise.all` async resolution. 3 new CMS config tests (title/description usage, alt_text stripping, API fallback).
+*   **Roam node documentation** — Added CMS Data Tool deployment requirements (pre-testing checklist, image specs, verification steps), updated commit msg (2 commits), updated PR body (sections, CMS, QA expanded to 15 steps).
+*   **Code review** — `/code-review` found 1 LOW (double blank line in Stylus) — fixed. AI review bot dismissed 2 false positives (missing `props` route, AND filter logic).
 
 ### Pending
 
-*   **DOTCOMPB-7903** — Changes staged, not committed. PR #20481 description updated. User needs to commit and push.
+*   **DOTCOMPB-7466** — Commit 2 staged (sections + CMS). Needs: commit, PR creation, QA. Branch `DOTCOMPB-7466`. Deployment deps: `RCC Site Revolution` B (breadcrumbs), `sr_shop_categories_config` Data Tool (CRITICAL — must be created per environment).
+*   **DOTCOMPB-7903** — Changes staged, not committed. PR #20481 description updated. Branch `DOTCOMPB-7903`.
 *   **DOTCOMPB-7712** — PR #20423 OPEN. In Code Review. Branch `DOTCOMPB-7712`. 81 tests.
 *   **DOTCOMPB-7742** — In Test (JIRA: Pruebas). PR #20368.
-*   **DOTCOMPB-7886** — In Progress. Roam node created, not yet implemented.
-*   **DOTCOMPB-7466** — In Progress. Roam node created (31 ACs), not yet implemented.
 *   **DOTCOMPB-7717 cleanup** — Not yet implemented. Plan in §3.8.
 *   **DashHudson Integration** — Research complete. Awaiting PM input.
 
 ### Where to resume
 
-If user wants to **finish DOTCOMPB-7903**: Changes staged on branch. Commit and push. PR #20481 exists with updated description.
-If user wants to **start DOTCOMPB-7886**: Read roam node `2026-04-08-120000-dotcompb_7886.org`. 1 AC — route location click to services screen.
-If user wants to **start DOTCOMPB-7466**: Read roam node `2026-04-08-120100-dotcompb_7466.org`. 31 ACs, Figma link in RELEVANT LINKs. Major feature — plan implementation before coding.
-If user wants to **check DOTCOMPB-7712 PR**: Branch `DOTCOMPB-7712`. PR #20423. Roam node `2026-03-30-150000-dotcompb_7712.org`.
+If user wants to **commit + PR for DOTCOMPB-7466**: Commit 2 is staged. Run `git commit`. Commit msg + PR body ready in roam node `2026-04-08-120100-dotcompb_7466.org` sections `COMMIT MSG` and `PR BODY`. Use `/create-pr`.
+If user wants to **refine DOTCOMPB-7466 further**: Read roam node. Components: `Shop/ShadeShopPage/ShadeShopPage.vue` + `components/FilterButtons.vue`. CMS config: `sr_shop_categories_config` (mixinKey).
+If user wants to **finish DOTCOMPB-7903**: Changes staged on branch. Commit and push. PR #20481 exists.
+If user wants to **check DOTCOMPB-7712 PR**: Branch `DOTCOMPB-7712`. PR #20423.
 If user wants **DOTCOMPB-7717 cleanup**: Follow §3.8 step-by-step plan.
 If user asks for a **new task**: Check Section 2.5 (Pending Work).
 
