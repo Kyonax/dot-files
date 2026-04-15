@@ -320,9 +320,9 @@ CMS Partials are a core content delivery mechanism in the MR platform. Understan
 
 *   **andris-guideline-13 — Track experiment exposure explicitly:** When implementing A/B experiments, explicitly call tracking when the customer sees a variant. Branching logic alone is not enough — track in `mounted` or watcher with `immediate: true`.
 
-### 1.18 Code Review Checklist (45 Rules)
+### 1.18 Code Review Checklist (45 Rules + 2 Graduated 2026-04-14)
 
-> Reference this table when running `/code-review` on any component in this session. Each row maps to the source rule. Load the referenced skill/section before reviewing. Validated on `SiteNavShopContent.vue` and `SiteNavMobileWrapper.vue` (2026-03-17) — 45/45 passed.
+> Reference this table when running `/code-review` on any component in this session. Each row maps to the source rule. Load the referenced skill/section before reviewing. Validated on `SiteNavShopContent.vue` and `SiteNavMobileWrapper.vue` (2026-03-17) — 45/45 passed. **(2026-04-14)** Added ad-23 and ad-24 — graduated from Andris PR review comments on DOTCOMPB-7466 into `code-review` skill `rules/mr-review-checklist.md`.
 
 | # | Category | Pattern | Source |
 |---|---|---|---|
@@ -401,7 +401,7 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 | `DOTCOMPB-7768` | Bug   | Mobile nav dropdowns not scrollable with subcopy text        | **MERGED** (2026-04-08, JIRA: Finalizada). PR #20335.                  |
 | `DOTCOMPB-7903` | Bug   | Fix Shop All link not tappable on mobile devices             | **IN PROGRESS** (2026-04-08). `100vh` → `100dvh` fix + removed no-op `env(safe-area-inset-bottom)`. PR #20481 OPEN. See §3.14. |
 | `DOTCOMPB-7886` | Story | Go to services page when clicking location                   | **IMPLEMENTED** (2026-04-10). Included in DOTCOMPB-7466 branch. LocationCard + LocationsDirectory redirect when `BookingFlowSiteRevolution` experiment B. 2 tests. See §3.15. |
-| `DOTCOMPB-7466` | Story | Shade Shop Page Redesign                                     | **IN PROGRESS** (2026-04-10). All phases done + sections refactor + CMS Data Tool integration (`sr_shop_categories_config`). 67 tests. Branch `DOTCOMPB-7466`. Staged changes pending commit. See §3.15. |
+| `DOTCOMPB-7466` | Story | Shade Shop Page Redesign                                     | **IN CODE REVIEW** (2026-04-14). PR #20512 OPEN. Andris reviewing. 67 tests. OR filter logic pending (Donna confirmed, Closest Shades blocked). See §3.15. |
 | DashHudson Research | Research | Platform research + per-location gallery integration plan    | **COMPLETE** (2026-04-06). Full platform analysis documented. Roam node: `2026-04-06-dashhudson_research.org`. |
 
 ### 2.3 Key Architectural Decisions (Session-Wide)
@@ -494,8 +494,8 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 *   **DOTCOMPB-7903** — PR #20481 OPEN (2026-04-08). `100dvh` fix for mobile nav viewport. Branch `DOTCOMPB-7903`. Changes staged, not yet committed.
 *   **DOTCOMPB-7712** — PR #20423 OPEN. In Code Review (JIRA). Branch `DOTCOMPB-7712`. 81 tests, 3 code review rounds.
 *   **DOTCOMPB-7742** — PR #20368. In Test (JIRA: Pruebas). Cookie-based service pre-selection.
-*   **DOTCOMPB-7886** — Implemented (2026-04-10). Included in DOTCOMPB-7466 branch. LocationCard + LocationsDirectory experiment redirect. 2 tests.
-*   **DOTCOMPB-7466** — Implementation complete + sections refactor + CMS Data Tool (2026-04-10). 67 tests. Branch `DOTCOMPB-7466`. Commit 1 pushed (`f42de1b`). Commit 2 staged (sections + CMS). Needs: commit, PR creation, QA. See §3.15.
+*   **DOTCOMPB-7886** — Implemented (2026-04-10). Included in DOTCOMPB-7466 PR #20512. LocationCard + LocationsDirectory experiment redirect. 2 tests.
+*   **DOTCOMPB-7466** — PR #20512 OPEN (2026-04-14). Andris reviewing. 2 comments addressed (ad-23 dedup method, ad-24 cache imagery). OR filter logic: code change ready, Closest Shades blocked on Donna. Commit 3 staged (Andris fixes + BEM rename + emits order). See §3.15.
 *   **DOTCOMPB-7717 cleanup** — MarketingBanner dead workaround removal. Plan in §3.8. Not yet implemented.
 *   **DOTCOMPB-7555_full_width** — Parked carousel work. Activate only when business confirms desktop banner carousel for location hero.
 *   **DashHudson Integration** — **RESEARCH COMPLETE** (2026-04-06). Awaiting PM input on open questions.
@@ -1173,7 +1173,7 @@ HcbLocationPageV2 (thin parent — data loading + router-view)
 
 **Created:** 2026-04-08 | **Last updated:** 2026-04-10
 **Branch:** `DOTCOMPB-7466`
-**Status:** Implementation complete. 67 tests passing. Commit 1 pushed (`f42de1b`), Commit 2 staged (sections + CMS). Ready for commit + PR.
+**Status:** PR #20512 OPEN. Under code review by Andris. 67 tests passing. OR filter logic pending (Donna confirmed, Closest Shades blocked).
 **Roam node:** `~/.brain.d/roam-nodes/madison_reed/2026-04-08-120100-dotcompb_7466.org`
 
 **Architecture:**
@@ -1201,7 +1201,7 @@ ShadeShopPage/
 |---|---|---|
 | Route-level swap, not experiment gate in component | 2026-04-10 | Avoids SSR flash — Vue Router resolves directly |
 | `grayCoverage` is a string, not boolean flags | 2026-04-10 | Runtime API validation confirmed |
-| AND filter logic with closest shades fallback | 2026-04-10 | Multi-select triggers empty state by design |
+| ~~AND~~ → OR filter logic | 2026-04-14 | Donna confirmed: multi-filter should show products matching ANY selected tag. AND always produced zero results (single string field). Closest Shades behavior pending Donna's clarification. |
 | CSS `position: sticky`, not `useScroll` composable | 2026-04-10 | Matches BookingFlowSiteRevolution pattern |
 | Card markup inline, not separate component | 2026-04-10 | Not complex enough for extraction |
 | `COVERAGE_LABELS` derived from `COVERAGE_OPTIONS` | 2026-04-10 | Single source of truth |
@@ -1240,13 +1240,30 @@ ShadeShopPage/
 
 **Commits:**
 1. `f42de1b` — `feat: Shade Shop Page Redesign + Location click redirect to services` (pushed)
-2. Staged — `feat: Product type sections with CMS Data Tool integration` (pending commit)
+2. Pushed — `feat: Product type sections with CMS Data Tool integration`
+3. Staged — `fix: Address PR review — extract dedup method, cache imagery lookup, fix naming` (Andris fixes + BEM rename + emits order)
 
-**PR:** Title `[DOTCOMPB-7466]: Shade Shop Page Redesign + Location Click Redirect`. Labels: `DOTCOM TEAM`, `Pending Code Review`. Full PR body + commit message documented in roam node.
+**PR:** #20512 — `[DOTCOMPB-7466]: Shade Shop Page Redesign + Location Click Redirect`. Labels: `DOTCOM TEAM`, `Pending Code Review`.
 
-**AI review bot responses (2026-04-10):**
-- *Missing `props` on route:* Not valid — `keys` prop populated by CMS/SSR pipeline, not Vue Router `props: true`.
-- *AND filter logic bug:* Not valid — AND producing zero results on multi-select is by design; empty state + closest shades fallback is the specified behavior.
+**Andris review comments (2026-04-14, PR #20512):**
+- *L305 — Repetitive dedup pattern:* Fixed — extracted `addUniqueProducts(source, target, seen)` method (ad-23)
+- *L342 — Repeated imagery lookup:* Fixed — cached `product?.imagery` into `const imagery` (ad-24)
+
+**AI review bot responses (3 total, all dismissed):**
+- *Missing `props` on route (sentry[bot]):* Not valid — `keys` prop populated by CMS/SSR pipeline, not Vue Router `props: true`
+- *AND filter logic (sentry[bot]):* Directionally correct — **(2026-04-14) Donna confirmed** filters should use OR. Change pending.
+- *SSR hydration mismatch on experiment (sentry[bot]):* Not valid — `this.experiments` populating in `mounted()` is the established pattern across all experiment splitters in the codebase
+
+**Full code review (2026-04-14, 8 parallel subagents, 84 rules):**
+- 2 implemented: Rule 6 (emits before props in FilterButtons), Rule 26 (BEM `--` → single hyphen `.shade-shop-loading`)
+- 3 skipped: Rule 31 (focus-visible on cards), ad-15 (trivial multi-line returns), sg-8 (px→rem clean conversions)
+- False positives filtered: Rule 2 (PascalCase accepted), Rule 16 (user overrode for this component), ad-16 (first-party `:deep()`), ad-23/ad-12 (card extraction — deliberate decision), sg-9 (space key on role="link"), sg-12 (role="link" deliberate), ad-1 (decorative alt deliberate)
+
+**Filter logic change (2026-04-14):**
+- Donna Yan confirmed filters should be OR (show products matching ANY selected tag)
+- `filteredSections`: `activeFilters.every()` → `activeFilters.some()` — NOT YET APPLIED (blocked on Closest Shades clarification)
+- Closest Shades section behavior: **BLOCKED — awaiting Donna's response** on when/what to display now that OR logic means multi-filter produces results
+- Kyo asked Donna for clarification on 2026-04-14; response pending
 
 **Tests:** 67 total (52 ShadeShopPage + 15 FilterButtons + 2 LocationCard experiment tests).
 
@@ -1374,19 +1391,19 @@ ShadeShopPage/
 
 > **Start here when resuming.** This section captures the most recent work and immediate next steps.
 
-### What was done last (2026-04-10)
+### What was done last (2026-04-14)
 
-*   **DOTCOMPB-7466 product type sections refactor** — Expanded from 2 product types (color_kit + colorwonder) to ALL 7 product types as separate sections. Each section has a 2-column header (title + description | promotional image) pulled from CMS Data Tool `sr_shop_categories_config`.
-*   **CMS Data Tool integration** — Created `sr_shop_categories_config` (Data Object ID: 49) in Tophat. Component fetches via `dataToolSvc.getData()` in `Promise.all` with V2 shop API. Lookup map keyed by `productType`. Falls back to API display name when CMS missing.
-*   **SEE MORE / SEE LESS toggle** — Per-section expand/collapse with responsive visible count (10 mobile via `MOBILE_VISIBLE_COUNT`, 14 desktop via `DESKTOP_VISIBLE_COUNT`). `MrBtn` with `aria-expanded`.
-*   **Section header `v-if` guard** — `.section-header` hidden when `displayName`, `description`, and `image` are all missing. `h2` also guarded individually.
-*   **Test updates** — 67 tests total (52 ShadeShopPage + 15 FilterButtons). Added `flushPromises` for `Promise.all` async resolution. 3 new CMS config tests (title/description usage, alt_text stripping, API fallback).
-*   **Roam node documentation** — Added CMS Data Tool deployment requirements (pre-testing checklist, image specs, verification steps), updated commit msg (2 commits), updated PR body (sections, CMS, QA expanded to 15 steps).
-*   **Code review** — `/code-review` found 1 LOW (double blank line in Stylus) — fixed. AI review bot dismissed 2 false positives (missing `props` route, AND filter logic).
+*   **Andris PR review addressed** — 2 comments on PR #20512 fixed: (1) `addUniqueProducts()` extracted from duplicated dedup blocks (ad-23), (2) `product?.imagery` cached into `const imagery` (ad-24).
+*   **Full code review (8 subagents, 84 rules)** — 2 implemented (emits order in FilterButtons, BEM `--` → single hyphen), 3 skipped (focus-visible, trivial returns, px→rem). Multiple false positives filtered.
+*   **3 AI bot comments dismissed** — Missing route props (CMS pipeline), AND filter logic (Donna confirmed OR), SSR hydration on experiments (established pattern).
+*   **Code-review skill updated** — ad-23 (extract repeated logic) and ad-24 (cache repeated lookups) added to `rules/mr-review-checklist.md` and `SKILL.md`. 84 rules total now.
+*   **Commit 3 staged** — Andris fixes + BEM rename + emits order. Ready to commit.
+*   **OR filter logic still blocked** — Donna confirmed OR, but Closest Shades clarification pending.
 
 ### Pending
 
-*   **DOTCOMPB-7466** — Commit 2 staged (sections + CMS). Needs: commit, PR creation, QA. Branch `DOTCOMPB-7466`. Deployment deps: `RCC Site Revolution` B (breadcrumbs), `sr_shop_categories_config` Data Tool (CRITICAL — must be created per environment).
+*   **DOTCOMPB-7466 — Commit 3** — Staged (Andris fixes). Needs commit + push to PR #20512.
+*   **DOTCOMPB-7466 — OR filter logic** — Code change ready (`every` → `some`). Closest Shades behavior blocked on Donna's response.
 *   **DOTCOMPB-7903** — Changes staged, not committed. PR #20481 description updated. Branch `DOTCOMPB-7903`.
 *   **DOTCOMPB-7712** — PR #20423 OPEN. In Code Review. Branch `DOTCOMPB-7712`. 81 tests.
 *   **DOTCOMPB-7742** — In Test (JIRA: Pruebas). PR #20368.
@@ -1395,11 +1412,10 @@ ShadeShopPage/
 
 ### Where to resume
 
-If user wants to **commit + PR for DOTCOMPB-7466**: Commit 2 is staged. Run `git commit`. Commit msg + PR body ready in roam node `2026-04-08-120100-dotcompb_7466.org` sections `COMMIT MSG` and `PR BODY`. Use `/create-pr`.
-If user wants to **refine DOTCOMPB-7466 further**: Read roam node. Components: `Shop/ShadeShopPage/ShadeShopPage.vue` + `components/FilterButtons.vue`. CMS config: `sr_shop_categories_config` (mixinKey).
-If user wants to **finish DOTCOMPB-7903**: Changes staged on branch. Commit and push. PR #20481 exists.
-If user wants to **check DOTCOMPB-7712 PR**: Branch `DOTCOMPB-7712`. PR #20423.
-If user wants **DOTCOMPB-7717 cleanup**: Follow §3.8 step-by-step plan.
+If user wants to **commit Andris fixes**: Commit 3 staged. Message: `fix: Address PR review — extract dedup method, cache imagery lookup, fix naming`. Push to PR #20512.
+If user wants to **implement OR logic**: Change L200 `activeFilters.every()` → `activeFilters.some()`. Tests will break until Closest Shades decision resolves.
+If Donna responds **"remove Closest Shades"**: Remove `closestShades` computed, `.empty-state` + `.suggestions` template, 5 tests. Update announcement.
+If Donna responds **"keep for edge cases"**: Rewrite `closestShades` for unselected coverage types.
 If user asks for a **new task**: Check Section 2.5 (Pending Work).
 
 <!-- DESCRIPTION AND USER CONTEXT END -->

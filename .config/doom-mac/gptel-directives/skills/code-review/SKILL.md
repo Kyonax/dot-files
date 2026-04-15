@@ -65,7 +65,7 @@ Split rules into 8 categories. Launch ALL in a single message as parallel agents
 | # | Category           | Rules                             |
 |---|--------------------|-----------------------------------|
 | 1 | Template           | 1-4, sg-1, ad-6, ad-7             |
-| 2 | Script Structure   | 5-13, sg-2 to sg-5, ad-4, ad-15   |
+| 2 | Script Structure   | 5-13, sg-2 to sg-5, ad-4, ad-15, ad-23, ad-24 |
 | 3 | Styling            | 14-21, sg-6 to sg-8, ad-14, ad-16 |
 | 4 | Naming             | 22-26                             |
 | 5 | ADA Accessibility  | 27-33, sg-9 to sg-12, ad-1, ad-17 |

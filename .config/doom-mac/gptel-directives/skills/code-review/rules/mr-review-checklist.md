@@ -1,11 +1,11 @@
 ---
-title: Madison Reed Vue Component Review Checklist — 82 Rules Across 9 Categories
+title: Madison Reed Vue Component Review Checklist — 84 Rules Across 9 Categories
 impact: HIGH
 impactDescription: The definitive checklist for reviewing Vue components in the MR website. Without it, reviews miss project-specific conventions validated through 56+ PR comments, 10+ code review cycles, and session-graduated patterns.
 tags: code-review, checklist, vue, pug, stylus, vuex, accessibility, naming, tracking, styling, template, script, components, mrbtn, backend, madison-reed, options-api, utility-classes, aria, keyboard, responsive, breakpoint, spacing
 ---
 
-Definitive checklist for reviewing Vue components in the Madison Reed website. 82 rules organized into 9 categories that map to the parallel subagent review flow in SKILL.md. Each category is self-contained.
+Definitive checklist for reviewing Vue components in the Madison Reed website. 84 rules organized into 9 categories that map to the parallel subagent review flow in SKILL.md. Each category is self-contained.
 
 Rules `1-45` are core checklist. Rules `ad-*` are senior reviewer patterns (56 PR comments, 10 PRs). Rules `sg-*` are session-graduated patterns (validated across 10+ components, 3+ code review cycles).
 
@@ -14,7 +14,7 @@ Rules `1-45` are core checklist. Rules `ad-*` are senior reviewer patterns (56 P
 | # | Category           | Rules | Section                                    |
 |---|--------------------|-------|--------------------------------------------|
 | 1 | Template           | 7     | [Template](#1-template)                    |
-| 2 | Script Structure   | 15    | [Script Structure](#2-script-structure)    |
+| 2 | Script Structure   | 17    | [Script Structure](#2-script-structure)    |
 | 3 | Styling            | 13    | [Styling](#3-styling)                      |
 | 4 | Naming             | 5     | [Naming](#4-naming)                        |
 | 5 | ADA Accessibility  | 13    | [ADA Accessibility](#5-ada-accessibility)  |
@@ -75,6 +75,8 @@ Dynamic interpolation: `h2.upper about {{ location.name }}`
 | sg-5  | Centralized `global/isDesktop` for 960px+. [Details](#sg-5)         |
 | ad-4  | Every Pug method must trace to `methods`, `mapActions`, or a mixin  |
 | ad-15 | Keep simple expressions on one line — no multi-line trivial returns |
+| ad-23 | Extract repeated logic blocks into a reusable method. [Details](#ad-23) |
+| ad-24 | Cache repeated property lookups into a `const`. [Details](#ad-24) |
 
 #### Rule 6
 
@@ -123,6 +125,58 @@ mounted() {
 #### SG-5
 
 For show/hide at the standard desktop threshold (960px+), use `mapGetters('global', ['isDesktop'])`. Only use local `matchMedia` when the breakpoint differs from 960px.
+
+#### AD-23
+
+When the same logic block appears 2+ times in a method (e.g., deduplication, filtering, mapping), extract it into a named method. The method should be self-explanatory without a comment.
+
+**Incorrect:**
+```javascript
+(productType.products || []).forEach(product => {
+  if (!seen.has(product.id)) {
+    seen.add(product.id);
+    products.push(product);
+  }
+});
+(subCategory.products || []).forEach(product => {
+  if (!seen.has(product.id)) {   // same block repeated
+    seen.add(product.id);
+    products.push(product);
+  }
+});
+```
+
+**Correct:**
+```javascript
+addUniqueProducts(source, target, seen) {
+  (source || []).forEach(product => {
+    if (!seen.has(product.id)) {
+      seen.add(product.id);
+      target.push(product);
+    }
+  });
+},
+// Usage:
+this.addUniqueProducts(productType.products, products, seen);
+this.addUniqueProducts(subCategory.products, products, seen);
+```
+
+#### AD-24
+
+When a method accesses the same nested property chain 2+ times, cache it in a `const`. Reduces visual noise, improves readability, and avoids repeated optional chaining.
+
+**Incorrect:**
+```javascript
+const image = product?.imagery?.toneSwatch
+  || product?.imagery?.alternative
+  || product?.imagery?.standard;
+```
+
+**Correct:**
+```javascript
+const imagery = product?.imagery;
+const image = imagery?.toneSwatch || imagery?.alternative || imagery?.standard;
+```
 
 ---
 
