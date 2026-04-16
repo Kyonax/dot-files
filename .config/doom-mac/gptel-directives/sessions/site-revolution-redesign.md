@@ -401,7 +401,12 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 | `DOTCOMPB-7768` | Bug   | Mobile nav dropdowns not scrollable with subcopy text        | **MERGED** (2026-04-08, JIRA: Finalizada). PR #20335.                  |
 | `DOTCOMPB-7903` | Bug   | Fix Shop All link not tappable on mobile devices             | **IN PROGRESS** (2026-04-08). `100vh` → `100dvh` fix + removed no-op `env(safe-area-inset-bottom)`. PR #20481 OPEN. See §3.14. |
 | `DOTCOMPB-7886` | Story | Go to services page when clicking location                   | **IMPLEMENTED** (2026-04-10). Included in DOTCOMPB-7466 branch. LocationCard + LocationsDirectory redirect when `BookingFlowSiteRevolution` experiment B. 2 tests. See §3.15. |
-| `DOTCOMPB-7466` | Story | Shade Shop Page Redesign                                     | **IN CODE REVIEW** (2026-04-14). PR #20512 OPEN. Andris reviewing. 67 tests. OR filter logic pending (Donna confirmed, Closest Shades blocked). See §3.15. |
+| `DOTCOMPB-7466` | Story | Shade Shop Page Redesign                                     | **PENDING QA REVIEW** (2026-04-15). PR #20512 OPEN. Andris approved 2026-04-14, ADA review addressed 2026-04-15. OR filter + 11 ADA fixes + 3 justified discards + **sticky-header-wrap ResizeObserver fix** + **View Details redirect fix**. 93 tests on PR surface (62 ShadeShopPage + 15 FilterButtons + 16 LocationCard). PR description fully rewritten in roam node via pr-scribe (2026-04-15). See §3.15. |
+| `DOTCOMPB-7944` | Bug | Shop All Products breadcrumb links to wrong URL on Shade Shop PLP | **IN PROGRESS** (2026-04-15). Branch `DOTCOMPB-7466` (piggybacked per user, not a new branch). 1-line fix (line 377 `/shop/all-hair-color` to `/shop-all`) + regression-lock test added to `ShadeShopPage.test.js`. Uncommitted in working tree. Commit message drafted. See §3.16. |
+| `DOTCOMPB-7958` | Bug | `[DOTCOMPB-7886]` LocationCard "View Details" link href disagrees with click destination in experiment B | **RESOLVED** (2026-04-15) by the View Details redirect fix bundled in PR #20512. See §3.15 follow-on sub-section. |
+| `DOTCOMPB-7959` | Bug | `[DOTCOMPB-7886]` `/colorbar/locations` LocationCard has 4 click targets that all land on services — no path to location details in experiment B | **RESOLVED** (2026-04-15) by the View Details redirect fix bundled in PR #20512 — "View Details" now provides the path back to location details under experiment B. See §3.15 follow-on sub-section. |
+| `DOTCOMPB-7960` | Bug | `[DOTCOMPB-7886]` Old location details page `/colorbar/locations/{code}` still serves 200 in experiment B | **SEPARATE TICKET** (out of scope for PR #20512). Concerns whether the old details route should return 301/404 when experiment B is active. Not addressed on this branch. |
+| `DOTCOMPB-7961` | Bug | `[DOTCOMPB-7886]` SSR hydration mismatch warning on `/colorbar/locations` (experiment A and B) | **SEPARATE TICKET** (out of scope for PR #20512). SSR-specific issue; not addressed on this branch. |
 | DashHudson Research | Research | Platform research + per-location gallery integration plan    | **COMPLETE** (2026-04-06). Full platform analysis documented. Roam node: `2026-04-06-dashhudson_research.org`. |
 
 ### 2.3 Key Architectural Decisions (Session-Wide)
@@ -485,6 +490,29 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 77. **(2026-04-10)** **`useScroll` composable for scroll-triggered UI (not `position: sticky`, not polling)** — The codebase has `website/src/vuescripts/composables/useScroll.js` — modern, reactive, 200ms throttled with passive listeners, SSR-safe. Use for sticky headers, scroll-triggered animations, etc. The codebase avoids CSS `position: sticky`. `StickyWrap` (polling-based) exists but `useScroll` is recommended for new code.
 78. **(2026-04-10, CORRECTED 2026-04-10)** **~~Coverage data is boolean flags~~ → `grayCoverage` is a single string field** — Runtime API validation confirmed `grayCoverage` is a single string: `"100%"`, `"Gray Blending"`, `"Knockout"`, `"No Gray"`, `"Superior"`, or `undefined`. The boolean flags (`grayCoverageGauranteed`, `noGrayCoverage`, `lowGrayProduct`) exist in PAT field configs but are NOT the source for V2 shop API data. Filter logic uses direct string comparison. — `100vh` on iOS includes area behind URL bar, Dynamic Island, and home indicator — content overflows past the visible viewport. `100dvh` (Dynamic Viewport Height) matches the actual visible area. The `env(safe-area-inset-bottom)` padding hacks in SiteNavShopContent and SiteNavMobileWrapper were no-ops because the site's viewport meta tag lacks `viewport-fit=cover` (without it, `env()` always resolves to `0px`). Fix: `SiteNavMobileV2.vue` `height: 100vh` → `height: 100dvh`. Removed all `padding-bottom: calc(Nem + env(safe-area-inset-bottom))` from ShopContent and MobileWrapper. Browser support: iOS Safari 15.4+, Chrome 108+, Firefox 101+. Branch: `DOTCOMPB-7903`.
 
+79. **(2026-04-15, SUPERSEDES #78 partial)** **OR filter logic for Shade Shop** — Donna Yan confirmed multi-filter should be OR (`activeFilters.some()`), not AND. Also confirmed closest-shades design is no longer necessary since OR logic means results should always be available. `filteredSections` uses `some()`; `closestShades` computed removed; `.suggestions` template removed. Empty-state kept only as safety net for the rare zero-match edge case. Validated in DOTCOMPB-7466.
+80. **(2026-04-15)** **WCAG 2.5.3 "Label in Name" — `<div role="link">` for multi-content cards, not native `<a>`** — Level Access ADA scanner flags native `<a>` elements containing multi-part visible text (product name + description + coverage tags) with: *"A element contains visible text not found in the accessible name."* The `<a>` accessible-name algorithm does not aggregate concatenated inner text the way the scanner expects. Use `<div role="link" tabindex="0" @keydown.enter>` with NO `aria-label` — inner text becomes the accessible name and satisfies 2.5.3. Trade-off: Space-key activation and right-click "Open in new tab" unavailable, but Level A compliance takes priority. Same rule applies to single-phrase `<a>` elements where the `aria-label` would insert extra words (e.g., quiz link with `aria-label="Take our quick shade quiz"` vs. visible "take our quick quiz" — scanner flags the mismatch). Solution: drop the `aria-label` and rely on sentence context for 2.4.4 Link Purpose in Context.
+81. **(2026-04-15)** **Test files: `import { vi } from 'vitest'` explicitly for new code** — PilkoLint (`bin/autoLintPR.js`) resolves ESLint config differently from local CLI and does not pick up the `vuescripts/.eslintrc.js` test-override that declares `vi` as a global. Any new `vi.fn()`, `vi.mock()`, `vi.stubGlobal()` in test files gets flagged as "`vi` is not defined" on the diff. Add `import { vi } from 'vitest'` at the top of new test files to sidestep the false positive. Existing files can keep the implicit global.
+82. **(2026-04-15)** **`filtersEverUsed` flag pattern for transient announcements** — When a live-region announcement should only fire AFTER user interaction (not on initial mount with pre-populated state, e.g., URL filter params), add a boolean flag that flips on first user interaction and gates the announcement. Pattern: `data: { filtersEverUsed: false }` + flip in toggle handlers + check in the computed `resultsAnnouncement`. Prevents silent AT updates on URL-param first-load while still announcing "Filters cleared. N shades available." when user clears all.
+83. **(2026-04-15)** **Live region placement: outside `v-if` gate** — The `.hiddenButPresent(aria-live)` element MUST be rendered from component mount, not inside a `v-if="hasProducts"` block. ATs observe mutations to live regions that were already present and empty in the DOM — if the region is created with text already populated (e.g., from a `?coverage=` URL param), the announcement is silently dropped. Wrap the component template in a root structural div (e.g., `.shade-shop-page`) and put the live region as a sibling of the v-if/v-else content.
+84. **(2026-04-15)** **Focus management on "See Less" collapse** — When a collapsing toggle may destroy the currently focused DOM node (e.g., expanded product cards beyond the visible count), return focus to the toggle button via `event.currentTarget.focus()` in `$nextTick` after the state change. Pattern: `toggleSectionExpand(sectionType, event) { if (wasExpanded && event?.currentTarget) { this.$nextTick(() => event.currentTarget.focus()); } }`. Template passes `$event`: `@click="toggleSectionExpand(section.type, $event)"`. MrBtn forwards the native DOM event on its emitted `click`, so `event.currentTarget` is the button element.
+85. **(2026-04-15)** **`aria-controls` + `aria-expanded` pair on expand/collapse buttons** — `aria-expanded` alone is not enough; add `aria-controls` pointing to the region ID so screen-reader users can navigate to what the button controls. Pattern: dynamic `:id="\`product-grid-${section.type}\`"` on the grid + matching `:aria-controls` on the toggle MrBtn.
+86. **(2026-04-15, REINFORCED)** **NEVER run git write commands, even when user says "commit this"** — "Gimme a commit" / "commit this" / "make a commit" means WRITE OUT the commit message as text for the user to copy-paste. It does NOT grant permission to execute `git commit`, `git add`, `git stash`, `git reset`, `git push`, etc. Read-only commands (`git status`, `git diff`, `git log`, `git show`, `git blame`) are fine. Only explicit "run git X" / "go ahead and run git X" grants narrow-scope, single-command authorization. Memory updated in `feedback_no_git.md`.
+87. **(2026-04-15)** **Hybrid PR body format — MR top-level skeleton + Kyonax internal formatting** — For this session's MR PRs, the user overrides pr-scribe's default brand detection (MR → MR-only) and requests a hybrid. Apply: (a) MR top-level section headings (`## Checklist for PR Author (Check if it applies)` with 6 MR items, `## Instructions on how QA can test this PR`, `## Special Deployment Requirements`, `## Documentation`); (b) Kyonax internal formatting inside those sections — Pattern B themed Changes subsections (`### Implementation` etc.) with the `[NEW] / [MOD] / [DEL] / [MOV]` closed tag vocabulary + mandatory legend blockquote `> **[NEW]** new file · **[MOD]** modified file · ...`, TD-4FIELD Technical Details with `***Chose:*** / ***Over:*** / ***Why:*** / ***Trade-off:***`, TEST-TWO-TABLE with `**Test runner:**` + `**Command:**` metadata + `#### Automated tests` + `#### Quality gates`, QA-HOW-TO-TEST content style with ASCII flow tree at top + `> **Prereqs:**` blockquote per feature group + `***Expected:***` bold-italic at 6-space indent, DEPLOY-SEVERITY numbered list with `(CRITICAL)` / `(REQUIRED)` / `(OPTIONAL)` labels, DOC-MEDIA-VOCAB `### <MEDIA-TYPE> — <target>` closed vocab; (c) MR reference footer with `atlOrigin` preserved on both ticket URLs. Validated on PR #20512.
+88. **(2026-04-15)** **Preserve `atlOrigin` query param on every ticket URL** — MR brand rule "Preserve it verbatim when pasted" (brand-madison-reed.md:119). Every Jira URL in the PR body (top-line + inline summary links + reference footer) should include the `atlOrigin=...` param when available. The atlOrigin on the DOTCOMPB-7466/7886 branch is `eyJpIjoiNWRkNTljNzYxNjVmNDY3MDlhMDU5Y2ZhYzA5YTRkZjUiLCJwIjoiZ2l0aHViLWNvbS1KU1cifQ`.
+89. **(2026-04-15)** **Changes bullet format — no brackets around ticket ID** — Pattern A (MR) and hybrid-Pattern-B Changes bullets use bare ticket IDs after the em dash: `- **\`ComponentName.vue\`** — DOTCOMPB-XXXX (\`path/\`):`. NOT `— [DOTCOMPB-XXXX]`. The brackets are reserved for reference-link footer resolution in the summary paragraph, not for bullets. Caught during PR body rewrite audit.
+90. **(2026-04-15)** **Vuex 4 `commit` spy asserts positional arg shape** — When spying on `store.commit` in Vitest, Vuex 4 invokes the wrapped commit with `(name, payload, options)` where `options` is typically `undefined`. `toHaveBeenCalledWith('name', expected)` fails because the actual call has 3 args. Use `commitSpy.mock.calls.find(call => call[0] === 'mutation/name')` to locate the call, then `toEqual` on `call[1]` for the payload shape. Pattern validated on the `/shop-all` breadcrumb regression-lock test in `ShadeShopPage.test.js`.
+91. **(2026-04-15)** **When discovering a follow-on bug from an open PR, stay on the same branch if user requests** — User preference: when a bug is discovered in work shipped by an open PR that is still in review (e.g., PR #20512 awaiting QA on DOTCOMPB-7466, bug DOTCOMPB-7944 filed against it), do NOT auto-create a new branch. Piggyback the fix on the existing branch so the PR carries both the feature and the fix to QA together. Roam node for the bug still gets created with proper parent cross-reference.
+92. **(2026-04-15)** **`:style` binding is allowed and idiomatic in this codebase** — 69 usages across `website/src/vuescripts/**/*.vue`. No ESLint rule forbids it (`vue/no-static-inline-styles` is NOT configured). No `.claude/rules` or skill file prohibits it. Use `:style` when the value is a runtime-measured numeric value that cannot be expressed as a utility class or pre-computed via CSS variables — e.g., `:style="stickyHeaderStyle"` returning `{ top: '${offset}px' }` from a `ResizeObserver` measurement. Static values still belong in utility classes or Stylus; `:style` is only for dynamic runtime values. Precedents: `ColorBarLocationSectionV1.vue:43` (`:style="mapColumnTopStyle"`), `PurchasePanelV2Modal.vue:110` (`:style="rightColStyles"`), `HcbGmap.vue:14` (`:style="mapDimensions"`), `MarqueeText.vue:2` (`:style="{'--text-size': textWidth + 'px', ...}"`).
+93. **(2026-04-15)** **`.sticky-header-wrap.is-sticky` is the SINGLE site-wide sticky scaffold, gated on `BookingFlowSiteRevolution === 'B'`** — Defined in `SsrApp.vue:90` and `views/desktop/vue-layout.pug:39`. Contains `SiteMessageBanner` (sitewide topics), `SiteMessageBannerCarousel` (content topics), `MrNavigation` — three siblings, in that vertical order. When experiment B is active, `vue-layout.styl:451-454` applies `position: sticky; top: 0; z-index: 1400` to the wrap. When experiment is A (control), the wrap scrolls with the page. Any component adding its own sticky element below the site nav MUST observe this wrap's actual rendered height to avoid banner / carousel overlap. **Checking `.is-sticky` via `document.querySelector('.sticky-header-wrap.is-sticky')` is preferred over checking `this.experiments?.['BookingFlowSiteRevolution'] === 'B'` directly — the selector decouples from the experiment name so future stickiness-gating changes in SsrApp.vue don't require touching consumers.**
+94. **(2026-04-15)** **`--mr-navigation-height` is incomplete — only measures `.mr-navigation`, not the full sticky wrap** — Set in `MrNavigation.vue:159-168` via `useResizeObserver(mrNavigationRef, ...)` where `mrNavigationRef` points to the `.mr-navigation` root element. It measures ONLY the nav's border-box, NOT the sitewide banner or carousel above it. Consumers using `top: var(--mr-navigation-height)` for their own sticky elements will overlap the banner + carousel when experiment B makes the wrap sticky with all three children visible. Do NOT rely on this variable alone for sticky offsets when banners may be present.
+95. **(2026-04-15)** **`--mr-sticky-header-height` is referenced but NEVER set — dead variable** — `ColorKitHeroV3.vue:97` uses `top: calc(var(--mr-sticky-header-height, 0px) + 16px)` with a hardcoded `top: 144px` override and `// TODO: remove when DOTCOMPB-7713 get merge` comment. Grep confirms no file in the codebase calls `setProperty('--mr-sticky-header-height', ...)`. The variable falls back to `0px`, so ColorKitHeroV3's PDP V3 layout relies on the magic `144px`. If you introduce this variable, audit every other sticky element that reads it.
+96. **(2026-04-15)** **Correct pattern for full-stack sticky offset: observe `.sticky-header-wrap.is-sticky` via `ResizeObserver`** — Scales to every scenario (experiment A / B, banner visible / dismissed, carousel present / absent, mobile / desktop breakpoints, banner state changes mid-session). Pattern: in `mounted`, `$nextTick` → `document.querySelector('.sticky-header-wrap.is-sticky')` → if found, read `getBoundingClientRect().height` + attach `ResizeObserver` to update on resizes; if not found, offset stays `0`. Tear down in `beforeUnmount`. SSR-guard with `typeof window === 'undefined' || typeof ResizeObserver === 'undefined'`. Validated on `ShadeShopPage.vue` (follow-on fix for DOTCOMPB-7466).
+97. **(2026-04-15)** **`inSiteRevolutionExperiment` computed exists on `mrVueApp.js:393-395` but is NOT a global mixin — not inherited by components** — This computed is defined inside the root app object (alongside `customerInfo`, `urlParams`) but it is NOT in `globalMixins.js`. Individual components must either define their own local computed or check `this.experiments?.['BookingFlowSiteRevolution'] === 'B'` directly. `this.experiments` IS available globally via `globalMixins` (populated in `mounted()` from `window.experiments`). Already-validated local-check pattern: `LocationCard.vue:72-74`, `LocationsDirectory.vue:93-95`, `MrFooter.vue:123`.
+98. **(2026-04-15)** **`LocationCardBody` child has its own local `detailsUrl` computed that the parent's experiment-gating does NOT cover** — The child template wires `@click.prevent="$emit('details-click')"` + `:href="detailsUrl"` where the child's `detailsUrl` is hardcoded to `/colorbar/locations/{code}`. Parent `LocationCard.onCardClick` handles the emit and uses the PARENT's experiment-gated `detailsUrl`. This creates a **left-click vs right-click divergence bug**: right-click "Open in new tab" follows the child's `href` (details page) while left-click goes through the parent handler (services page under experiment B). Filed as DOTCOMPB-7958 and DOTCOMPB-7959. **Fix pattern:** add a dedicated parent handler (`onViewDetailsClick`) that always routes to the non-experiment-gated URL, wire the emit to the new handler (not `onCardClick`). Child's `detailsUrl` can stay hardcoded — parent controls the destination via the handler it wires to `@details-click`.
+99. **(2026-04-15)** **DOTCOMPB-7886 AC1 scope is the location NAME only** — Ticket AC1 says `WHEN I click on the NAME of a location from /colorbar/locations, THEN I should be taken to the services screen`. Explicitly scoped to the `.location-name` anchor. The AC is silent on "View Details", "card image", and other click targets. Sibling clickable elements (card image, View Details, Book Service CTA) are out of AC1 scope and can route independently — View Details intentionally routes to the details page (pre-change behavior) to preserve a path to `/colorbar/locations/{code}` under experiment B.
+100. **(2026-04-15)** **Local dev server is LAN-reachable out of the box — no config change needed** — `website/gulpfile.js:239-246` BrowserSync proxies Express on port 3001 and listens on port 3000 on `0.0.0.0`. Mac LAN IP works: `http://<lan-ip>:3000/shop/brown` from any device on the same Wi-Fi. Caveats: macOS firewall may block; guest Wi-Fi networks with client isolation block device-to-device traffic; experiment cookies (`abt_*`) scoped to `mdsnrd.com` don't transfer — other devices get fresh assignments, which is actually useful for testing experiment A/B states with `?xid=<id>&v=A|B` override. For HTTPS / cross-network / firewall-blocked scenarios, use `cloudflared tunnel --url http://localhost:3000` or `ngrok http 3000`.
+
 ### 2.4 PR Review Resolutions (DOTCOMPB-7289)
 
 8 comments addressed: magic numbers → named constants; repeated boolean logic → `isSelected(slideImage)` method; oddly specific em values → reverted to `px`; inline event logic → dedicated methods; placeholder button → `// TODO:` comment; resize listener → `window.matchMedia` API; `@hook:mounted` → custom `@ready` event (later deprecated); `getObjProperty` → optional chaining (`?.`).
@@ -495,7 +523,10 @@ This session covers the **Site Revolution Redesign** for the Hair Color Bar (HCB
 *   **DOTCOMPB-7712** — PR #20423 OPEN. In Code Review (JIRA). Branch `DOTCOMPB-7712`. 81 tests, 3 code review rounds.
 *   **DOTCOMPB-7742** — PR #20368. In Test (JIRA: Pruebas). Cookie-based service pre-selection.
 *   **DOTCOMPB-7886** — Implemented (2026-04-10). Included in DOTCOMPB-7466 PR #20512. LocationCard + LocationsDirectory experiment redirect. 2 tests.
-*   **DOTCOMPB-7466** — PR #20512 OPEN (2026-04-14). Andris reviewing. 2 comments addressed (ad-23 dedup method, ad-24 cache imagery). OR filter logic: code change ready, Closest Shades blocked on Donna. Commit 3 staged (Andris fixes + BEM rename + emits order). See §3.15.
+*   **DOTCOMPB-7466** — PR #20512 OPEN (2026-04-15). Approved by Andris 2026-04-14; ADA review addressed in commit `41c4a25`. **PR description fully rewritten in roam node via pr-scribe (Hybrid MR+Kyonax format)** — user can copy-paste from the `* PR BODY` `#+begin_src markdown` block in the roam node. Labels updated to `DOTCOM TEAM`, `Pending QA Review`, `Special Deploy Requirements`. 93 tests on PR surface. **Three follow-on fixes uncommitted in the working tree** — all on the same branch per user instruction: (1) DOTCOMPB-7944 Shop All breadcrumb, (2) sticky-header `ResizeObserver` rewrite, (3) View Details redirect fix (also resolves DOTCOMPB-7958 and DOTCOMPB-7959). See §3.15.
+*   **DOTCOMPB-7944** — NEW BUG (2026-04-15). Shop All Products breadcrumb links to wrong URL on Shade Shop PLP. Fix implemented on branch `DOTCOMPB-7466` (piggybacked per user, not a new branch). 1-line component change + 1 regression-lock test. Uncommitted in working tree. Commit message drafted and ready. See §3.16.
+*   **Sticky-header-wrap fix on Shade Shop PLP** (no ticket number — follow-on to DOTCOMPB-7466 reported via live QA). Fix uses `document.querySelector('.sticky-header-wrap.is-sticky')` + `ResizeObserver` to compute `top` offset dynamically. Scales to experiment A / B, banner presence, carousel presence, breakpoint changes. Uncommitted. +4 regression-lock tests. See §3.15 follow-on sub-section.
+*   **View Details redirect fix** (no dedicated ticket — resolves DOTCOMPB-7958 and DOTCOMPB-7959 by side effect). `LocationCard.vue` adds `locationDetailsUrl` computed + `onViewDetailsClick` handler; template rewires `@details-click` from `onCardClick` to `onViewDetailsClick`. Uncommitted. +2 regression-lock tests. See §3.15 follow-on sub-section.
 *   **DOTCOMPB-7717 cleanup** — MarketingBanner dead workaround removal. Plan in §3.8. Not yet implemented.
 *   **DOTCOMPB-7555_full_width** — Parked carousel work. Activate only when business confirms desktop banner carousel for location hero.
 *   **DashHudson Integration** — **RESEARCH COMPLETE** (2026-04-06). Awaiting PM input on open questions.
@@ -1171,9 +1202,9 @@ HcbLocationPageV2 (thin parent — data loading + router-view)
 
 ### 3.15 DOTCOMPB-7466: Shade Shop Page Redesign
 
-**Created:** 2026-04-08 | **Last updated:** 2026-04-10
+**Created:** 2026-04-08 | **Last updated:** 2026-04-15
 **Branch:** `DOTCOMPB-7466`
-**Status:** PR #20512 OPEN. Under code review by Andris. 67 tests passing. OR filter logic pending (Donna confirmed, Closest Shades blocked).
+**Status:** PR #20512 OPEN. Andris approved 2026-04-14; ADA review batch addressed 2026-04-15 in commit `41c4a25` (11 fixes, 3 justified discards). **PR description rewritten in roam node via pr-scribe (2026-04-15, Hybrid MR+Kyonax format)** — ready for user to copy-paste from roam node `* PR BODY` block. Three follow-on fixes uncommitted in the working tree on the same branch: **(1) DOTCOMPB-7944** Shop All breadcrumb URL, **(2) sticky-header-wrap ResizeObserver rewrite** (no ticket), **(3) View Details redirect fix** (no dedicated ticket — resolves DOTCOMPB-7958 and DOTCOMPB-7959). 93 tests on PR surface (62 ShadeShopPage + 15 FilterButtons + 16 LocationCard). See §3.16 for DOTCOMPB-7944 and the two follow-on sub-sections below for the other fixes.
 **Roam node:** `~/.brain.d/roam-nodes/madison_reed/2026-04-08-120100-dotcompb_7466.org`
 
 **Architecture:**
@@ -1196,22 +1227,44 @@ ShadeShopPage/
     └── FilterButtons.test.js — 15 tests
 ```
 
-**Key decisions (2026-04-10):**
+**Key decisions:**
 | Decision | Date | Rationale |
 |---|---|---|
 | Route-level swap, not experiment gate in component | 2026-04-10 | Avoids SSR flash — Vue Router resolves directly |
 | `grayCoverage` is a string, not boolean flags | 2026-04-10 | Runtime API validation confirmed |
-| ~~AND~~ → OR filter logic | 2026-04-14 | Donna confirmed: multi-filter should show products matching ANY selected tag. AND always produced zero results (single string field). Closest Shades behavior pending Donna's clarification. |
+| AND → OR filter logic (`every` → `some`) | 2026-04-15 | Donna confirmed multi-filter should show products matching ANY selected tag |
+| Closest Shades removed (`closestShades` computed + `.suggestions` template) | 2026-04-15 | Donna: "closest shade design may not be necessary since there should always be results available with OR logic" |
+| Empty-state kept as safety net only (filter-match zero case) | 2026-04-15 | Rare but possible edge case (e.g., `['Superior']` matches no products). Template shows "Oops! No matches" for filter-zero; loading skeleton is `v-else` fallback |
+| Product cards stay `<div role="link">`, NOT native `<a>` | 2026-04-15 | Level Access ADA scanner flags WCAG 2.5.3 "Label in Name" on native `<a>`. Dropped `aria-label` so inner text (name + description + coverage tags) is the accessible name |
+| Quiz link: removed experimental `aria-label` | 2026-04-15 | Same WCAG 2.5.3 scan conflict. Inner text "take our quick quiz." is the accessible name. Sentence context satisfies 2.4.4 Link Purpose in Context (Level A) |
+| Live region `.hiddenButPresent` lifted above `v-if` | 2026-04-15 | Stable DOM presence so AT observes mutations on first load. Wrapped template in `.shade-shop-page` root |
+| `filtersEverUsed` flag pattern | 2026-04-15 | Silent on first mount; announces "Filters cleared. N shades available." after user clears all filters |
+| `.card-description` contrast `text-color-3` → `text-color-2` | 2026-04-15 | 4.57:1 → 9.73:1. Moved from Stylus to `.text-color-2` utility class per sg-6 |
+| `toggleSectionExpand($event)` returns focus to MrBtn on collapse | 2026-04-15 | Prevents focus drop to `<body>` when expanded cards unmount |
+| `aria-controls` on See More + `:id` on `.product-grid` | 2026-04-15 | Completes `aria-expanded` pairing |
+| H1 "SHADES" → "Shades"; H2 "OOPS! NO MATCHES" → "Oops! No matches" | 2026-04-15 | `.upper` CSS handles visual uppercasing; template uses natural case for SR cadence |
+| Loading skeleton `role="status"` | 2026-04-15 | `aria-label` on plain `<div>` without role is not reliably announced; `role="status"` gives ARIA the accessible-name context |
+| `import { vi } from 'vitest'` in test files | 2026-04-15 | PilkoLint flags implicit `vi` global on new diff lines; explicit import sidesteps false positive |
 | CSS `position: sticky`, not `useScroll` composable | 2026-04-10 | Matches BookingFlowSiteRevolution pattern |
 | Card markup inline, not separate component | 2026-04-10 | Not complex enough for extraction |
 | `COVERAGE_LABELS` derived from `COVERAGE_OPTIONS` | 2026-04-10 | Single source of truth |
 | No meta overrides in component | 2026-04-10 | Handled by Tophat/CMS |
 | Breadcrumb v3 requires `RCC Site Revolution` experiment B | 2026-04-10 | Deployment dependency documented in roam node |
-| All 7 product types as sections, not just color_kit + colorwonder | 2026-04-10 | Business requirement — match previous design's product type grouping |
+| All 7 product types as sections | 2026-04-10 | Business requirement — match previous design's product type grouping |
 | CMS Data Tool `sr_shop_categories_config` for section headers | 2026-04-10 | Titles, descriptions, images managed in Tophat — not hardcoded |
 | SEE MORE/LESS per section (10 mobile, 14 desktop) | 2026-04-10 | Responsive visible count prevents overwhelming grids |
 | Section header `v-if` guard for all three fields | 2026-04-10 | Hides header entirely when title + description + image all missing |
 | `flushPromises` in tests (not `$nextTick`) | 2026-04-10 | `Promise.all` in `created()` needs extra microtask ticks to resolve |
+
+**Discarded ADA findings (replied with justification on PR #20512):**
+| Finding | Reason |
+|---|---|
+| Filter-toggle drops focus to `<body>` (Andris L413) | Edge case after AND→OR filter decision. Sections rarely disappear from DOM under OR. Filter-button-focus-stays-put matches Amazon/Sephora/Ulta shop UX |
+| Native `<a>` for product cards (Andris L33, WCAG 4.1.2) | WCAG 2.5.3 Level A scan violation overrides WCAG 4.1.2 recommendation. Kept `<div role="link">` |
+| Quiz link `aria-label` (Andris L5, WCAG 2.4.9 AAA) | WCAG 2.5.3 Level A scan violation overrides 2.4.9 AAA recommendation. Removed aria-label |
+| FilterButtons `aria-label` attr vs `:ariaLabel` prop (Andris L13) | False positive — Vue 3 normalizes kebab-case to declared camelCase prop |
+| Route `props` configuration (Andris routes.js L22) | `/shop/brown` verified working end-to-end via existing CMS/SSR pipeline (same mechanism `ShopProductByCategoryV2` uses) |
+| Sentry loading-skeleton indefinite (bot L80) | Not reachable in production — `/shop/brown\|blonde\|red\|black` always return products per Tophat configuration |
 
 **CMS Data Tool dependency (CRITICAL):**
 - `mixinKey: "sr_shop_categories_config"` (Data Object ID: 49)
@@ -1238,34 +1291,246 @@ ShadeShopPage/
 - `LocationCard.vue`: `detailsUrl` returns `/colorbar/booking/{code}/services` when `BookingFlowSiteRevolution` experiment B, else `/colorbar/locations/{code}`
 - `LocationsDirectory.vue`: `getLocationUrl()` method + `isBookingFlowExperiment` computed for same conditional redirect
 
-**Commits:**
-1. `f42de1b` — `feat: Shade Shop Page Redesign + Location click redirect to services` (pushed)
-2. Pushed — `feat: Product type sections with CMS Data Tool integration`
-3. Staged — `fix: Address PR review — extract dedup method, cache imagery lookup, fix naming` (Andris fixes + BEM rename + emits order)
+**Commits (on origin):**
+1. `f42de1b` — `feat: Shade Shop Page Redesign + Location click redirect to services`
+2. `5b4a28c` — `feat: Product type sections with CMS Data Tool integration`
+3. `3ce08fb` — `fix: Address PR review — extract dedup method, cache imagery lookup, fix naming`
+4. `497d872` — `fix: Superior Gray Coverage Length Solution`
+5. `41c4a25` — `fix: Address Andris ADA review — focus management, live region, contrast, scan-safe ARIA` (2026-04-15, latest)
 
-**PR:** #20512 — `[DOTCOMPB-7466]: Shade Shop Page Redesign + Location Click Redirect`. Labels: `DOTCOM TEAM`, `Pending Code Review`.
+**PR:** #20512 — `[DOTCOMPB-7466]: Shade Shop Page Redesign + Location Click Redirect`. Labels: `DOTCOM TEAM`, `Pending QA Review`, `Special Deploy Requirements`. All CI checks green (CircleCI, Codecov, security); PilkoLint currently failing on `vi is not defined` — fix staged locally (explicit `import { vi } from 'vitest'`) pending user commit + push.
 
-**Andris review comments (2026-04-14, PR #20512):**
-- *L305 — Repetitive dedup pattern:* Fixed — extracted `addUniqueProducts(source, target, seen)` method (ad-23)
-- *L342 — Repeated imagery lookup:* Fixed — cached `product?.imagery` into `const imagery` (ad-24)
+**Andris review responses (2026-04-14):**
+- L305 dedup pattern (ad-23): Fixed — extracted `addUniqueProducts()` method
+- L342 imagery lookup (ad-24): Fixed — cached `product?.imagery` into `const imagery`
 
-**AI review bot responses (3 total, all dismissed):**
-- *Missing `props` on route (sentry[bot]):* Not valid — `keys` prop populated by CMS/SSR pipeline, not Vue Router `props: true`
-- *AND filter logic (sentry[bot]):* Directionally correct — **(2026-04-14) Donna confirmed** filters should use OR. Change pending.
-- *SSR hydration mismatch on experiment (sentry[bot]):* Not valid — `this.experiments` populating in `mounted()` is the established pattern across all experiment splitters in the codebase
+**Andris ADA review batch (2026-04-15, 14 inline + 4 review summaries — all replied):**
 
-**Full code review (2026-04-14, 8 parallel subagents, 84 rules):**
-- 2 implemented: Rule 6 (emits before props in FilterButtons), Rule 26 (BEM `--` → single hyphen `.shade-shop-loading`)
-- 3 skipped: Rule 31 (focus-visible on cards), ad-15 (trivial multi-line returns), sg-8 (px→rem clean conversions)
-- False positives filtered: Rule 2 (PascalCase accepted), Rule 16 (user overrode for this component), ad-16 (first-party `:deep()`), ad-23/ad-12 (card extraction — deliberate decision), sg-9 (space key on role="link"), sg-12 (role="link" deliberate), ad-1 (decorative alt deliberate)
+*Implemented (11):*
+- L38 focus-visible on cards → `.focusable` utility class
+- L17 live region inside `v-if` → lifted above `v-if` via root `.shade-shop-page` wrapper
+- L36 `aria-label` suppresses inner content → dropped `aria-label`; inner text is accessible name
+- L222 clear-last-filter silence → `filtersEverUsed` flag + "Filters cleared. N shades available." announcement
+- L564 `text-color-3` contrast → `text-color-2` (9.73:1) via `.text-color-2` utility class
+- L432 SEE LESS focus loss → `toggleSectionExpand($event)` returns focus to MrBtn on collapse
+- L52 missing `aria-controls` → `:id` on `.product-grid` + `:aria-controls` on See More
+- L8 H1 "SHADES" hardcoded → "Shades" (natural case + `.upper` CSS)
+- L60 H2 "OOPS! NO MATCHES" hardcoded → "Oops! No matches"
+- L84 loading skeleton `aria-label` without role → added `role="status"`
+- LocationsDirectory L127 `isFrontEndEvent: true` removal → confirmed
 
-**Filter logic change (2026-04-14):**
-- Donna Yan confirmed filters should be OR (show products matching ANY selected tag)
-- `filteredSections`: `activeFilters.every()` → `activeFilters.some()` — NOT YET APPLIED (blocked on Closest Shades clarification)
-- Closest Shades section behavior: **BLOCKED — awaiting Donna's response** on when/what to display now that OR logic means multi-filter produces results
-- Kyo asked Donna for clarification on 2026-04-14; response pending
+*Discarded (3, each with concise justification reply):*
+- L33/L66 native `<a>` for cards (WCAG 4.1.2) — WCAG 2.5.3 scan violation overrides; kept `<div role="link">` with inner text as accessible name
+- L13 FilterButtons `aria-label` prop — Vue 3 normalizes kebab-case to declared prop (not fallthrough)
+- L413 filter-toggle focus loss — edge case after Donna's OR-logic decision; filter-button-focus-stays-put matches Amazon/Sephora/Ulta shop UX
+- Quiz link `aria-label` (L5) — same WCAG 2.5.3 conflict as cards; removed aria-label, sentence context satisfies 2.4.4
 
-**Tests:** 67 total (52 ShadeShopPage + 15 FilterButtons + 2 LocationCard experiment tests).
+**Bot review responses:**
+- Sentry "loading skeleton indefinite" (L80): Not reachable — Tophat always configures products for brown/blonde/red/black color families. Reply posted.
+- PilkoLint `vi is not defined` (9 flags across 2 test files): Fix staged locally; pending user commit (import vi from vitest).
+
+**Re-validation:** Every change re-validated with Level Access browser extension — clean.
+
+**Tests (87 total on PR surface):** 58 ShadeShopPage (+9 new — OR logic, native-anchor verification discard, grid id, filtersEverUsed, section toggle focus, Shop All breadcrumb `/shop-all` regression-lock) + 15 FilterButtons + 14 LocationCard (includes experiment redirect + breadcrumb assertions). Full website suite unchanged at 5373 passing, no regressions.
+
+**PR body rewrite (2026-04-15, session-reset artifact):**
+- Source: rewritten via pr-scribe in the `* PR BODY` `#+begin_src markdown` block of `~/.brain.d/roam-nodes/madison_reed/2026-04-08-120100-dotcompb_7466.org`
+- Format: Hybrid MR top-level skeleton + Kyonax internal formatting (see §2.3 decision #87)
+- Checklist: 6 verbatim MR items; all 5 boxes checked except `requires a lambda deployment` and `contains db migrations`
+- Changes: Pattern B with `### Implementation` subsection only (no `### Release` / `### CI & Tooling` / `### Dependencies` / `### Docs` since this PR doesn't touch those), mandatory tag legend blockquote, themed group labels (Shade Shop Page, Routing, Location Card, Location Directory, Assets), `[NEW]` / `[MOD]` tags (7 NEW + 3 MOD)
+- Technical Details: TD-4FIELD with 9 decisions × 4 sub-fields (Chose / Over / Why / Trade-off)
+- Tracking Events: separate subsection listing 5 Segment events
+- Testing Coverage: TEST-TWO-TABLE with `**Test runner:**` / `**Command:**` metadata + `#### Automated tests` (3-row table) + `#### Quality gates` (6-row table)
+- QA heading: MR wording (`## Instructions on how QA can test this PR`) + Kyonax step format (ASCII flow tree, `> **Prereqs:**` per feature group, `***Expected:***` bold-italic at 6-space indent, 2 feature groups = 20 steps total)
+- Special Deployment: DEPLOY-SEVERITY numbered list — 2 CRITICAL (CMS Data Tool object + image format), 2 REQUIRED (RCC Site Revolution + BookingFlowSiteRevolution experiments), 1 OPTIONAL (Tophat route collision check)
+- Documentation: DOC-MEDIA-VOCAB with 4 media headings (VIDEO demo + DESKTOP/MOBILE/SCREENSHOT placeholders)
+- Reference footer: `[DOTCOMPB-7466]` + `[DOTCOMPB-7886]` both with `atlOrigin` preserved
+- Global-rule sweep: 0 emojis outside `✅` status cells, 0 arrow glyphs (including `=>`), 0 gitignored file refs, all absolute URLs, checkboxes only in top Checklist
+
+#### Follow-on fix A: Sticky-header-wrap ResizeObserver rewrite (2026-04-15, uncommitted)
+
+**Reported:** User QA on `dotcom-feat.mdsnrd.com/shop/brown` showing sticky header misaligned. Compared against `dotcom.mdsnrd.com/shop/brown` (working) and `localhost:3000/shop/brown`. Root cause traced to `--mr-navigation-height` only measuring `.mr-navigation`, not the full `.sticky-header-wrap` (which contains `SiteMessageBanner` + `SiteMessageBannerCarousel` + `MrNavigation` when experiment B is active). See §2.3 decisions #93–#96.
+
+**Broken scenarios before the fix:**
+- Experiment A (control): nav is NOT sticky → `.sticky-header-wrap.is-sticky` absent → but `--mr-navigation-height` still set by `ResizeObserver` → sticky header offset by a phantom nav height
+- Experiment B + visible banner: `.sticky-header-wrap.is-sticky` active → sticky header offset by ONLY nav height → overlaps banner + carousel
+- Mobile vs desktop: banner skeleton heights differ (`5.5em` / `4em` / `3.6em` per breakpoint) → single CSS var never matches
+
+**Fix:**
+- `ShadeShopPage.vue` template: `.sticky-header(:style="stickyHeaderStyle")` replaces the static `top var(--mr-navigation-height, 0px)` in scoped Stylus.
+- `data()`: new `stickyHeaderOffset: 0`, `stickyHeaderObserver: null`.
+- `computed`: new `stickyHeaderStyle()` returning `{ top: `${this.stickyHeaderOffset}px` }`.
+- `mounted()` adds `$nextTick(() => this.setupStickyHeaderOffset())`; `beforeUnmount()` calls `teardownStickyHeaderOffset()`.
+- `setupStickyHeaderOffset()`: SSR-guarded (`typeof window === 'undefined' || typeof ResizeObserver === 'undefined'` short-circuits). Queries `document.querySelector('.sticky-header-wrap.is-sticky')`. If absent (experiment A or no sticky scaffold), offset stays `0`. If found, reads `getBoundingClientRect().height` and attaches a `ResizeObserver` to keep the offset live (covers banner dismiss, carousel slide, viewport resize).
+- `teardownStickyHeaderOffset()`: disconnects the observer, nulls the reference.
+- Scoped Stylus: removed stale `top var(--mr-navigation-height, 0px)` line from `.sticky-header`.
+
+**Key pattern decisions:**
+
+| Decision | Date | Rationale |
+|---|---|---|
+| `document.querySelector('.sticky-header-wrap.is-sticky')` (not experiment name) | 2026-04-15 | Decouples from experiment name; if SsrApp's gating logic changes, consumer still works |
+| `ResizeObserver` on the wrap (not polling / `useScroll`) | 2026-04-15 | Border-box changes are caught live; banner dismiss / carousel slide / breakpoint change all trigger correct re-measure |
+| `:style` binding (not CSS variable on `<html>`) | 2026-04-15 | Scoped to this component; avoids cross-cutting change to `MrNavigation.vue`; verified `:style` is allowed and idiomatic (69 precedents, no ESLint rule) — §2.3 #92 |
+| SSR-guarded setup in `mounted` via `$nextTick` | 2026-04-15 | Ensures `globalMixins.mounted` has already populated `this.experiments`; double-guard via `typeof ResizeObserver === 'undefined'` covers older environments |
+
+**Tests added (+4 in new `describe('sticky header offset')` block in `ShadeShopPage.test.js`):**
+- defaults `stickyHeaderOffset` to `0` and `stickyHeaderStyle.top` to `'0px'`
+- keeps offset at `0` when `.sticky-header-wrap.is-sticky` is absent (experiment A scenario)
+- reads wrap height and observes when `.sticky-header-wrap.is-sticky` is present (experiment B + banners — mock `getBoundingClientRect()` returns `172`, assert `stickyHeaderOffset === 172`, assert `observe` called with the wrap element)
+- disconnects the observer on `beforeUnmount`
+
+**Tests: 62 `ShadeShopPage.test.js` passing locally (was 58 → +4 new).**
+
+#### Follow-on fix B: View Details redirect fix (2026-04-15, uncommitted)
+
+**Reported:** User QA flagged two inconsistencies on `/colorbar/locations`:
+1. Right-click → "Open in new tab" on "View Details" opens `/colorbar/locations/{code}` (details)
+2. Left-click on "View Details" lands on `/colorbar/booking/{code}/services` (services)
+
+**Root cause:** `LocationCardBody.vue` child component has its own local `detailsUrl` computed hardcoded to `/colorbar/locations/{code}`, but wires `@click.prevent="$emit('details-click')"` which bubbles up to `LocationCard.onCardClick` — and THAT handler uses the parent's experiment-gated `detailsUrl`. So `href` and click destination diverge under experiment B. Already filed as **DOTCOMPB-7958** and **DOTCOMPB-7959** (linked to 7886 via "created by" on the JIRA ticket).
+
+**Fix (scoped to `LocationCard.vue` — no change needed to `LocationCardBody.vue`):**
+- `computed`: added `locationDetailsUrl()` returning `/colorbar/locations/${this.location.code}` (NEVER experiment-gated). `detailsUrl` refactored to reuse this new computed in the non-B branch (functionally identical, cleaner).
+- `methods`: added `onViewDetailsClick()` firing `trackMREventAndRedirect('Locations page – Location card clicked', this.locationDetailsUrl, this.locationProperties)` — same tracking event as card click but hardcoded destination.
+- Template: `LocationCardBody(... @details-click="onViewDetailsClick")` replaces the prior `@details-click="onCardClick"`. Card image + name anchors still use the experiment-gated `detailsUrl` → DOTCOMPB-7886 AC1 still satisfied (§2.3 #99).
+
+**Interaction matrix (now consistent across all input modes):**
+
+| Interaction on "View Details" | Destination |
+|---|---|
+| Left-click (with tracking) | `/colorbar/locations/{code}` |
+| Keyboard Enter | `/colorbar/locations/{code}` |
+| Right-click → Open in new tab | `/colorbar/locations/{code}` |
+| Middle-click / Cmd-click | `/colorbar/locations/{code}` |
+| Copy link address | `/colorbar/locations/{code}` |
+
+**Tests added (+2 in `LocationCard.test.js`):**
+- `computes correct locationDetailsUrl (never experiment-gated)` — asserts `locationDetailsUrl === '/colorbar/locations/woodlands'` even with `experiments: { 'BookingFlowSiteRevolution': 'B' }`
+- `onViewDetailsClick always redirects to location details page (not booking), even when experiment is B` — asserts `trackMREventAndRedirect` called with `/colorbar/locations/woodlands` under experiment B
+
+**Tests: 16 `LocationCard.test.js` passing locally (was 14 → +2 new).**
+
+**Defects resolved by this fix:** DOTCOMPB-7958 (href vs click divergence), DOTCOMPB-7959 (no path to location details under experiment B). DOTCOMPB-7960 and DOTCOMPB-7961 remain open — separate concerns (SSR-side route handling + SSR hydration mismatch).
+
+**AC1 of DOTCOMPB-7886 verification:** Location NAME click still routes through the experiment-gated `detailsUrl` → services page (B) or details page (A). AC1 is scoped to NAME only (§2.3 #99); View Details is out of AC scope. AC1 remains satisfied.
+
+#### PR-surface tests summary (post follow-ons, pre-commit)
+
+- `ShadeShopPage.test.js`: 62 passing (was 57 before session, now +5: 1 `/shop-all` breadcrumb regression-lock from DOTCOMPB-7944, +4 sticky-header-offset regression-locks)
+- `FilterButtons.test.js`: 15 passing (unchanged)
+- `LocationCard.test.js`: 16 passing (was 14, +2 View Details regression-locks)
+- **Total PR surface: 93 passing**, 0 regressions. Full website Vitest suite unchanged at baseline.
+
+#### Commit message plan (drafted text only — NOT executed, per `feedback_no_git.md`)
+
+Two separable commits OR one bundled commit — user preference. Drafts available in the `ShadeShopPage.test.js` / `LocationCard.test.js` / `ShadeShopPage.vue` / `LocationCard.vue` working-tree edits.
+
+---
+
+### 3.16 DOTCOMPB-7944: Shop All Products Breadcrumb Wrong URL (Bug)
+
+**Created:** 2026-04-15 | **Last updated:** 2026-04-15
+**Branch:** `DOTCOMPB-7466` (piggybacked — NOT a new branch, per user instruction)
+**Status:** **IN PROGRESS** (JIRA: En curso). Fix implemented locally, uncommitted in working tree. Commit message drafted and ready. Will ship with PR #20512.
+**Roam node:** `~/.brain.d/roam-nodes/madison_reed/2026-04-15-220000-dotcompb_7944.org` (UUID `1d126143-ebe7-4cb3-bd00-1736b196eaf3`)
+**Parent ticket:** [DOTCOMPB-7466](https://madison-reed.atlassian.net/browse/DOTCOMPB-7466) — Shade Shop Page Redesign (introduced the hardcoded breadcrumb)
+
+**Bug summary:**
+The Shop All Products breadcrumb on every Shade Shop PLP (`/shop/brown`, `/shop/blonde`, `/shop/red`, `/shop/black`) points to `/shop/all-hair-color` (the filtered V2 hair-color category view served by `ShopProductByCategoryV2`) instead of the intended site-wide Shop All landing page at `/shop-all`. Carley Keran confirmed the target destination is `/shop-all`.
+
+**Root cause:**
+Hardcoded URL in `website/src/vuescripts/components/Shop/ShadeShopPage/ShadeShopPage.vue:377` inside `setBreadcrumbFragments()`:
+
+```javascript
+// BEFORE
+{ title: 'Shop All Products', url: '/shop/all-hair-color' },  // WRONG
+
+// AFTER
+{ title: 'Shop All Products', url: '/shop-all' },
+```
+
+Single point of failure — grep across `website/src` confirmed this was the **only** place in the codebase pairing the text "Shop All Products" with `/shop/all-hair-color`. Every other Shop All link (SiteNav, PDP breadcrumb, Cart empty state, Dashboard cards) correctly uses `/shop-all`. The Express route `/shop-all` is already registered in `website/src/routing/views.js:850`.
+
+**Reference patterns audited (all use `/shop-all`):**
+
+| File | Line | Pattern |
+|---|---|---|
+| `SiteNav/constants.js` | 333 | `{ title: 'Shop All Products', url: '/shop-all' }` |
+| `PdpEntry.vue` | 314 | `fragments.push({ title: 'Shop All', url: '/shop-all' });` |
+| `PdpEntrySsr.vue` | 302 | `fragments.push({ title: 'Shop All', url: '/shop-all' });` |
+| `CartV2.vue` | 7 | `native-href="/shop-all"` |
+| `EmptyCart.vue` | 7 | `a(href="/shop-all") See all products` |
+| `LocationsEmptyState.vue` | 31 | `trackMREventAndRedirect('Locations page - Shop Now clicked', '/shop-all')` |
+| `views.js` | 850 | `app.get('/shop-all', (req, res) => {...})` (Express route) |
+
+**Implementation options considered:**
+
+| Option | Scope | Decision |
+|---|---|---|
+| 1. One-line URL change + test assertion | 1 file, ~20 lines | **Chose this** — minimal, aligned with existing codebase pattern |
+| 2. Extract `SHOP_ALL_URL` module-level const | Same file | Rejected — used only once, creates inconsistency with other call sites |
+| 3. Centralize nav URLs in `@constants/navigation.js` | 10+ files | Rejected — cross-cutting refactor not appropriate for single-URL bug fix; candidate for separate tech-debt ticket |
+
+**Files changed (2):**
+
+- **`website/src/vuescripts/components/Shop/ShadeShopPage/ShadeShopPage.vue`** — Line 377: `/shop/all-hair-color` replaced with `/shop-all`
+- **`website/src/vuescripts/components/Shop/ShadeShopPage/ShadeShopPage.test.js`** — Added 1 new test in the `describe('breadcrumbs')` block asserting the middle fragment's URL is `/shop-all` (regression lock). Uses `vi.spyOn(store, 'commit')` + `commitSpy.mock.calls.find(...)` pattern because Vuex 4 invokes the bound commit with 3 positional args (name, payload, options) — see §2.3 decision #90.
+
+**Test added:**
+```javascript
+it('sets the Shop All Products breadcrumb url to /shop-all', async () => {
+  const store = createMockStore();
+  const commitSpy = vi.spyOn(store, 'commit');
+  createWrapper({ keys: ['brown'] }, store);
+  await flushPromises();
+  const setBreadcrumbsCall = commitSpy.mock.calls.find(call => call[0] === 'global/setBreadcrumbs');
+  expect(setBreadcrumbsCall).toBeDefined();
+  expect(setBreadcrumbsCall[1]).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ title: 'Shop All Products', url: '/shop-all' }),
+    ]),
+  );
+});
+```
+
+**Tests result:** 73 passing on local run (58 ShadeShopPage including new breadcrumb test + 15 FilterButtons). LocationCard untouched (still 14 tests — not re-run this session but unaffected). Total PR surface: 87 tests passing.
+
+**Key decisions:**
+
+| Decision | Date | Rationale |
+|---|---|---|
+| Fix on `DOTCOMPB-7466` branch, not a new branch | 2026-04-15 | User instruction — bug is a direct regression from the open PR; ship both together to QA |
+| Option 1 (one-line URL change) | 2026-04-15 | Aligned with every other call site; no cross-file refactor needed |
+| Add regression-lock test | 2026-04-15 | Existing `describe('breadcrumbs')` block only asserted `setBreadcrumbs` was called, not the URL — future change could silently reintroduce the bug |
+| `commitSpy.mock.calls.find(...)` over `toHaveBeenCalledWith(...)` | 2026-04-15 | Vuex 4 invokes `commit` with `(name, payload, options)` where `options` is typically undefined. `toHaveBeenCalledWith('name', expected)` fails on positional-count mismatch. Find + `toEqual` on `call[1]` is cleaner. See §2.3 decision #90 |
+
+**Commit message (drafted, awaiting user to run `git commit`):**
+```
+fix: Shop All Products breadcrumb links to /shop-all on Shade Shop PLP
+
+DOTCOMPB-7944: The Shop All Products breadcrumb on every Shade Shop PLP
+(/shop/brown, /shop/blonde, /shop/red, /shop/black) pointed to the
+filtered V2 hair-color category view (/shop/all-hair-color) instead of
+the site-wide Shop All landing page (/shop-all). Confirmed destination
+is /shop-all per Carley Keran — consistent with SiteNav, PDP, Cart, and
+Dashboard which all use /shop-all.
+
+Root cause: hardcoded URL on line 377 of ShadeShopPage.setBreadcrumbFragments.
+Single point of failure — grep across website/src confirmed no other call
+site pairs "Shop All Products" with /shop/all-hair-color.
+
+Fix: 1-line URL change in ShadeShopPage.vue + a regression-lock test in
+ShadeShopPage.test.js that asserts the middle breadcrumb fragment's url
+is /shop-all. Tests: 73 passing, 0 regressions.
+
+Modified-by: Cristian D. Moreno <kyonax.corp@gmail.com>
+```
+
+**Index entries:**
+- BACKLOG: `<<bug-7944>>` anchor with org-roam link to node UUID `1d126143-...`
+- Sprint Board `IN PROGRESS`: nested under `<<ticket-7466>>` (same lane, parent-child)
+- BACKLOG statistics cookie: `[69%] [23/33]` bumped to `[68%] [23/34]`
 
 ---
 
@@ -1366,17 +1631,22 @@ ShadeShopPage/
 | `~/.brain.d/roam-nodes/madison_reed/2026-04-06-dashhudson_research.org` | DashHudson / Dash Social platform research (8-part doc, CDN inventory, widget internals, API reference, implementation plans) |
 | `~/.brain.d/roam-nodes/madison_reed/2026-04-06-160000-dotcompb_7527.org` | DOTCOMPB-7527 (Dash Hudson UGC carousel overrides) |
 | `~/.brain.d/roam-nodes/madison_reed/2026-04-08-120000-dotcompb_7886.org` | DOTCOMPB-7886 |
-| `~/.brain.d/roam-nodes/madison_reed/2026-04-08-120100-dotcompb_7466.org` | DOTCOMPB-7466 (31 ACs, 10 mockups, data pipeline investigation, CMS architecture, experiment design, 8-phase plan) |
+| `~/.brain.d/roam-nodes/madison_reed/2026-04-08-120100-dotcompb_7466.org` | DOTCOMPB-7466 (31 ACs, 10 mockups, data pipeline investigation, CMS architecture, experiment design, 8-phase plan, rewritten `* PR BODY` block 2026-04-15 via pr-scribe Hybrid format) |
+| `~/.brain.d/roam-nodes/madison_reed/2026-04-15-220000-dotcompb_7944.org` | DOTCOMPB-7944 (BUG: Shop All Products breadcrumb wrong URL — root cause + 3 implementation options + recommendation + test plan + parent cross-ref to ticket-7466) |
 | `~/.brain.d/roam-nodes/madison_reed/assets/mobile_shop:brown*.jpg` (5 files) | DOTCOMPB-7466 Figma mockups (mobile) |
 | `~/.brain.d/roam-nodes/madison_reed/assets/desktop_shop*.png` (5 files) | DOTCOMPB-7466 Figma mockups (desktop) |
-| `website/src/vuescripts/components/Shop/ShadeShopPage/*` (3 files + components/) | DOTCOMPB-7466 (page, index, tests) |
-| `website/src/vuescripts/components/Shop/ShadeShopPage/components/*` (2 files) | DOTCOMPB-7466 (FilterButtons + tests) |
+| `website/src/vuescripts/components/Shop/ShadeShopPage/ShadeShopPage.vue` | DOTCOMPB-7466 (page) + DOTCOMPB-7944 (`/shop-all` fix) + sticky-header-wrap ResizeObserver rewrite (2026-04-15 follow-on: `:style="stickyHeaderStyle"` binding, `setupStickyHeaderOffset` / `teardownStickyHeaderOffset` methods, removed stale `top var(--mr-navigation-height)` Stylus) |
+| `website/src/vuescripts/components/Shop/ShadeShopPage/ShadeShopPage.test.js` | DOTCOMPB-7466 (57 tests) + DOTCOMPB-7944 (+1 breadcrumb regression-lock) + sticky-header follow-on (+4 regression-locks) — 62 total |
+| `website/src/vuescripts/components/Shop/ShadeShopPage/index.js` | DOTCOMPB-7466 (barrel export) |
+| `website/src/vuescripts/components/Shop/ShadeShopPage/components/FilterButtons.vue` | DOTCOMPB-7466 |
+| `website/src/vuescripts/components/Shop/ShadeShopPage/components/FilterButtons.test.js` | DOTCOMPB-7466 (15 tests) |
 | `website/src/assets/svg-icons/close-thin.svg` | DOTCOMPB-7466 (dismiss icon for filter buttons) |
 | `website/src/vuescripts/components/Shop/routes.js` | DOTCOMPB-7466 (added shade shop route) |
-| `website/src/vuescripts/components/ColorBarLocationSectionV1/LocationCard.vue` | DOTCOMPB-7886 (experiment redirect) |
-| `website/src/vuescripts/components/ColorBarLocationSectionV1/LocationCard.test.js` | DOTCOMPB-7886 (2 experiment tests) |
-| `website/src/vuescripts/components/ColorBarMapSection/LocationsDirectory.vue` | DOTCOMPB-7886 (experiment redirect) |
-| `~/.brain.d/roam-nodes/2025-11-18-index_madison_reed.org` | Sprint Board Index |
+| `website/src/vuescripts/components/ColorBarLocationSectionV1/LocationCard.vue` | DOTCOMPB-7886 (experiment redirect) + View Details follow-on fix (2026-04-15: `locationDetailsUrl` computed, `onViewDetailsClick` handler, template rewires `@details-click`) |
+| `website/src/vuescripts/components/ColorBarLocationSectionV1/LocationCard.test.js` | DOTCOMPB-7886 (14 tests) + View Details follow-on (+2 regression-locks) — 16 total |
+| `website/src/vuescripts/components/ColorBarLocationSectionV1/LocationCardBody.vue` | Pre-existing. Unchanged by session work — its local `detailsUrl` computed intentionally stays hardcoded to `/colorbar/locations/{code}` and is the source of truth for the "View Details" `href` |
+| `website/src/vuescripts/components/ColorBarMapSection/LocationsDirectory.vue` | DOTCOMPB-7886 (experiment redirect + `isFrontEndEvent` removal) |
+| `~/.brain.d/roam-nodes/2025-11-18-index_madison_reed.org` | Sprint Board Index — `<<bug-7944>>` added 2026-04-15 (nested under `<<ticket-7466>>` in IN PROGRESS, BACKLOG cookie `[68%] [23/34]`) |
 
 ### Session & Directives
 
@@ -1391,32 +1661,41 @@ ShadeShopPage/
 
 > **Start here when resuming.** This section captures the most recent work and immediate next steps.
 
-### What was done last (2026-04-14)
+### What was done last (2026-04-15) — Sticky-header-wrap rewrite + View Details redirect fix on branch `DOTCOMPB-7466`
 
-*   **Andris PR review addressed** — 2 comments on PR #20512 fixed: (1) `addUniqueProducts()` extracted from duplicated dedup blocks (ad-23), (2) `product?.imagery` cached into `const imagery` (ad-24).
-*   **Full code review (8 subagents, 84 rules)** — 2 implemented (emits order in FilterButtons, BEM `--` → single hyphen), 3 skipped (focus-visible, trivial returns, px→rem). Multiple false positives filtered.
-*   **3 AI bot comments dismissed** — Missing route props (CMS pipeline), AND filter logic (Donna confirmed OR), SSR hydration on experiments (established pattern).
-*   **Code-review skill updated** — ad-23 (extract repeated logic) and ad-24 (cache repeated lookups) added to `rules/mr-review-checklist.md` and `SKILL.md`. 84 rules total now.
-*   **Commit 3 staged** — Andris fixes + BEM rename + emits order. Ready to commit.
-*   **OR filter logic still blocked** — Donna confirmed OR, but Closest Shades clarification pending.
+*   **Sticky-header bug investigated end-to-end across environments** — User QA flagged misaligned sticky header on `dotcom-feat.mdsnrd.com/shop/brown` vs working on `dotcom.mdsnrd.com`. Two research rounds across the codebase: (1) how the site-wide sticky scaffold works (`SsrApp.vue:90` + `vue-layout.styl:451`: `.sticky-header-wrap.is-sticky` is the single sticky contract, gated on `BookingFlowSiteRevolution === 'B'`); (2) what `--mr-navigation-height` actually measures (only `.mr-navigation`, not the banners) — `MrNavigation.vue:159-168`. Found planned-but-never-set `--mr-sticky-header-height` in `ColorKitHeroV3.vue:97` with `TODO: remove when DOTCOMPB-7713 get merge`. Catalogued how other sticky components handle the stack (`BookingHeader`, `BookingSummary`, `StickyWrap`, `StoreLocator`, `ResultsPageHero`, PDP heroes).
+*   **Sticky-header fix implemented on `ShadeShopPage.vue`** — `document.querySelector('.sticky-header-wrap.is-sticky')` + `ResizeObserver` pattern. Handles every scenario: experiment A (no sticky scaffold → offset 0), experiment B with any combination of banner / carousel / nav, dismissed banners mid-session, viewport resizes. Scoped to this component via `:style="stickyHeaderStyle"` binding. Stale `top var(--mr-navigation-height, 0px)` Stylus removed. +4 regression-lock tests in `ShadeShopPage.test.js`. Source file changes and full logic documented in §3.15 "Follow-on fix A".
+*   **`:style` audit completed** — User questioned whether `:style` binding is allowed. Confirmed: 69 usages across `website/src/vuescripts/**/*.vue`, no ESLint rule forbids it, no `.claude/rules` file restricts it. Idiomatic pattern for runtime-measured numeric values. Graduated as session decision §2.3 #92.
+*   **LAN / tunnel guidance provided** — User wanted to test `localhost:3000/shop/brown` from another device. BrowserSync on port 3000 already binds to `0.0.0.0` — no config change needed. LAN IP: `192.168.40.10`. Fallbacks: `cloudflared tunnel --url http://localhost:3000` or `ngrok http 3000`. Graduated as session decision §2.3 #100.
+*   **DOTCOMPB-7886 recap + "View Details" redirect bug discovered** — User asked to recall DOTCOMPB-7886 scope (location NAME → services under experiment B). While reviewing `LocationCardBody.vue` discovered a hardcoded `detailsUrl` computed on the child component creating a **left-click vs right-click divergence**: href pointed to `/colorbar/locations/{code}` (details page) while left-click's emit-chain landed on `/colorbar/booking/{code}/services` (services page) under experiment B. Already filed as DOTCOMPB-7958 and DOTCOMPB-7959.
+*   **View Details redirect fix implemented on `LocationCard.vue`** — Added `locationDetailsUrl` computed (never experiment-gated) + `onViewDetailsClick` handler that tracks + redirects to `locationDetailsUrl`. Template rewires `@details-click="onCardClick"` → `@details-click="onViewDetailsClick"`. `LocationCardBody.vue` untouched — its local hardcoded `detailsUrl` is now the intended source of truth for the `href`. +2 regression-lock tests in `LocationCard.test.js`. Resolves DOTCOMPB-7958 and DOTCOMPB-7959. DOTCOMPB-7886 AC1 still satisfied (AC1 is scoped to NAME only — §2.3 #99). DOTCOMPB-7960 and DOTCOMPB-7961 remain separate open tickets (SSR route handling + SSR hydration — out of scope).
+*   **PR-surface test totals:** 93 passing (62 `ShadeShopPage.test.js` + 15 `FilterButtons.test.js` + 16 `LocationCard.test.js`), 0 regressions.
+*   **All three follow-on fixes uncommitted in the working tree** — DOTCOMPB-7944 breadcrumb + sticky-header rewrite + View Details redirect. Commit messages drafted as text; never executed per `feedback_no_git.md`.
 
 ### Pending
 
-*   **DOTCOMPB-7466 — Commit 3** — Staged (Andris fixes). Needs commit + push to PR #20512.
-*   **DOTCOMPB-7466 — OR filter logic** — Code change ready (`every` → `some`). Closest Shades behavior blocked on Donna's response.
-*   **DOTCOMPB-7903** — Changes staged, not committed. PR #20481 description updated. Branch `DOTCOMPB-7903`.
-*   **DOTCOMPB-7712** — PR #20423 OPEN. In Code Review. Branch `DOTCOMPB-7712`. 81 tests.
+*   **Uncommitted local edits on branch `DOTCOMPB-7466`** — three logical changes ready to commit:
+    1. DOTCOMPB-7944: `ShadeShopPage.vue` line 377 URL fix + `ShadeShopPage.test.js` breadcrumb regression-lock.
+    2. Sticky-header-wrap fix: `ShadeShopPage.vue` template `:style` binding + `data` + `computed` + `mounted` + `beforeUnmount` + new methods + Stylus cleanup; `ShadeShopPage.test.js` +4 regression-locks.
+    3. View Details fix: `LocationCard.vue` `locationDetailsUrl` computed + `onViewDetailsClick` method + template rewire; `LocationCard.test.js` +2 regression-locks.
+    Also still present from earlier in the day: quiz-link `aria-label` removal in `ShadeShopPage.vue` + `import { vi } from 'vitest'` headers (if not already staged by the user).
+*   **DOTCOMPB-7466 — paste refined PR description into GitHub PR #20512** — Source: `* PR BODY` `#+begin_src markdown` block in the 7466 roam node. Run `gh pr edit 20512 --body-file <tempfile>` or manually copy. Do NOT run without user confirmation.
+*   **DOTCOMPB-7466 — top-level PR summary comment** — drafted earlier, content in `/tmp/pr_20512_replies.md`. `gh pr comment 20512 --body-file /tmp/pr_20512_replies.md` on explicit approval.
+*   **DOTCOMPB-7960 and DOTCOMPB-7961** — separate open tickets (SSR route handling + SSR hydration mismatch on `/colorbar/locations`). Not addressed on this branch.
+*   **DOTCOMPB-7903** — Changes staged, not committed. PR #20481.
+*   **DOTCOMPB-7712** — PR #20423 OPEN. In Code Review. 81 tests.
 *   **DOTCOMPB-7742** — In Test (JIRA: Pruebas). PR #20368.
-*   **DOTCOMPB-7717 cleanup** — Not yet implemented. Plan in §3.8.
+*   **DOTCOMPB-7717 cleanup** — MarketingBanner dead workaround. Plan in §3.8.
 *   **DashHudson Integration** — Research complete. Awaiting PM input.
 
 ### Where to resume
 
-If user wants to **commit Andris fixes**: Commit 3 staged. Message: `fix: Address PR review — extract dedup method, cache imagery lookup, fix naming`. Push to PR #20512.
-If user wants to **implement OR logic**: Change L200 `activeFilters.every()` → `activeFilters.some()`. Tests will break until Closest Shades decision resolves.
-If Donna responds **"remove Closest Shades"**: Remove `closestShades` computed, `.empty-state` + `.suggestions` template, 5 tests. Update announcement.
-If Donna responds **"keep for edge cases"**: Rewrite `closestShades` for unselected coverage types.
-If user asks for a **new task**: Check Section 2.5 (Pending Work).
+If user wants to **commit the three follow-on fixes on branch `DOTCOMPB-7466`**: Draft commit messages are in §3.15 (fixes A and B) and §3.16 (DOTCOMPB-7944). Can be committed separately (three commits) or bundled (one commit). Files: `ShadeShopPage.vue` (breadcrumb URL + sticky-header :style/methods/cleanup + prior quiz aria-label removal), `ShadeShopPage.test.js` (+5 new regression-locks total), `LocationCard.vue` (View Details handler), `LocationCard.test.js` (+2 new regression-locks), `LocationCard.test.js` may also need `import { vi } from 'vitest'` if not already present from the earlier 2026-04-15 work. NEVER run git commands unless user explicitly says "run git X" per `feedback_no_git.md`.
+If user wants to **push PR body to GitHub**: Copy content between the `#+begin_src markdown` / `#+end_src` fences in the `* PR BODY` block of `~/.brain.d/roam-nodes/madison_reed/2026-04-08-120100-dotcompb_7466.org`, then `gh pr edit 20512 --body-file <tempfile>`. Only on explicit user approval.
+If user wants to **post the top-level PR summary comment**: Content at `/tmp/pr_20512_replies.md`. Only on explicit user approval.
+If user wants to **test from another device**: `http://192.168.40.10:3000/shop/brown` on same Wi-Fi. If firewall / client-isolation blocks: `cloudflared tunnel --url http://localhost:3000`. Force experiment variant via `?xid=<experimentId>&v=A|B` URL override.
+If user wants to **triage DOTCOMPB-7960 or DOTCOMPB-7961**: Those are separate tickets — SSR route handling (`/colorbar/locations/{code}` should 301/404 when experiment B) and SSR hydration mismatch warning on `/colorbar/locations`. Neither is addressed on this branch.
+If user asks for a **new task**: check §2.5 Pending Work.
 
 <!-- DESCRIPTION AND USER CONTEXT END -->
 
