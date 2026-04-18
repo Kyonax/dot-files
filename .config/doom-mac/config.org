@@ -366,6 +366,7 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 (package! slim-mode)
 (package! stylus-mode)
 (package! sws-mode)
+(package! vue-mode)
 (package! web-mode)
 (package! yaml-mode)
 #+end_src
@@ -944,7 +945,9 @@ Setup the ~lsp-mode~ package to use it on the main languages that I work with.
 
 **** WEB-MODE
 Setup the ~web-mode~ package to use it on all html template files.
-#+begin_src emacs-lisp :tangle config.el
+
+*Work-mac:* Pug + Stylus engine detection for Madison Reed dotcom Vue SFCs.
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
 (defun kyo/web-mode-setup ()
   (setq web-mode-enable-current-element-highlight t)
   (setq web-mode-enable-current-column-highlight t)
@@ -964,6 +967,64 @@ Setup the ~web-mode~ package to use it on all html template files.
   :hook ((web-mode . kyo/web-mode-setup)
          (web-mode . flycheck-mode)
          (web-mode . whitespace-mode)))
+#+end_src
+
+*Personal-linux:* Standard HTML only, Vue files handled by ~vue-mode~ below.
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
+;; Fix Doom :lang web bug — set-indent-vars! takes (modes vars) but
+;; +html.el calls it with 5 separate args instead of a list.
+;; Redefine early to accept rest args so the buggy call doesn't crash.
+(defun set-indent-vars! (modes &rest vars)
+  "Register VARS as the tab-width proxy variables for each of major MODES."
+  (let ((vars (if (and (= (length vars) 1) (listp (car vars)))
+                  (car vars)
+                (ensure-list vars))))
+    (if (eq modes t)
+        (put 'tab-width 'indent-vars vars)
+      (dolist (mode (ensure-list modes))
+        (put mode 'indent-vars vars)))))
+
+(defun kyo/web-mode-setup ()
+  (setq web-mode-enable-current-element-highlight t)
+  (setq web-mode-enable-current-column-highlight t)
+  (setq web-mode-enable-engine-detection t)
+  (setq web-mode-markup-indent-offset 2)
+  (setq web-mode-code-indent-offset 2)
+  (setq web-mode-css-indent-offset 2)
+  (setq web-mode-block-padding 2))
+
+(use-package web-mode
+  :mode ("\\.html\\'" . web-mode)
+  :hook ((web-mode . kyo/web-mode-setup)
+         (web-mode . flycheck-mode)
+         (web-mode . whitespace-mode)))
+
+;; Force web-mode for .html after Doom's :lang web module loads
+;; (tree-sitter html-ts-mode falls back to fundamental-mode when grammar missing)
+(after! web-mode
+  (add-to-list 'auto-mode-alist '("\\.html\\'" . web-mode)))
+#+end_src
+
+**** VUE-MODE
+Setup the ~vue-mode~ package for Vue 3 SFCs on personal-linux. Uses ~mmm-mode~ to give each block its native major mode (html, js, scss). SCSS support via custom mmm subclass. No auto-formatting, no LSP — linting handled by flycheck + eslint CLI.
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
+(use-package vue-mode
+  :mode ("\\.vue\\'" . vue-mode)
+  :hook ((vue-mode . flycheck-mode)
+         (vue-mode . whitespace-mode))
+  :config
+  (setq mmm-submode-decoration-level 0)
+
+  ;; Register scss as a known style language for vue-mode
+  ;; vue-mode already handles <script> and <style> via vue-modes defcustom
+  (add-to-list 'vue-modes '(:type style :name scss :mode scss-mode))
+
+  ;; Prevent flycheck from running in mmm temp/indirect buffers
+  ;; Lint the whole .vue file from the main vue-mode buffer only
+  (setq flycheck-global-modes '(not js-mode css-mode scss-mode))
+  (add-hook 'vue-mode-hook
+            (lambda ()
+              (setq-local flycheck-global-modes t))))
 #+end_src
 
 **** ORG-MODE
@@ -1329,25 +1390,39 @@ Add =flycheck= with eslint for JSX/TSX/VUE/AND SO ON...
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
 (after! flycheck
   (setq flycheck-checker-error-threshold 2000)
-  (flycheck-define-checker eslint
-    "Run eslint (a strict eslint_d wrapper)."
-    :command ("eslint" "--format" "unix" source-inplace)
-    :standard-input (eval (not (buffer-file-name)))
-    :error-patterns ((error line-start (file-name) ":" line ":" column ": "
-                            (message (one-or-more not-newline)) " [Error" (* not-newline) "]" line-end)
-                     (warning line-start (file-name) ":" line ":" column ": "
-                              (message (one-or-more not-newline)) " [Warning" (* not-newline) "]" line-end))
-    :modes (js-mode js2-mode typescript-mode web-mode pug-mode stylus-mode)
-    :predicate (lambda ()
-                 (and (buffer-file-name)
-                      (executable-find "eslint"))))
 
-  (add-to-list 'flycheck-checkers 'eslint)
+  ;; Use the built-in javascript-eslint checker (JSON format, proper parser)
+  ;; ~/.local/bin/eslint wrapper delegates to npx eslint (project-local)
   (setq-default flycheck-disabled-checkers
-                '(javascript-eslint javascript-jshint javascript-standard typescript-tslint vue-eslint))
-  (add-hook 'flycheck-mode-hook (lambda ()
-                                  (when (derived-mode-p 'js-mode 'js2-mode 'typescript-mode 'web-mode)
-                                    (flycheck-select-checker 'eslint)))))
+                '(javascript-jshint javascript-standard typescript-tslint))
+
+  ;; Add vue-mode + mmm submodes to the built-in javascript-eslint checker
+  ;; mmm-mode switches major mode per subregion (vue-html-mode, js-mode,
+  ;; scss-mode) so all must be registered for flycheck to run
+  (after! flycheck
+    (flycheck-add-mode 'javascript-eslint 'vue-mode)
+    (flycheck-add-mode 'javascript-eslint 'vue-html-mode)
+    (flycheck-add-mode 'javascript-eslint 'web-mode)
+    (flycheck-add-mode 'javascript-eslint 'css-mode)
+    (flycheck-add-mode 'javascript-eslint 'scss-mode))
+
+  ;; Check on save and mode-enabled (avoid constant background checks)
+  (setq flycheck-check-syntax-automatically '(save mode-enabled))
+
+  ;; Force eslint checker in all vue-related buffers regardless of submode
+  (dolist (hook '(vue-mode-hook vue-html-mode-hook js-mode-hook
+                  css-mode-hook scss-mode-hook))
+    (add-hook hook
+              (lambda ()
+                (when (and (buffer-file-name)
+                           (string-match-p "\\.vue\\'" (buffer-file-name)))
+                  (setq-local flycheck-checker 'javascript-eslint)))))
+
+  ;; Select eslint for standalone js/ts/web buffers
+  (add-hook 'flycheck-mode-hook
+            (lambda ()
+              (when (derived-mode-p 'js2-mode 'typescript-mode 'web-mode)
+                (flycheck-select-checker 'javascript-eslint)))))
 #+end_src
 
 **** ESLINTD FIX
@@ -1371,22 +1446,22 @@ Add =flycheck= with eslint for JSX/TSX/VUE/AND SO ON...
 #+end_src
 
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
-(defun kyo/eslint-strict-fix-file ()
-  "Run eslint --fix on the current file and reload the buffer."
+(defun kyo/eslint-fix-file ()
+  "Run eslint --fix on the current file and reload the buffer.
+Uses the ~/.local/bin/eslint wrapper which delegates to npx eslint,
+resolving the project-local eslint and config automatically."
   (interactive)
   (let* ((file (buffer-file-name))
+         (default-directory (or (locate-dominating-file file "package.json")
+                                default-directory))
          (quoted (shell-quote-argument file))
-         (cmd (format "%s --fix %s"
-                      "eslint"
-                      quoted)))
+         (cmd (format "eslint --fix %s" quoted)))
     (message "Running eslint --fix on %s" file)
-
     (shell-command cmd)
-
     (revert-buffer :ignore-auto :noconfirm)
     (message "eslint --fix applied and buffer reloaded.")))
 
-(global-set-key (kbd "C-c f") #'kyo/eslint-strict-fix-file)
+(global-set-key (kbd "C-c f") #'kyo/eslint-fix-file)
 #+end_src
 
 **** WHITESPACE-MODE
@@ -1396,6 +1471,7 @@ Setup the ~whitespace-mode~ package to use it on the main languages that I work 
   :hook ((js2-mode . whitespace-mode)
          (typescript-mode . whitespace-mode)
          (web-mode . whitespace-mode)
+         (vue-mode . whitespace-mode)
          (php-mode . whitespace-mode)
          (json-mode . whitespace-mode)))
 #+end_src
@@ -1504,6 +1580,7 @@ Disable LSP formatting and indentation to avoid conflicts.
     (remove-hook 'js2-mode-hook #'prettier-js-mode)
     (remove-hook 'typescript-mode-hook #'prettier-js-mode)
     (remove-hook 'web-mode-hook #'prettier-js-mode)
+    (remove-hook 'vue-mode-hook #'prettier-js-mode)
     (remove-hook 'json-mode-hook #'prettier-js-mode)))
 ;; Also make sure the symbol exists but does nothing if called:
 (when (not (fboundp 'prettier-js-mode))
