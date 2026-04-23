@@ -15,7 +15,7 @@ This file is the **single source of truth** for the **RECKIT** project (repo: `K
 
 **Key principle:** Data may appear in multiple sections with different framing. Section 1 frames it as a rule to follow. Section 2 frames it as context to understand. Section 3 frames it as an implementation to reference. This is intentional — each section answers a different question about the same knowledge.
 
-**Compaction sources:** Sessions 1-5 (2026-04-08 to 2026-04-15 — brand bootstrap through v0.3 PR system), Session 6 (2026-04-16 to 2026-04-17 — overlay card fixes, modal abstraction, cam-log rename, Tier 1 file headers, ESLint Vue + naming conventions, brand-driven architecture refactor, Vite aliases, CONTRIBUTING.org, SECURITY.org, Doom Emacs config for Vue development), Session 7 Part A (2026-04-20 early — component architecture & naming convention §1.12: views restructured into sections/elements/modals, shared file renames, 7 new kind-aliases, four-layer naming pattern, Rules A–I codified), Session 7 Part B (2026-04-20 late — utils topic libraries §Rule J, three new ui/ primitives, widgets split by kind, ambiguous filename corrections, brand folder restructure into sources/, UiIcon multi-pool SVG discovery, SCSS single source of truth for brand theming, 27/27 tests), Session 8 prep (2026-04-21 — post PR #3 merge + `feat-brand_kot` branch creation; PR #4 opened for `dev` → `master` v0.4 release; release-PR composition pattern codified in §1.13; `release: v0.4 — Architectural Baseline` title chosen via title-body alignment rule; triad pending on `dev`), Session 9 (2026-04-21 continuation — first code on `feat-brand_kot`: cam-log "REC FRAME" replaced with dynamic dayjs UTC session-date `UTC ∇ DD.MM.YYYY // DDD`, status-dot switched from hard blink to smooth breathe animation, preview modal iframe-scale sub-pixel fix via `getBoundingClientRect()`, dayjs added as runtime dep).
+**Compaction sources:** Sessions 1-5 (2026-04-08 to 2026-04-15 — brand bootstrap through v0.3 PR system), Session 6 (2026-04-16 to 2026-04-17 — overlay card fixes, modal abstraction, cam-log rename, Tier 1 file headers, ESLint Vue + naming conventions, brand-driven architecture refactor, Vite aliases, CONTRIBUTING.org, SECURITY.org, Doom Emacs config for Vue development), Session 7 Part A (2026-04-20 early — component architecture & naming convention §1.12: views restructured into sections/elements/modals, shared file renames, 7 new kind-aliases, four-layer naming pattern, Rules A–I codified), Session 7 Part B (2026-04-20 late — utils topic libraries §Rule J, three new ui/ primitives, widgets split by kind, ambiguous filename corrections, brand folder restructure into sources/, UiIcon multi-pool SVG discovery, SCSS single source of truth for brand theming, 27/27 tests), Session 8 prep (2026-04-21 — post PR #3 merge + `feat-brand_kot` branch creation; PR #4 opened for `dev` → `master` v0.4 release; release-PR composition pattern codified in §1.13; `release: v0.4 — Architectural Baseline` title chosen via title-body alignment rule; triad pending on `dev`), Session 9 (2026-04-21 continuation — first code on `feat-brand_kot`: cam-log "REC FRAME" replaced with dynamic dayjs UTC session-date `UTC ∇ DD.MM.YYYY // DDD`, status-dot switched from hard blink to smooth breathe animation, preview modal iframe-scale sub-pixel fix via `getBoundingClientRect()`, dayjs added as runtime dep), Session 10 (2026-04-22 → 2026-04-23 — FPS-preservation performance pass on `feat-brand_kot`: blanket `cyberpunk-glow` mixin diagnosed as OBS FPS killer and removed; halo/glow reborn as opt-in design tokens on `:root` (`--hud-halo`, `--hud-halo-text`, `--hud-glow`); `useRecordingStatus`, `useSceneName`, `useAudioAnalyzer` collapsed to module-level singletons; audio analyzer rewritten event-driven off `InputVolumeMeters` with `Float32Array` + precomputed JITTER_TABLE + no rAF; `<AudioMeter>` writes bar transforms directly to the DOM via template refs (quantized SCALE_STRINGS, write-threshold skip, emit throttled ~10 Hz); `transform: scaleY()` replaces animated `height`; `contain: layout paint` applied to every HUD sub-tree; `<UiStatusDot>` split into static halo shell + animated-opacity `.glow` layer; cam-log layout restructured around `.hud-group` system; `brand.js` gains `host` + `region`; preview resize debounced; emit names kebab-cased; neutral-200 → neutral-100 harmonization; new `composables.test.js` (27 → 33 tests); §1.14 Performance Budget codified).
 
 **CRITICAL:** NEVER run `git commit`, `git push`, `gh pr create`, or any git write command. The user handles all git operations manually. Write to `COMMIT.org` and `PR.org` only.
 
@@ -29,7 +29,7 @@ This file is the **single source of truth** for the **RECKIT** project (repo: `K
 
 *   **Color palette:** Black (`--clr-neutral-500` = #000), gold (`--clr-primary-100` = #FFD700), white (`--clr-neutral-50` = #F2F2F2). Purple for license/version badges only. Red (`--clr-error-100`) for active recording state.
 *   **Aesthetic:** Cyberpunk/sci-fi HUD — military-grade surveillance UI. Corner brackets and crosshairs (no rounded borders).
-*   **HUD vocabulary:** SYS.LOG, session-date (`UTC ∇ DD.MM.YYYY // DDD` — dayjs, UTC, uppercase), CAM ONLINE, REC MODE, SES::SceneName::Txx. Status indicator (`<UiStatusDot>`) **breathes** when recording — smooth 2s ease-in-out opacity pulse (1 ↔ 0.35) + red `box-shadow` glow inhale/exhale. Never the hard `step-end` blink — soft breathing is the canonical recording-light idiom.
+*   **HUD vocabulary:** `brand.host` (top-left non-primary), session-date (`${brand.region} ∇ DD.MM.YYYY // DDD` — dayjs, UTC, uppercase; primary/gold), `[SESSION] ${scene_name}::T${take_count}` (top-right non-primary), CAM ONLINE (primary/gold), REC MODE. Status indicator (`<UiStatusDot>`) **breathes** when recording — smooth 2s ease-in-out opacity pulse (1 ↔ 0.35) on an inner `.glow` span; the dark halo stays on a separate static layer so the browser never re-rasterizes shadows per frame (decision #128). Never the hard `step-end` blink — soft breathing is the canonical recording-light idiom.
 
 ### 1.2 Technical Requirements
 
@@ -311,6 +311,62 @@ Every release PR body must make the triad visible to reviewers:
 6. New branch from dev              → next feature cycle
 ```
 
+### 1.14 Performance Budget for OBS Browser Sources
+
+**(2026-04-23)** RECKIT HUDs run as OBS Browser Sources composited over live video — the source MUST hold full OBS canvas fps (typically 60) on low-core-processor machines. Rendering cost is a first-class constraint, not a polish concern. Every HUD-touching change must consciously weigh these rules before shipping. Reverse-engineered from Session 10's FPS-regression diagnosis (decision #116) and the rewrite that followed.
+
+#### 1.14.1 The FPS budget rule
+
+*   **Target:** the HUD must never drop OBS source fps on the user's hardware (multi-core CPUs with low per-core clock — streaming rigs, laptops, minis). If any rule below conflicts with a visual flourish, fps wins.
+*   **Regression-first instinct:** when the HUD feels slow in OBS, profile before fixing. Common culprits in order of pain: broad CSS `filter` / `text-shadow` chains, per-frame JS allocations, animated properties that re-layout or re-rasterize, over-subscription to `InputVolumeMeters`.
+
+#### 1.14.2 Don't apply expensive CSS broadly
+
+*   **Never apply `filter: drop-shadow(...)` chains, multi-layer `box-shadow`, or `text-shadow` chains via a utility/mixin that hits every element of a color class.** The original `cyberpunk-glow` on every `--clr-primary-100` text was the FPS-killing incident — each gold label rasterized its own filter layer, compounded when animated.
+*   **Halo/glow is OPT-IN per element**, declared via CSS custom properties (`--hud-halo`, `--hud-halo-text`, `--hud-glow`) that specific consumers reference. Never auto-apply by color.
+*   **Group halo on a single container when possible.** `filter: drop-shadow()` rasterizes the subtree once; applying per-leaf multiplies the cost by N.
+
+#### 1.14.3 Animate only cheap, composited properties
+
+*   **Allowed per-frame:** `transform` (`translate`, `scale`, `rotate`), `opacity`.
+*   **Avoid per-frame:** `width`, `height`, `top`/`left`/`right`/`bottom`, `box-shadow`, `filter`, `background`, anything that triggers layout or re-rasterization.
+*   **Split static from animated.** If a decoration needs both a dark halo (expensive) and a pulsing glow (cheap), put the halo on one layer and animate `opacity` on a sibling — never animate an element whose `box-shadow`/`filter` is part of the keyframe. Example: `<UiStatusDot>` root carries static halo `box-shadow`; the inner `.glow` span is the only animated element (`opacity` only).
+*   **Prefer `transform: scaleY()` over animated `height`** for bar-style visualizers. GPU-composited, zero layout cost.
+
+#### 1.14.4 CSS containment on HUD sub-trees
+
+*   Add `contain: layout paint` to any HUD group, widget root, or frequently-updating region (`.hud-group`, `.status-bar`, `.audio-meter`, `.recording-timer`, `.ui-data-point`, `.debug-info`, `.hud-frame`, `.cam-log-overlay`). Isolates paint/layout so a bar-height update in the audio meter cannot force a layout pass on unrelated HUD labels.
+*   Don't use `contain: strict` or `contain: size` — they constrain layout too aggressively for brand-sized content.
+
+#### 1.14.5 OBS WebSocket call budget
+
+*   **One subscription per event per page.** Every OBS-WS-consuming composable is a **module-level singleton** (`useObsWebsocket`, `useRecordingStatus`, `useSceneName`, `useAudioAnalyzer`). N mounted consumers share one state object — never N subscriptions. First caller registers the handler; subsequent callers receive the same returned object.
+*   **Singleton contract:** `const a = useX(); const b = useX(); assert(a === b)`. Enforced by `src/shared/composables/composables.test.js`.
+*   **No `onUnmounted` cleanup on singletons** — they live for the page lifetime. Handler registration happens once at first-use.
+*   **Event-driven over rAF.** If OBS already pushes data (e.g. `InputVolumeMeters` at ~50 Hz), drive the UI off that event, not a separate `requestAnimationFrame` loop. One clock, one update cadence.
+*   **Throttle emits from hot paths.** A composable firing per OBS event should expose a `tick` counter for fine-grained watchers; Vue `$emit` calls that cross component boundaries should be throttled (~10 Hz is plenty for diagnostic readouts — use `performance.now()` delta gating).
+
+#### 1.14.6 Zero-allocation hot path
+
+*   **Preallocate typed arrays.** `new Float32Array(bar_count)` once at setup; mutate in place every tick. Never allocate new `Array(...)` or `{...}` per event.
+*   **Precompute lookup tables.** Replace per-frame `Math.random()` with a seeded `JITTER_TABLE: Float32Array` (256-entry ring, cursor-advanced). Replace per-frame string concat with a quantized `SCALE_STRINGS` table (101-entry `transform: scaleY(0.00...1.00)` strings indexed by rounded scale).
+*   **No per-event `Array.find` / `Array.map` / destructuring on large inputs.** Classic `for (let i = 0; i < len; i++)` in hot paths. Break out of the loop as soon as the target is found.
+*   **Bypass Vue reactivity when appropriate.** For visualizers updating many siblings at 50 Hz, write directly to the DOM via template refs (`el.style.transform = ...`). Gate writes with a threshold (`Math.abs(next - last) < 0.01` → skip). Vue's reactivity graph is for *state*, not *per-frame paint*.
+
+#### 1.14.7 Debounce event listeners on burst-prone inputs
+
+*   `window.resize`, `scroll`, and similar fire in bursts. Debounce expensive handlers (`applyScale`, layout recomputation) by ~100 ms with `setTimeout`/`clearTimeout`; clear the timer on unmount.
+
+#### 1.14.8 Review checklist before adding any HUD feature
+
+1. Does this add a `filter`, `box-shadow`, `text-shadow` on a broad selector? → No. Opt-in via custom property.
+2. Does this animate anything other than `transform` / `opacity`? → No. Refactor.
+3. Does this add an OBS-WS subscription? → Inside a singleton composable, not inside the consumer.
+4. Does this allocate per frame (new arrays, new objects, string concat)? → Preallocate or precompute.
+5. Does this `$emit` on every tick? → Throttle.
+6. Is this a frequently-updating sub-tree without `contain: layout paint`? → Add containment.
+7. Does this own a burst-prone `window.*` event listener? → Debounce.
+
 ---
 
 ## SECTION 2: SESSION OVERVIEW
@@ -373,6 +429,20 @@ Decisions 1-78 from Sessions 1-6 remain (see prior compaction). Session 6 contin
 113. **(2026-04-21)** `<UiStatusDot>` swapped from hard `step-end` blink (`opacity: 1 ↔ 0.2` flicker) to smooth `breathe` animation: `2s ease-in-out infinite`, `opacity: 1 ↔ 0.35`, `box-shadow: 0 0 4px ↔ 2px` of `var(--clr-error-100)`. Matches the canonical "recording red light" idiom (camera REC indicator, hardware record LEDs). Header comment updated: "blinks" → "breathes", prop doc notes the soft glow pulse. Ripples to every consumer of `<UiStatusDot>` (currently `<HudTimer>` in `cam-log.vue`; future overlays get it for free).
 114. **(2026-04-21)** Preview-modal iframe-scale sub-pixel bug fixed in `src/views/components/modals/preview.vue:137`. Root cause: `element.clientWidth` returns **rounded integer** pixels; when the stage container renders at e.g. `1070.9999…px`, `clientWidth` returns `1071` → `scale = 1071/1920 = 0.5578125` → scaled iframe width `1920 × 0.5578125 = 1071.0px` **overflows** the real container by ~1px. User identified the workaround empirically (changing the scale from `0.5578125` → `0.5578124` fixed the visual offset). Proper fix: swap to `element.getBoundingClientRect().width` — returns sub-pixel float, scale lands correctly regardless of fractional container width. **Rule captured:** for scale-derived CSS custom properties, always read container width via `getBoundingClientRect()`, never `clientWidth` / `offsetWidth`.
 115. **(2026-04-21)** Cam-log top-label sizing + positioning refined. `.session-date` and `.cam-online` both reduced from `hud-label-base`'s default `--fs-475` → `--fs-425` (−50 on the granular 25-step scale), then repositioned to `top: 5em` / `left,right: 4.7em` to hold visual anchor after font-size change (em units are relative to element font-size, so the original `4.5em`/`4em` offsets had to grow proportionally to compensate for the smaller type). `.toolkit-id` bottom-right badge bumped `--fs-300` → `--fs-350` for readability. Pattern captured: when changing a HUD label's `font-size`, always recompute its `em`-based position to preserve the intended anchor.
+116. **(2026-04-22)** FPS regression post-mortem — the `cyberpunk-glow` mixin (previously in `src/app/scss/abstracts/_mixins.scss`) applied to every `--clr-primary-100` text element was diagnosed as the cause of OBS Browser Source fps drops on low-core-processor devices. Each gold label spawned its own animated `box-shadow` keyframe → the compositor paid a layer-rasterization cost per element per frame. Mixin + `.cyberpunk-glow` utility class + `sass:math` import removed. Blanket-glow-via-utility pattern **banned** (§1.14.2). Glow reborn as explicit opt-in token (`--hud-glow`). This single decision triggered the Session 10 cascade — #117 through #129 are the refactors that restore the cyberpunk aesthetic without the FPS cost.
+117. **(2026-04-22)** Halo/glow lifted from SCSS mixin into CSS custom properties declared on `:root` in `src/app/scss/abstracts/_theme.scss`. Four tokens: `--hud-halo` (`filter: drop-shadow()` chain, 3 layers — dark outline + soft fall-off), `--hud-halo-text` (equivalent `text-shadow` chain for text-only elements), `--hud-glow` (brand-primary glow, bound to `--hud-glow-color` so consumers can re-point it to error/success colors without redefining the chain), `--hud-group-gap` (shared 0.6em vertical rhythm for grouped HUD labels). Plus `--clr-primary-100-80` / `--clr-primary-100-40` via `color-mix()` for bar-shadow tinting. Consumers compose: `filter: var(--hud-halo)` on containers, `text-shadow: var(--hud-halo-text), var(--hud-glow)` on leaves. **Explicit opt-in, not cascade-applied.** Legibility memory `project_hud_legibility_strategies.md` now stale on implementation pointers (mixin → tokens) — rationale about "why no blend modes" still valid.
+118. **(2026-04-22)** `useRecordingStatus`, `useSceneName`, `useAudioAnalyzer` converted to **module-level singletons** following the existing `useObsWebsocket` pattern. Each now owns a `let shared_state = null;` at module scope; repeat calls return the same object. Callers dropped the `{ obs, connected }` parameters — the composables call `useObsWebsocket()` themselves. N mounted HUD leaves consuming recording state now share one event handler registration instead of N. `watch(connected, ..., { immediate: true })` replaces the old `onMounted` fetch to guarantee initial sync even if the composable is first called after the WS connects. No `onUnmounted` cleanup — singletons live for page lifetime, matching the OBS-WS contract. Singleton identity asserted by `composables.test.js` (`expect(a).toBe(b)`).
+119. **(2026-04-22)** `useAudioAnalyzer` rewritten for zero-allocation event-driven operation. Changes: (a) levels/smoothed stored in preallocated `Float32Array(bar_count)` instead of `Array.from(...)`; (b) per-frame `Math.random()` replaced by a 256-entry `JITTER_TABLE: Float32Array` seeded once at module load, cursor-advanced per tick; (c) `requestAnimationFrame` render loop **deleted** — the composable now ticks off the OBS `InputVolumeMeters` event (~50 Hz); (d) reactivity surface reduced to a single `tick: ref(0)` counter + three low-churn refs (`active`, `source_name`); bar levels are NOT reactive — consumers watch `tick` and read `levels` synchronously; (e) target input hardcoded to `Mic/Aux` (was a runtime `source_name` option) — one known target eliminates a `find()` call per event. Result: one reactive write per event (the tick increment) instead of per-frame array allocation + 16-entry reactive update.
+120. **(2026-04-22)** `<AudioMeter>` writes bar transforms directly to the DOM via template refs, bypassing Vue reactivity in the hot path. Architecture: (a) template renders `v-for` of static `<div ref="bar_els" class="bar" />` — no inline `:style` binding; (b) a `watch(tick, ...)` callback reads `levels[i]` synchronously and assigns `el.style.transform = SCALE_STRINGS[idx]`; (c) `SCALE_STRINGS` is a precomputed 101-entry `Array` of `scaleY(0.00)`...`scaleY(1.00)` strings (quantized to 2 decimals) — no per-frame string concat; (d) write-threshold skip: if `|scale − last_scale[i]| < 0.01`, skip the DOM write entirely; (e) `update:state` emit throttled to ~10 Hz via `performance.now()` delta. Bar CSS switched from animated `height` → `transform: scaleY(...)` with `transform-origin: bottom` so all animations are GPU-composited with no layout cost. `source_name` prop removed from `<AudioMeter>` — the analyzer owns the target, consumers just mount the meter.
+121. **(2026-04-22)** `contain: layout paint` CSS containment applied to every frequently-updating HUD sub-tree: `.hud-group`, `.status-bar`, `.audio-meter`, `.recording-timer`, `.ui-data-point`, `.debug-info`, `.hud-frame`, `.cam-log-overlay`. Isolates paint and layout from siblings so a bar-height update in the audio meter cannot force a layout pass on unrelated HUD labels. Chose `layout paint` (not `strict` or `size`) so brand-sized content still reflows correctly when the HUD canvas resizes. Codified in §1.14.4.
+122. **(2026-04-22)** `brand.js` schema extended with two new fields: `host` (short uppercase stream/workstation label, e.g. `"KYO-LABS"`) and `region` (uppercase country/geographic tag, e.g. `"COL"`). Consumed by `cam-log.vue`: `host` renders as the top-left non-primary label; `region` replaces the previously hardcoded `"UTC"` in the session-date format string, becoming `${region} ∇ DD.MM.YYYY // ddd`. Brand-theming rule unchanged: colors still live exclusively in `@<brand>/styles/_theme.scss`. These are identity/context fields only — no runtime side-effects. All future brand bootstraps include them.
+123. **(2026-04-22)** `cam-log.vue` layout rewritten around a `.hud-group` structural system. Replaces ad-hoc absolute-positioned single-label classes (`.rec-frame`, `.cam-online`, `.identity-block`) with four positioned groups (`.group--top-left`, `.group--top-right`, `.group--bottom-left`, `.group--identity`) each containing vertically-stacked labels. Label markup unified under `.hud-text` + `.hud-text--primary` classes. Deprecates the `labels` prop on `<HudFrame>` for brand HUDs — structural grouping + explicit label markup is clearer than a labels map. `.dynamic-layer` extracted as a sibling of `<HudFrame>` to separate static HUD chrome from OBS-state-driven widgets (timer + audio meter + debug readout).
+124. **(2026-04-22)** Preview-modal `window.resize` handler debounced to 100 ms (`RESIZE_DEBOUNCE_MS`). Before: every resize event triggered `applyScale()` → `getBoundingClientRect()` + CSS custom property write — during window drag this fires ~60 Hz and paints the iframe at every size. After: a trailing 100 ms `setTimeout` collapses the burst into one recompute when the user pauses. Timer cleared on `onUnmounted`. Codified in §1.14.7.
+125. **(2026-04-22)** Vue emit event names normalized to kebab-case. `consume_trigger` → `consume-trigger` in both `<PreviewModal>` (`defineEmits`) and `<Card>` (`@consume-trigger` handler binding). Aligns with Vue's convention of declaring emit names in kebab-case and binding with `@kebab-case` on templates; snake_case remains the project convention for *props* (`:is_open`, `:elapsed_time`) per Rule I, but *events* follow the framework idiom.
+126. **(2026-04-22)** Color harmonization — `var(--clr-neutral-200)` replaced with `var(--clr-neutral-100)` across view-layer text (footer, sources-section tabs / count badge / filter-input / placeholder / toolbar, card requires-overflow, preview modal meta-labels, badge `--dim` variant). Brand theme's `--clr-neutral-100` lightened from `hsl(0 0% 95%)` → `hsl(0 0% 85%)` to keep enough tonal separation from the neutral-50 (headline) tier. Net effect: secondary text gains legibility headroom against black backgrounds without changing the design-token count.
+127. **(2026-04-22)** Unused SCSS utilities purged from `src/app/scss/abstracts/_mixins.scss`: `cyberpunk-glow` mixin (perf-fatal — #116), `max-media-query` mixin (unused anywhere), `@use "sass:math"` (only consumer was `cyberpunk-glow`). New `hud-text-base` mixin added as the minimal label-text core (font family, size, uppercase, letter-spacing, color); `hud-label-base` now composes it + adds `position: absolute` (positioned variant). Consumers that just want the typography tokens use `hud-text-base`; consumers that position themselves via the base use `hud-label-base`.
+128. **(2026-04-22)** `<UiStatusDot>` composition refined for per-frame paint cost. Before: one `<span>` with animated `opacity` + `box-shadow` inside a single `breathe` keyframe — the browser re-rasterized the (expensive) shadow every frame. After: outer `<span>` owns the STATIC dark halo (`box-shadow: var(--hud-halo-text)`, never animated); inner `<span class="glow">` owns a red `box-shadow: var(--hud-glow)` with `opacity: 0` by default, animated to a `1 ↔ 0.35` pulse via a 2s ease-in-out `breathe` keyframe while `.active`. Only `opacity` changes per frame — the dark shadow stays cached. `--hud-glow-color` scoped inside `.glow` to `var(--clr-error-100)` so the halo-color-mix resolves to red without the root element changing color. Split-static-from-animated pattern codified in §1.14.3.
+129. **(2026-04-22)** `composables.test.js` added at `src/shared/composables/composables.test.js` covering the three newly-singleton composables. Mocks `useObsWebsocket` at module scope (stub `obs` + a `connected` ref). For each of `useRecordingStatus`, `useSceneName`, `useAudioAnalyzer`: asserts documented initial state (`is_recording.value === false`, `scene_name.value === ''`, `levels instanceof Float32Array` of length 16, `tick.value === 0`) AND asserts the singleton identity contract (`expect(a).toBe(b)` with same sub-references). 6 new tests, test count 27 → 33. No assertions on event-driven mutation yet — singleton-identity + initial-state contract first; dynamic-behavior tests follow after the audio analyzer (#119) stabilizes.
 
 ### 2.4 Pending Work
 
@@ -389,12 +459,26 @@ Decisions 1-78 from Sessions 1-6 remain (see prior compaction). Session 6 contin
 *   [ ] Post-tag (optional): `gh release create v0.4 --title "RECKIT v0.4" --notes-file <changelog-slice>`.
 *   [ ] Post-release (optional, one-time): enable branch protection on `master` (require PR review + status checks).
 
-**On current branch `feat-brand_kot` (Phase 3.7 — Session 8/9 scope):**
+**On current branch `feat-brand_kot` (Phase 3.7 — Session 8/9/10 scope):**
 *   [x] ~~Cam-log: replace static "REC FRAME" label with dayjs UTC session-date (`UTC ∇ DD.MM.YYYY // DDD`); retune `.session-date` + `.cam-online` to `--fs-425` with `top: 5em` / `left,right: 4.7em`; bump `.toolkit-id` to `--fs-350`.~~ (2026-04-21)
 *   [x] ~~`<UiStatusDot>`: swap hard blink for smooth `breathe` animation (2s ease-in-out, opacity + box-shadow pulse) — the canonical recording-light idiom.~~ (2026-04-21)
 *   [x] ~~`<PreviewModal>`: fix iframe sub-pixel scale offset by reading container width via `getBoundingClientRect().width` instead of `clientWidth`.~~ (2026-04-21)
 *   [x] ~~Add `dayjs` (`^1.11.20`) as runtime dep + enable `utc` plugin.~~ (2026-04-21)
-*   [ ] Build `item-explain.vue` at `@kyonax_on_tech/sources/animation/item-explain.vue` (follows the new kind-alias conventions — imports from `@hud/*`, `@widgets/hud/*`, `@widgets/ui/*`, `@composables/*`; template tags in PascalCase). Update `sources.js` status to `'ready'` once the file lands.
+*   [x] ~~**FPS regression** — diagnose + remove `cyberpunk-glow` mixin; replace with opt-in `--hud-halo` / `--hud-halo-text` / `--hud-glow` CSS custom properties on `:root`.~~ (2026-04-22)
+*   [x] ~~Convert `useRecordingStatus`, `useSceneName`, `useAudioAnalyzer` to module-level singletons (one WS subscription per event per page).~~ (2026-04-22)
+*   [x] ~~Rewrite audio analyzer event-driven: Float32Array + 256-entry JITTER_TABLE + no rAF; drive ticks off `InputVolumeMeters`.~~ (2026-04-22)
+*   [x] ~~`<AudioMeter>` direct DOM writes via template refs; quantized SCALE_STRINGS (101 entries); write-threshold skip; emit throttling (~10 Hz); `transform: scaleY()` over animated `height`.~~ (2026-04-22)
+*   [x] ~~`contain: layout paint` on every frequently-updating HUD sub-tree.~~ (2026-04-22)
+*   [x] ~~`<UiStatusDot>`: split into static halo shell + animated-opacity `.glow` layer.~~ (2026-04-22)
+*   [x] ~~`cam-log.vue` layout rewrite around `.hud-group` system (4 positioned groups).~~ (2026-04-22)
+*   [x] ~~`brand.js` schema: add `host` + `region` fields; `region` drives the session-date prefix.~~ (2026-04-22)
+*   [x] ~~Preview-modal resize debounced 100 ms.~~ (2026-04-22)
+*   [x] ~~Emit event names kebab-cased (`consume_trigger` → `consume-trigger`).~~ (2026-04-22)
+*   [x] ~~Color harmonization `neutral-200` → `neutral-100` across views.~~ (2026-04-22)
+*   [x] ~~Purge `max-media-query` + `cyberpunk-glow` mixins + `sass:math` import from `_mixins.scss`; add `hud-text-base` mixin.~~ (2026-04-22)
+*   [x] ~~New `composables.test.js` — 6 tests covering initial state + singleton identity contract. Test count 27 → 33.~~ (2026-04-22)
+*   [x] ~~Codify §1.14 Performance Budget — reverse-engineered discipline from the perf pass.~~ (2026-04-23)
+*   [ ] Build `item-explain.vue` at `@kyonax_on_tech/sources/animation/item-explain.vue` (follows the new kind-alias conventions — imports from `@hud/*`, `@widgets/hud/*`, `@widgets/ui/*`, `@composables/*`; template tags in PascalCase). Update `sources.js` status to `'ready'` once the file lands. **Must conform to §1.14 from day 1.**
 *   [ ] Brand-private primitives as needed at `@kyonax_on_tech/components/{hud,ui}/`, `@kyonax_on_tech/composables/`, `@kyonax_on_tech/widgets/{hud,ui}/` — create each folder only when 2+ files of that kind exist (Rule F). Cross-brand primitives stay in `src/shared/`.
 *   [ ] Brand SVGs at `@kyonax_on_tech/assets/svg/` — any SVG dropped there is auto-picked up by `<UiIcon name="<file>" />` via the multi-pool glob; brand SVGs win filename collisions with shared SVGs.
 *   [ ] Brand theme tuning in `@kyonax_on_tech/styles/_theme.scss` — single source of truth for the brand palette (never re-add `colors` to `brand.js`; enforced by brand-loader test).
@@ -440,17 +524,34 @@ Identity, README, licensing stack, CI (6 jobs), ESLint, OBS environment. All sta
 
 ### 3.8 @kyonax_on_tech Brand
 
-**Created:** 2026-04-13 | **Last updated:** 2026-04-21
-**Status:** Active. 1 HUD source ready (refined in Session 9), 1 animation planned.
+**Created:** 2026-04-13 | **Last updated:** 2026-04-22
+**Status:** Active. 1 HUD source ready (rewritten in Session 10), 1 animation planned.
 
-**`brand.js`:** handle `@kyonax_on_tech`, identity (Cristian D. Moreno), social links. NO colors — those live exclusively in `styles/_theme.scss`.
+**`brand.js`:** handle `@kyonax_on_tech`, identity (Cristian D. Moreno), social links. **NEW fields (2026-04-22):** `host: 'KYO-LABS'`, `region: 'COL'` — consumed by `cam-log.vue` labels. NO colors — those live exclusively in `styles/_theme.scss`.
 **`sources.js`:** CAM-LOG (hud, ready) + ITEM-EXPLAIN (animation, planned).
-**`sources/hud/cam-log.vue`:** HUD overlay at `/@kyonax_on_tech/cam-log`. Uses `getBrand()` for identity data. Imports from `@hud/*`, `@widgets/hud/*`, `@widgets/ui/*`, `@composables/*`, plus `dayjs` + `dayjs/plugin/utc.js` for the session-date.
-  - **Top-left label (`.session-date`):** live dayjs UTC date `UTC ∇ DD.MM.YYYY // DDD`, computed once at setup. `--fs-425`, `top: 5em`, `left: 4.7em`.
-  - **Top-right label (`.cam-online`):** mirrors `.session-date` — `CAM ONLINE`, `--fs-425`, `top: 5em`, `right: 4.7em`.
+**`sources/hud/cam-log.vue`:** HUD overlay at `/@kyonax_on_tech/cam-log`. Uses `getBrand()` for identity/host/region data. Imports from `@hud/*`, `@widgets/hud/*`, `@widgets/ui/*`, `@composables/*`, plus `dayjs` + `dayjs/plugin/utc.js` for the session-date.
+
+Structural layout (Session 10 rewrite — see §1.12 for kind rules, §1.14 for perf rules):
+
+```
+.cam-log-overlay  (contain: layout paint)
+├── <HudFrame width=1920 height=1080>   — brackets + crosshair
+│   ├── .hud-group .group--top-left    — { brand.host, .session-date (primary) }
+│   ├── .hud-group .group--top-right   — { [SESSION] id, CAM ONLINE (primary) }
+│   ├── .hud-group .group--bottom-left — { brand.identity.author, display_handle (primary) }
+│   ├── .toolkit-id                    — RECKIT {VERSION_TAG}
+│   └── .offline (v-if !connected)
+└── .dynamic-layer  (sibling; separates OBS-state widgets from HUD chrome)
+    ├── .status-bar — <HudTimer> + <AudioMeter>
+    └── .debug-info — <LiveReadout text="WS:... AUDIO:... L0:...">
+```
+
+  - **Top-left primary label (`.session-date`):** live dayjs UTC date formatted `${brand.region} ∇ DD.MM.YYYY // DDD` (e.g. `COL ∇ 22.04.2026 // WED`) — computed once at setup via `dayjs().utc().format('[${region} ∇ ]DD.MM.YYYY[ // ]ddd').toUpperCase()`. `--fs-425`, inherits halo/glow via `.hud-text--primary`.
+  - **Top-right primary label (`.cam-online`):** mirrors `.session-date` — `CAM ONLINE`. Secondary row above it: `[SESSION] ${scene_name}::T${take_count}` with `.bracket` spans translateY(-0.12em).
   - **Bottom-right (`.toolkit-id`):** `RECKIT {VERSION_TAG}`, `--fs-350`.
-  - **Bottom status bar:** `<HudTimer>` + `<AudioMeter>` (widgets). `<HudTimer>` composes `<UiStatusDot active="{is_recording}" />` which now **breathes** red when recording.
-**`styles/_theme.scss`:** CSS class `.brand-kyonax-on-tech` with full color overrides — auto-loaded by `src/main.js` (single source of truth for the brand's palette, see §1.5).
+  - **Status bar:** `<HudTimer>` + `<AudioMeter>`. `<HudTimer>` composes `<UiStatusDot active="{is_recording}" />` which **breathes** red when recording (decision #113 + #128 for the static-halo / animated-glow split). `<AudioMeter>` writes bar `transform: scaleY()` directly to the DOM via template refs, driven by the `tick` counter from the singleton `useAudioAnalyzer` (decisions #119 + #120).
+  - **Halo/glow:** `.hud-text--primary` composes `text-shadow: var(--hud-halo-text), var(--hud-glow)` (opt-in per element). `<HudFrame>` root carries `filter: var(--hud-halo)` so the bracket SVGs inherit the dark outline automatically.
+**`styles/_theme.scss`:** CSS class `.brand-kyonax-on-tech` with full color overrides — auto-loaded by `src/main.js` (single source of truth for the brand's palette, see §1.5). `--clr-neutral-100` lightened to `hsl(0 0% 85%)` (Session 10) for secondary-text legibility headroom.
 **`assets/`:** currently holds development reference images (`temp_obs_inspo_*`). The reserved `assets/svg/` subfolder is auto-scanned by `<UiIcon>` if/when brand SVGs are added.
 
 ### 3.9 Landing Page (`src/views/`)
@@ -492,7 +593,7 @@ Split `views/` and `shared/` component layers by **kind** (what type of thing it
 
 **Shared layer** (`src/shared/`):
 - `components/hud/` — HUD-domain primitives: `frame.vue` (`<HudFrame>`), `timer.vue` (`<HudTimer>`). Renamed from `hud-frame.vue` / `recording-timer.vue`.
-- `components/ui/` — domain-agnostic primitives: `icon.vue` (`<UiIcon>`, generic SVG loader via `import.meta.glob('@shared/assets/svg/*.svg', { eager: true, query: '?raw' })`), `status-dot.vue` (`<UiStatusDot>`, 6×6 square that **breathes** red when active — 2s ease-in-out opacity + red box-shadow pulse; multi-word answers "status shown how? as a dot"), `data-point.vue` (`<UiDataPoint>`, label/value tile with `sm`/`lg` size variants — multi-word answers "metric of what? a data point, i.e. a label paired with a value"), `chip.vue` (`<UiChip>`, lowercase pill with `solid`/`overflow` variants — "chip" is a visual primitive per Material Design / PrimeVue / Quasar), `badge.vue` (`<UiBadge>`, uppercase HUD status pill with `active`/`dim` variants).
+- `components/ui/` — domain-agnostic primitives: `icon.vue` (`<UiIcon>`, generic SVG loader via `import.meta.glob('@shared/assets/svg/*.svg', { eager: true, query: '?raw' })`), `status-dot.vue` (`<UiStatusDot>`, 6×6 square with a **layered composition** (decision #128) — outer `<span>` owns the STATIC dark halo `box-shadow: var(--hud-halo-text)` (never animated); inner `<span class="glow">` owns a red `box-shadow: var(--hud-glow)` at `opacity: 0` by default, animated to a 1 ↔ 0.35 pulse via `breathe 2s ease-in-out infinite` while `.active`. Only `opacity` changes per frame — dark shadows stay cached. Multi-word answers "status shown how? as a dot"), `data-point.vue` (`<UiDataPoint>`, label/value tile with `sm`/`lg` size variants + opt-in `text-shadow: var(--hud-halo-text), var(--hud-glow)` — multi-word answers "metric of what? a data point, i.e. a label paired with a value"), `chip.vue` (`<UiChip>`, lowercase pill with `solid`/`overflow` variants — "chip" is a visual primitive per Material Design / PrimeVue / Quasar), `badge.vue` (`<UiBadge>`, uppercase HUD status pill with `active`/`dim` variants).
 - `widgets/hud/` — HUD-domain widgets. `audio-meter.vue` (`<AudioMeter>`) — calls `useAudioAnalyzer({ obs })`, OBS-coupled.
 - `widgets/ui/` — domain-agnostic widgets. `live-readout.vue` (`<LiveReadout>`) — owns `setInterval` for throttled text display, no project coupling.
 - `composables/` — Vue-aware JS hooks (unchanged): 4 `use-*.js` files.
@@ -554,6 +655,33 @@ RUN TIME
 
 **Verified:** `grep brand-kyonax-on-tech dist/assets/*.css` matches after `npm run build` — brand theme is truly in the bundle.
 
+**HUD halo/glow tokens (Session 10 addition):** `src/app/scss/abstracts/_theme.scss` declares four design tokens on `:root` — `--hud-halo` (filter chain), `--hud-halo-text` (text-shadow chain), `--hud-glow` (brand-primary glow, rebindable via `--hud-glow-color`), `--hud-group-gap` — plus `--clr-primary-100-80` / `--clr-primary-100-40` via `color-mix()`. These are **globally-scoped utilities**, not brand-scoped overrides: brands CAN redefine them inside `.brand-<handle>` if they want a different glow color, but the baseline chain lives at `:root` so `src/shared/` components can consume `var(--hud-halo)` without caring which brand is active. Opt-in per element — never applied via a catch-all utility class (decision #116 lesson).
+
+### 3.15 Performance Pass (Session 10)
+
+**Created:** 2026-04-22 | **Last updated:** 2026-04-23
+**Status:** Implementation complete on `feat-brand_kot`; pending commit + PR.
+
+Session-wide FPS-preservation refactor triggered by the `cyberpunk-glow` mixin diagnosed as an OBS Browser Source FPS killer. Rationale: RECKIT HUDs are composited live; the source MUST hold OBS canvas fps on low-core-processor hardware. Every change here trades a small visual/ergonomic cost for measurable frame-time budget.
+
+**Techniques applied** (reverse-engineered and codified in §1.14):
+
+| # | Technique | Decision | File(s) |
+|---|---|---|---|
+| 1 | Remove broad CSS filter utility; replace with opt-in design tokens | #116, #117 | `_mixins.scss`, `_theme.scss` |
+| 2 | Module-level singleton composables | #118 | `use-recording-status.js`, `use-scene-name.js`, `use-audio-analyzer.js` |
+| 3 | Event-driven (no rAF) + preallocated typed arrays + precomputed jitter table | #119 | `use-audio-analyzer.js` |
+| 4 | Direct DOM writes via template refs (bypass Vue reactivity); quantized string-lookup table; write-threshold skip; emit throttling; GPU-composited `transform: scaleY()` | #120 | `audio-meter.vue` |
+| 5 | `contain: layout paint` on HUD sub-trees | #121 | ~8 components |
+| 6 | Split static/animated layers (static halo + animated-opacity glow) | #128 | `status-dot.vue`, `timer.vue` |
+| 7 | Debounce burst-prone `window.*` listeners | #124 | `preview.vue` |
+
+**Measurement note:** no formal profiling data captured in this session — regression diagnosis was perceptual (HUD "felt slow in OBS") + elimination-based (removing `cyberpunk-glow` restored fps). Future sessions should capture OBS `Stats` numbers (rendering lag, FPS, encoder overload) before and after any HUD change for objective evidence.
+
+**Tests added:** `src/shared/composables/composables.test.js` — 6 tests covering initial state + singleton identity for the three newly-singleton composables. Mocks `useObsWebsocket` at module scope. Test count 27 → 33.
+
+**Pending validation:** user will run `npm test` + `npm run lint` + browser-source smoke test in OBS before committing.
+
 ---
 
 ## SECTION 4: FILE INDEX
@@ -580,7 +708,7 @@ RUN TIME
 
 | Path | Association |
 |---|---|
-| `@kyonax_on_tech/brand.js` | Brand metadata + identity + colors |
+| `@kyonax_on_tech/brand.js` | Brand metadata + identity + `host: "KYO-LABS"` + `region: "COL"` (NO colors — those live in `styles/_theme.scss`) |
 | `@kyonax_on_tech/sources.js` | Web source registry (data file) |
 | `@kyonax_on_tech/sources/hud/cam-log.vue` | CAM-LOG HUD overlay (session-date via dayjs, breathing status dot) |
 | `@kyonax_on_tech/styles/_theme.scss` | Brand CSS overrides |
@@ -630,10 +758,11 @@ RUN TIME
 | `src/shared/components/ui/data-point.vue` | `@ui` | `<UiDataPoint>` (label/value tile, `size` prop) |
 | `src/shared/components/ui/chip.vue` | `@ui` | `<UiChip>` (lowercase pill, `variant` prop) |
 | `src/shared/components/ui/badge.vue` | `@ui` | `<UiBadge>` (uppercase status pill, `variant` prop) |
-| `src/shared/composables/use-obs-websocket.js` | `@composables` | `useObsWebsocket()` |
-| `src/shared/composables/use-recording-status.js` | `@composables` | `useRecordingStatus()` |
-| `src/shared/composables/use-audio-analyzer.js` | `@composables` | `useAudioAnalyzer()` |
-| `src/shared/composables/use-scene-name.js` | `@composables` | `useSceneName()` |
+| `src/shared/composables/use-obs-websocket.js` | `@composables` | `useObsWebsocket()` (singleton) |
+| `src/shared/composables/use-recording-status.js` | `@composables` | `useRecordingStatus()` (singleton — Session 10) |
+| `src/shared/composables/use-audio-analyzer.js` | `@composables` | `useAudioAnalyzer()` (singleton, event-driven, Float32Array — Session 10) |
+| `src/shared/composables/use-scene-name.js` | `@composables` | `useSceneName()` (singleton — Session 10) |
+| `src/shared/composables/composables.test.js` | — | 6 tests — singleton identity + initial state (Session 10) |
 | `src/shared/widgets/hud/audio-meter.vue` | `@widgets` (path `hud/`) | `<AudioMeter>` (HUD-domain, OBS-coupled) |
 | `src/shared/widgets/ui/live-readout.vue` | `@widgets` (path `ui/`) | `<LiveReadout>` (domain-agnostic) |
 | `src/shared/data/` | — | reserved (empty) |
@@ -654,93 +783,112 @@ RUN TIME
 
 ## SECTION 5: LAST INTERACTION
 
-### What was done last (2026-04-21 — Session 9: first code on `feat-brand_kot`)
+### What was done last (2026-04-22 → 2026-04-23 — Session 10: performance pass on `feat-brand_kot`)
 
-First feature pass on the new brand branch. Four staged changes, all scoped to HUD polish / UX refinement — no new files, no architectural shifts.
+Root-cause FPS incident + reverse-engineered performance discipline. All work on `feat-brand_kot`; no new architectural shifts to §1.12 conventions. One new test file. Net −73 LoC across ~30 files — mostly cleanup on top of a deep hot-path rewrite.
 
-1. **Cam-log top-left label turned from static to live.** User asked to replace the hardcoded `REC FRAME` label with today's date in a "cyberpunk sci-fi" format. Presented a 6-option format matrix (cycle day-of-year, UTC dotted, glyph + DDD, etc.). User picked **option C** (`UTC ∇ YY.MM.DD // MON`), then refined to full year + `DD.MM.YYYY`. Final format: `UTC ∇ DD.MM.YYYY // DDD` (e.g. `UTC ∇ 21.04.2026 // TUE`). Implemented via `dayjs().utc().format('[UTC ∇ ]DD.MM.YYYY[ // ]ddd').toUpperCase()`, computed once at setup. Template class renamed `.rec-frame` → `.session-date` (Rule G — purpose-describing, not repeating the kind). HUD vocabulary in §1.1 updated accordingly.
+1. **FPS regression diagnosed and mixin removed.** The user had previously applied the `cyberpunk-glow` mixin to every element inheriting `var(--clr-primary-100)` (gold labels, audio meter bars, timer, status dots) to get the signature cyberpunk aura. Inside OBS Browser Source, the HUD felt slow on low-core-processor hardware. Profiling-by-elimination traced it to the mixin: each gold element spawned its own animated `box-shadow` keyframe → the compositor rasterized a new layer per element per frame. Removal path: `cyberpunk-glow` mixin + `.cyberpunk-glow` utility class + `sass:math` import deleted from `_mixins.scss` + `_theme.scss`. Cost principle captured in new §1.14: **never apply `filter` / `box-shadow` / `text-shadow` chains via a utility that hits every element of a color class.**
 
-2. **Font-size + position retune on the top sub-labels.** User iterated: first asked for "100 less on fs" (→ `--fs-375`), then "up 50" (→ `--fs-425`), then gave explicit final values `top: 5em` / `left: 4.7em` for `.session-date`. Applied to both `.session-date` (left) and `.cam-online` (right — mirrored to `right: 4.7em`) so they stay symmetrical. Rationale in decision #115: when HUD label `font-size` changes, its `em`-based anchor must be recomputed proportionally to preserve the intended visual position. Also noted: `.toolkit-id` was separately bumped `--fs-300` → `--fs-350` in the user's manual edit.
+2. **Halo/glow re-expressed as opt-in design tokens.** Replaced the mixin with four CSS custom properties on `:root` in `src/app/scss/abstracts/_theme.scss` — `--hud-halo` (filter chain), `--hud-halo-text` (text-shadow chain), `--hud-glow` (brand-primary glow, rebindable via `--hud-glow-color`), `--hud-group-gap`. Plus `--clr-primary-100-80/40` via `color-mix()`. Consumers now opt in per element (`filter: var(--hud-halo)` on a container; `text-shadow: var(--hud-halo-text), var(--hud-glow)` on a leaf). Decision #117.
 
-3. **Status-dot: hard blink → smooth "respirando" (breathing).** User asked for the recording indicator to breathe like a normal recording red button. Swapped `animation: blink 0.8s step-end infinite` (`opacity: 1 ↔ 0.2` flicker) for `animation: breathe 2s ease-in-out infinite` — `opacity: 1 ↔ 0.35` with a soft red `box-shadow: 0 0 4px ↔ 2px of var(--clr-error-100)` inhale/exhale. This is the canonical camera REC / hardware record-LED idiom. Updated the file header comment ("blinks" → "breathes", prop doc gains "soft glow pulse"). All `<UiStatusDot>` consumers inherit the change for free.
+3. **All OBS-WS composables converted to module-level singletons.** `useRecordingStatus`, `useSceneName`, `useAudioAnalyzer` now follow the `useObsWebsocket` pattern: `let shared_state = null;` at module scope; first call wires the WS handler and populates state; subsequent calls return the same object. Callers dropped `{ obs, connected }` params. Rationale: many HUD leaves on one page subscribing to the same event used to register N handlers per event → singleton collapses to 1. `onUnmounted` cleanup dropped (singletons live for page lifetime). Decision #118.
 
-4. **Preview modal iframe-scale sub-pixel offset fixed.** User reported a ~1px visual offset solved empirically by nudging `--iframe-scale` from `0.5578125` → `0.5578124`. Diagnosed: `element.clientWidth` (at `preview.vue:137`) returns a **rounded integer**; when the real stage width renders at e.g. `1070.9999…px`, `clientWidth` returns `1071` → `scale = 1071/1920 = 0.5578125` → scaled iframe width `1920 × 0.5578125 = 1071.0px` overshoots the real container by ~1px. Proper fix: switched to `element.getBoundingClientRect().width` for sub-pixel float precision. Decision #114 codifies a general rule: scale-derived CSS custom properties must read container width via `getBoundingClientRect()`, never `clientWidth` / `offsetWidth`.
+4. **Audio analyzer rewritten event-driven + zero-allocation.** `use-audio-analyzer.js` was the biggest hot path (OBS fires `InputVolumeMeters` ~50 Hz). Changes: preallocated `Float32Array(bar_count)` for levels/smoothed; 256-entry `JITTER_TABLE: Float32Array` seeded once at module load, cursor-advanced per tick (replaces per-frame `Math.random()`); `requestAnimationFrame` loop **deleted** (OBS already gives us a clock); reactivity surface collapsed to a single `tick: ref(0)` counter plus `active` / `source_name` refs — bar levels are NOT reactive, consumers watch the tick and read `levels` synchronously; target input hardcoded to `Mic/Aux` (eliminates per-event `Array.find`). Decision #119.
 
-5. **Dependency added: `dayjs ^1.11.20`.** User confirmed dayjs preference over native `Date` / `Intl.DateTimeFormat`. First runtime dep added beyond the core trio (`vue`, `vue-router`, `obs-websocket-js`). UTC plugin loaded at module scope (`dayjs.extend(utc)`). `package.json` + `package-lock.json` updated.
+5. **AudioMeter bypasses Vue reactivity in the hot path.** `audio-meter.vue` no longer uses `:style` binding on bars. Architecture: static `v-for` of `<div ref="bar_els" class="bar" />`; `watch(tick, ...)` callback reads `levels[i]` and assigns `el.style.transform = SCALE_STRINGS[idx]`. `SCALE_STRINGS` is a precomputed 101-entry string table (`scaleY(0.00)`...`scaleY(1.00)`). Write-threshold skip: `|scale − last_scale[i]| < 0.01` → skip DOM write. `update:state` emit throttled to ~10 Hz via `performance.now()`. CSS animation switched from `height` → `transform: scaleY()` with `transform-origin: bottom` — GPU-composited, zero layout cost. `source_name` prop removed (analyzer owns target). Decision #120.
 
-6. **This reset** — added decisions #111–#115 to §2.3; updated §1.1 HUD vocabulary (session-date + breathing status idiom); extended §3.8 with cam-log's label spec; flagged `.status-dot` as breathing in §3.13 + §4 file index; noted dayjs dep in §4; marked Session 9 completions in §2.4; compaction sources header extended with Session 9.
+6. **CSS containment + GPU-friendly transforms applied across the HUD.** `contain: layout paint` added to `.hud-group`, `.status-bar`, `.audio-meter`, `.recording-timer`, `.ui-data-point`, `.debug-info`, `.hud-frame`, `.cam-log-overlay`. `<UiStatusDot>` split into static outer halo shell + animated-opacity `.glow` inner span so the dark shadow never re-rasterizes per frame — only `opacity` changes. Decision #121 + #128.
 
-**Staged at reset (5 files, all modifications, no new files):**
-- `@kyonax_on_tech/sources/hud/cam-log.vue` — session-date + dayjs import + label style retune + `.toolkit-id` fs bump.
-- `src/shared/components/ui/status-dot.vue` — blink → breathe animation + header comment.
-- `src/views/components/modals/preview.vue` — `clientWidth` → `getBoundingClientRect().width`.
-- `package.json` — `+"dayjs": "^1.11.20"`.
-- `package-lock.json` — dayjs lockfile entry.
+7. **`cam-log.vue` layout restructured around a `.hud-group` system.** Four positioned groups (`top-left`, `top-right`, `bottom-left`, `identity`) replace ad-hoc absolute-positioned labels. Unified `.hud-text` + `.hud-text--primary` classes. `.dynamic-layer` sibling extracted for OBS-state widgets (timer / audio meter / debug readout). Deprecates `labels` prop on `<HudFrame>` for brand HUDs. Decision #123.
 
-**No validation run yet** — user will run tests / lint before/after commit (pre-commit hooks handle linting regardless).
+8. **`brand.js` gains `host` + `region`.** `@kyonax_on_tech/brand.js` adds `host: 'KYO-LABS'` (top-left non-primary label) and `region: 'COL'` (replaces hardcoded `"UTC"` in the session-date format → `${region} ∇ DD.MM.YYYY // ddd` → `COL ∇ 22.04.2026 // WED`). Colors-in-SCSS rule unchanged. Decision #122.
 
-**Documentation sync:** changes flow into this session file only. No roam node update. COMMIT.org + PR.org are the downstream deliverables of this reset (see "Where to resume").
+9. **Smaller polish.** Preview-modal resize handler debounced 100 ms (decision #124). Vue emit event names kebab-cased: `consume_trigger` → `consume-trigger` on `<PreviewModal>` + `<Card>` (decision #125). Secondary text upgraded `--clr-neutral-200` → `--clr-neutral-100` across ~10 view surfaces; brand theme's `--clr-neutral-100` lightened `95%` → `85%` to preserve tonal separation (decision #126). Frame.vue dead `.border-*` divs removed. `LiveReadout` skips no-op writes. Comment stripping across config files matching the "default no comments" CLAUDE.md guidance.
+
+10. **Tests.** New `src/shared/composables/composables.test.js` — 6 tests covering initial state + singleton identity contract (`expect(a).toBe(b)`) for `useRecordingStatus`, `useSceneName`, `useAudioAnalyzer`. Mocks `useObsWebsocket` at module scope. Dynamic-behavior tests deferred. Decision #129.
+
+11. **This reset** — added §1.14 Performance Budget for OBS Browser Sources (the codified discipline, reverse-engineered from this session's work); added decisions #116–#129 to §2.3; updated §3.8 cam-log with the new layout system + brand.host/region consumption; refined §3.13 UiStatusDot composition note; added halo-token line to §3.14; new §3.15 Performance Pass implementation entry; §4 file index adds `composables.test.js`; §1.1 HUD vocabulary updated to note `brand.region` drives the session-date prefix; intro compaction-sources extended.
+
+**Staged + unstaged at reset (~32 files modified + 1 new test file):**
+
+Staged (baseline of the perf pass): `@kyonax_on_tech/brand.js`, `@kyonax_on_tech/sources/hud/cam-log.vue`, `@kyonax_on_tech/styles/_theme.scss`, `eslint.config.mjs`, `src/App.vue`, `src/app/scss/abstracts/_mixins.scss`, `src/app/scss/abstracts/_theme.scss`, `src/app/scss/base/_global.scss`, `src/app/scss/components/_index.scss`, `src/app/scss/layout/_index.scss`, `src/main.js`, `src/shared/brand-loader.js`, `src/shared/components/hud/frame.vue`, `src/shared/components/hud/timer.vue`, `src/shared/components/ui/badge.vue`, `src/shared/components/ui/data-point.vue`, `src/shared/components/ui/status-dot.vue`, `src/shared/composables/use-audio-analyzer.js`, `src/shared/composables/use-obs-websocket.js`, `src/shared/composables/use-recording-status.js`, `src/shared/composables/use-scene-name.js`, `src/shared/version.js`, `src/shared/widgets/hud/audio-meter.vue`, `src/shared/widgets/ui/live-readout.vue`, `src/views/components/elements/card.vue`, `src/views/components/modals/preview.vue`, `src/views/components/sections/footer.vue`, `src/views/components/sections/sources.vue`, `src/views/utils/markup.js`, `vite.config.js`, `package.json`, `package-lock.json`.
+
+Unstaged (in-progress iteration on 10 of the above): `@kyonax_on_tech/sources/hud/cam-log.vue`, `src/app/scss/abstracts/_mixins.scss`, `src/shared/components/hud/frame.vue`, `src/shared/components/ui/data-point.vue`, `src/shared/components/ui/status-dot.vue`, `src/shared/composables/use-audio-analyzer.js`, `src/shared/composables/use-recording-status.js`, `src/shared/widgets/hud/audio-meter.vue`, `src/views/components/elements/card.vue`, `src/views/components/modals/preview.vue`.
+
+Untracked: `src/shared/composables/composables.test.js`.
+
+**No validation run yet** — user will run `npm test` + lint before committing (pre-commit hooks handle linting).
+
+**Documentation sync:** this reset writes the perf discipline into §1.14 (new) + decisions #116–#129 + §3.15 (new). The user also asked for a reverse-engineered rules table at the bottom of the chat response — that table is the conversational counterpart to §1.14's structured form. COMMIT.org + PR.org for Session 10 are pending.
 
 ### Pending / Not yet started
 
-**Immediate — v0.4 release (UNCHANGED from Session 8 prep; still gates PR #4 merge):**
-*   [ ] **CRITICAL:** `package.json` bump to `0.4.0` on `dev` — `npm version 0.4.0 --no-git-tag-version`. *Note: Session 9 bumped dep list on `feat-brand_kot` — do NOT let the version bump land on the feature branch; only on `dev`.*
+**Immediate — v0.4 release (UNCHANGED; still gates PR #4 merge):**
+*   [ ] **CRITICAL:** `package.json` bump to `0.4.0` on `dev` — `npm version 0.4.0 --no-git-tag-version`. *Note: Sessions 9 + 10 added deps / tests / code on `feat-brand_kot` — those rides v0.5+, NOT v0.4. Triad lives on `dev` only.*
 *   [ ] **CRITICAL:** `README.org` version markers on `dev` — four `sed -i -E` patches (see §1.8 + `COMMIT.org` PERMANENT runbook step 3).
-*   [ ] **CRITICAL:** `CHANGELOG.org` on `dev` — new `[v0.4] — 2026-04-21 :: Architectural Baseline` block above `[v0.3]` with Added / Changed / Removed / Decided subsections.
+*   [ ] **CRITICAL:** `CHANGELOG.org` on `dev` — new `[v0.4] — <date> :: Architectural Baseline` block above `[v0.3]` with Added / Changed / Removed / Decided subsections.
 *   [ ] Push refined PR.org body + title to PR #4 — `gh pr edit 4 --title "release: v0.4 — Architectural Baseline" --body-file <(awk ...)`.
 *   [ ] Post-merge: tag `v0.4` on `master`, optional GitHub Release + branch protection.
 
-**Immediate — Session 9 commit/PR (on `feat-brand_kot`):**
-*   [ ] User stages / commits the 5 modified files using the new `COMMIT.org` generated this reset.
-*   [ ] User opens PR `feat-brand_kot` → `dev` using the `PR.org` body generated by pr-scribe (Kyonax brand, Feature PR shape — not release).
-*   [ ] Expected next release including Session 9: **v0.4.1 or v0.5** (decided at release-cut time; v0.4 ships Session 6+7 baseline first).
+**Immediate — Session 9 + 10 commit/PR (on `feat-brand_kot`):**
+*   [ ] User stages + commits remaining unstaged perf iterations (10 files listed above) + the new `composables.test.js`.
+*   [ ] User generates `COMMIT.org` — likely two logical commits: `feat(kot)` for Session 9 HUD polish (if not yet committed) + `perf` for Session 10 (audio pipeline, singletons, halo tokens, containment). Alternatively one combined commit since both are on the same feature branch.
+*   [ ] User opens PR `feat-brand_kot` → `dev` via pr-scribe (Kyonax brand, **Feature PR shape**). Title candidate: `feat(kot): live session-date + performance pass (halo tokens, singleton composables, GPU-composited audio meter)`.
+*   [ ] Expected next release including Session 9 + 10: **v0.5** — performance discipline is a named baseline feature, not a patch-level fix.
 
-**On current branch `feat-brand_kot` (Phase 3.7 — remaining Session 8/9+ code):**
-*   [ ] Build `item-explain.vue` at `@kyonax_on_tech/sources/animation/item-explain.vue`. Kind-alias imports; PascalCase tags. Flip `sources.js` to `'ready'` on land.
+**On current branch `feat-brand_kot` (Phase 3.7 — remaining scope):**
+*   [ ] Build `item-explain.vue` at `@kyonax_on_tech/sources/animation/item-explain.vue`. Kind-alias imports; PascalCase tags. Flip `sources.js` to `'ready'` on land. **Must conform to §1.14 from day 1** — no blanket filter/shadow utilities, `transform`/`opacity`-only animations, `contain: layout paint` on the root.
 *   [ ] Brand-private primitives under `@kyonax_on_tech/components|composables|widgets/` as needed (Rule F — 2+ files before folder).
 *   [ ] Brand SVGs at `@kyonax_on_tech/assets/svg/` — multi-pool glob auto-discovers.
 *   [ ] Brand theme tuning at `@kyonax_on_tech/styles/_theme.scss` — single source of truth (never re-add `colors` to `brand.js`).
 
 **Cross-branch / ongoing:**
-*   [ ] Broaden Vitest coverage beyond 27 baseline — 5 sections, 4 renamed shared primitives, 3 new `ui/` primitives, brand theming integration. Consider adding a `status-dot` animation test (state-based class check).
+*   [ ] Broaden Vitest coverage beyond the now-33 baseline — 5 sections, 4 renamed shared primitives, 3 new `ui/` primitives, brand theming integration, `<AudioMeter>` DOM-write correctness (render levels → assert `style.transform`), `tick`-driven event propagation.
 *   [ ] Shared widgets showcase on landing page (new `@sections/widgets.vue` or dedicated route).
 *   [ ] Fix YouTube subscriber badge subscribe link.
 *   [ ] **OPEN SOURCE:** Contribute to `wallyqs/org-ruby` for GitHub alert syntax in `.org` files.
 *   [ ] Phase 4 (packaging, scene collection export).
+*   [ ] Consider `prefers-reduced-motion` gates on `breathe` and any future continuous pulsations.
 
-### Post-Session-9 status
+### Post-Session-10 status
 
-`feat-brand_kot` holds 5 staged modifications covering: (a) @kyonax_on_tech brand cam-log label refinements (session-date + label sizing/position), (b) shared `<UiStatusDot>` recording-idiom upgrade (breathe), (c) shared `<PreviewModal>` iframe sub-pixel scale bug fix, (d) runtime dep addition (`dayjs`). No new files, no architectural changes, no test additions. PR #4 (v0.4 Architectural Baseline — `dev` → `master`) remains open with triad pending.
+`feat-brand_kot` now carries: (a) Session 9 HUD polish (live session-date, breathing status, iframe sub-pixel fix, dayjs); (b) Session 10 performance pass (cyberpunk-glow-mixin removal, halo/glow design tokens, 3 singleton composables, event-driven audio analyzer, DOM-direct AudioMeter, CSS containment, GPU-composited transforms, resize debounce, UiStatusDot layered composition, color harmonization, 6 new singleton-contract tests). **§1.14 Performance Budget** now codifies the discipline for all future HUD work. PR #4 (v0.4 Architectural Baseline — `dev` → `master`) still open, triad still pending on `dev`.
 
 ### Where to resume
 
 **Branch & PR context at resume:**
-- Current branch: `feat-brand_kot` (5 files staged — Session 9 work).
+- Current branch: `feat-brand_kot`. Staged (Session 10 baseline) + 10 unstaged iterations + 1 new untracked test file (`composables.test.js`).
 - Open PRs: **PR #4** (`dev` → `master`, `release: v0.4 — Architectural Baseline`, triad pending on `dev`).
 - Merged: PR #3 (`feat-fixes-and-refinement-v3` → `dev`).
-- Expected next Session 9 PR: `feat-brand_kot` → `dev` (post-v0.4 merge, so Session 9 can ride the new baseline). Title candidate: `feat(kot): live session-date + breathing status + iframe sub-pixel fix`.
+- Expected next PR: `feat-brand_kot` → `dev` (post-v0.4 merge). Title candidate: `feat(kot): live session-date + performance pass`.
 
 **Resume paths (by task):**
 
-If the user asks to **commit Session 9 work**: do NOT run `git commit`. Regenerate `COMMIT.org` with a subject under 72 chars summarizing the 5-file staged diff (cam-log live date, breathing status, preview sub-pixel fix, dayjs). Keep the Session 9 commit limited to `feat-brand_kot` — triad / release work stays on `dev`.
+If the user asks to **commit Session 10 work**: do NOT run `git commit`. Regenerate `COMMIT.org` with a subject under 72 chars summarizing the perf pass (halo tokens, singleton composables, audio-meter GPU path). Consider splitting Session 9 (HUD polish) and Session 10 (perf) into two commits for clean PR-readability, OR one combined commit — user's call. Keep all commits on `feat-brand_kot`; triad stays on `dev`.
 
-If the user asks to **generate the PR for Session 9**: invoke the `pr-scribe` skill with Kyonax brand, **Feature PR shape** (not Release). Changes block uses Pattern B (flat `**Changes:**` list with `[MOD]` tags — no release subsection). Technical Details should include at minimum: TD on the dayjs-vs-native tradeoff; TD on `clientWidth` → `getBoundingClientRect()` sub-pixel rule; TD on blink → breathe animation rationale. Testing Coverage stays light — 27/27 baseline still passes (no new tests added this session). Reference §1.13 feature-PR conventions.
+If the user asks to **generate the PR for Session 9 + 10**: invoke the `pr-scribe` skill with Kyonax brand, **Feature PR shape** (not Release). Changes block: Pattern B flat `**Changes:**` with `[MOD]` / `[NEW]` tags. Technical Details must cover at minimum: (a) the `cyberpunk-glow` FPS regression + halo-token mitigation; (b) singleton composable pattern; (c) event-driven audio analyzer + Float32Array / precomputed tables; (d) DOM-direct AudioMeter rationale; (e) GPU-composited `scaleY()` over animated `height`; (f) CSS containment adoption. Testing Coverage: 33 tests (27 baseline + 6 new singleton contract). Reference §1.14 inline for the codified discipline. Reference §1.13 for feature-PR conventions.
 
-If the user asks to **complete the release triad on `dev`**: see §2.4 — check out `dev`, run the three CRITICAL commands, push, then `gh pr edit 4 --title ... --body-file ...`. After CI green, merge PR #4. Session 9 PR rebases on top of `dev` after the merge.
+If the user asks to **complete the release triad on `dev`**: see §2.4 — check out `dev`, run the three CRITICAL commands, push, then `gh pr edit 4 --title ... --body-file ...`. After CI green, merge PR #4. Session 9 + 10 PR rebases on top of `dev` after the merge.
 
-If the user asks to **generate commit / PR text**: write to `COMMIT.org` or `PR.org` only (NEVER run git write commands). For feature PRs use Kyonax Feature-PR shape; for release PRs follow §1.13 composition.
+If the user asks to **generate commit / PR text**: write to `COMMIT.org` or `PR.org` only (NEVER run git write commands). Follow Kyonax Feature-PR or §1.13 release-PR conventions.
 
-If the user asks to **change the cam-log session-date format**: modify the `dayjs().utc().format(...)` token string in `@kyonax_on_tech/sources/hud/cam-log.vue`. Escape literal segments with `[...]`. Keep `.toUpperCase()`. Update §1.1 HUD vocabulary line + §3.8 label spec when the format changes.
+If the user asks to **review another HUD feature's performance**: walk it against §1.14.8 checklist: broad filter/shadow? animates non-transform/opacity? new OBS-WS subscription outside a singleton? per-frame allocation? per-tick `$emit`? missing `contain: layout paint`? un-debounced burst listener? Any "yes" → refactor before merging.
 
-If the user asks for **another HUD animation** (scanline, glitch, boot sequence): if broadly reusable, create a new `@shared/utils/animations.scss` partial or `@ui/` primitive; if brand-specific, keep inside the brand's source `.vue`. Keep animations `prefers-reduced-motion`-aware if they pulse continuously (future enhancement — not yet applied on `breathe`).
+If the user asks to **add a new OBS-WS-driven composable**: follow the singleton pattern (§1.14.5): module-level `shared_state`, early-return on repeat calls, `watch(connected, fn, { immediate: true })` for initial fetch, no `onUnmounted`. Add a test to `composables.test.js` asserting initial state + `expect(a).toBe(b)` identity.
 
-If the user asks to **tune status-dot timing**: edit `src/shared/components/ui/status-dot.vue` — the `2s ease-in-out` duration + `0.35` low-opacity point are the two tuning knobs. Keep `box-shadow` color bound to `var(--clr-error-100)` so brand theming cascade still works.
+If the user asks to **add a new HUD widget or primitive**: default to `contain: layout paint` on the root. Use `transform`/`opacity` for any animation. Reference halo/glow via `var(--hud-halo)` / `var(--hud-halo-text)` / `var(--hud-glow)` — never reintroduce the deleted `cyberpunk-glow` mixin or any `filter`-chain utility.
 
-If the user asks to **build `item-explain`**: create `@kyonax_on_tech/sources/animation/item-explain.vue` + flip `sources.js` to `'ready'`. Route auto-discovers. Kind-alias imports; PascalCase tags.
+If the user asks to **change the cam-log session-date format**: modify the `dayjs().utc().format(...)` token string in `@kyonax_on_tech/sources/hud/cam-log.vue`. Escape literal segments with `[...]`. Keep `.toUpperCase()`. `brand.region` drives the prefix — changing the region value on `brand.js` is the lowest-cost way to re-label the source. Update §1.1 HUD vocabulary line + §3.8 label spec when the format changes.
 
-If the user asks to **build a new component** (any kind): follow §1.12. Kebab short filename; kind folder; `@<kind>` alias; binding per §1.12.5. Don't extract unless Rule E is met.
+If the user asks for **another HUD animation** (scanline, glitch, boot sequence): animate `transform`/`opacity` only; apply halo via `var(--hud-halo)` on a static layer; no `box-shadow` or `filter` inside `@keyframes`. If broadly reusable, create a new `@shared/utils/animations.scss` partial or `@ui/` primitive; if brand-specific, keep inside the brand source `.vue`. Add `prefers-reduced-motion: reduce` media-query gate for any continuous pulsation (not yet applied on `breathe` — open TODO).
 
-If the user asks to **add a new brand**: create `@<brand>/` with `brand.js` + `sources.js` + `assets/` + `styles/_theme.scss` + `sources/{hud,animation,scene}/`. Zero app code changes needed.
+If the user asks to **tune status-dot timing**: edit `src/shared/components/ui/status-dot.vue` — the `2s ease-in-out` duration + `0.35` low-opacity point are the two tuning knobs on `.glow`'s `breathe` keyframe. The dark halo layer on the outer span stays static — do not move it into the keyframe.
+
+If the user asks to **build `item-explain`**: create `@kyonax_on_tech/sources/animation/item-explain.vue` + flip `sources.js` to `'ready'`. Route auto-discovers. Kind-alias imports; PascalCase tags. Conform to §1.14 from day 1.
+
+If the user asks to **build a new component** (any kind): follow §1.12 for placement + naming; follow §1.14 for performance. Kebab short filename; kind folder; `@<kind>` alias; binding per §1.12.5. Don't extract unless Rule E is met.
+
+If the user asks to **add a new brand**: create `@<brand>/` with `brand.js` (`handle`, `name`, `description`, **`host`**, **`region`**, `identity`, `links`) + `sources.js` + `assets/` + `styles/_theme.scss` + `sources/{hud,animation,scene}/`. Zero app code changes needed.
 
 If the user asks to **add a web source to an existing brand**: add entry to `@<brand>/sources.js`, create `.vue` in the matching `sources/<type>/` folder. Route auto-discovers.
 

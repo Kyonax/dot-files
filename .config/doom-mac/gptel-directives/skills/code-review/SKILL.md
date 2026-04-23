@@ -1,38 +1,55 @@
 ---
 name: code-review
-description: "Code review and quality analysis. Detects architecture violations, performance issues, accessibility gaps, styling inconsistencies, naming breaks, and unused code. Auto-detects tech stack and loads domain skills (e.g., mr-dotcom-dev for Vue/Pug/Stylus/Vuex). Supports parallel subagent review for large rulesets. Trigger: 'review this code', 'code review', 'review PR', 'check quality', 'audit code', 'style check', 'find issues', or any code quality/accessibility audit request."
+description: "Code review and quality analysis. Detects architecture violations, performance issues, accessibility gaps, styling inconsistencies, naming breaks, and unused code. Auto-detects brand (Kyonax/RECKIT/OBS vs MadisonReed vs generic) AND tech stack (Vue/Pug/Stylus/Vuex), loading matching rule files — e.g., brand-kyonax.md for OBS Browser-Source FPS discipline, mr-review-checklist.md for MR Vue conventions. Supports parallel subagent review for large rulesets. Trigger: 'review this code', 'code review', 'review PR', 'check quality', 'audit code', 'style check', 'find issues', 'RECKIT review', 'OBS HUD perf', or any code quality/accessibility audit request."
 metadata:
   author: Kyonax
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 # Code Review Skill
 
-Structural code quality analysis beyond linting — architectural patterns, design principles, performance, accessibility, testability, and project-specific conventions.
+Structural code quality analysis beyond linting — architectural patterns, design principles, performance, accessibility, testability, and brand-scoped + tech-stack-scoped conventions. Brand detection runs first (OBS FPS discipline for Kyonax, no brand rule for MadisonReed, conservative fallback otherwise); tech-stack domain detection runs second. Both sets of rules can apply to the same review.
 
 ## When to Apply
 
 Reference these guidelines when:
 
+*   Reviewing any Vue component, JS module, or SCSS file in a Kyonax / RECKIT / OBS Browser Source codebase
 *   Reviewing Vue components, Pug templates, Stylus styles, or Vuex stores in the MR website
 *   Running a pre-PR quality gate or post-implementation review
 *   Checking ADA/accessibility compliance on any web component
 *   Auditing code style, naming, or architectural consistency
 *   Evaluating backend Express routes, controllers, or webservices
+*   Auditing HUD overlays, widgets, or composables that drive OBS WebSocket subscriptions for FPS-regression risk
 
 ## When to Read Which Rules
 
-| If reviewing...                                | Read                                                            |
-|------------------------------------------------|-----------------------------------------------------------------|
-| Any file in `website/src/vuescripts/`          | `rules/mr-review-checklist.md` (82 rules, 9 categories)         |
-| Express routes or controllers in `mr_modules/` | `rules/mr-review-checklist.md` § Backend / API only             |
-| Non-MR codebase                                | Use universal categories in Stage 2 below (no rule file needed) |
+**Step 0 — Always first: brand detection.** Load `rules/brand-detection.md` on every review to identify the owning brand, then load the matching `brand-<name>.md` (if any). Brand rules and domain rules both apply — they address orthogonal axes.
+
+| If reviewing...                                                                                | Read                                                                                                                             |
+|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
+| **Any review (Step 0 — brand detection)**                                                      | `rules/brand-detection.md`                                                                                                       |
+| Any Kyonax-owned repo (remote `Kyonax/*`, or `@<brand>/` folders, or `use-obs-websocket.js`)   | `rules/brand-kyonax.md` + any tech-stack rule matched below                                                                      |
+| HUD overlays or OBS-WS composables specifically                                                | `rules/brand-kyonax.md` (Sections A–F are the FPS budget)                                                                        |
+| Any file in `website/src/vuescripts/`                                                          | `rules/mr-review-checklist.md` (82 rules, 9 categories) — MR has no brand rule                                                   |
+| Express routes or controllers in `mr_modules/`                                                 | `rules/mr-review-checklist.md` § Backend / API only                                                                              |
+| Non-Kyonax, non-MR codebase                                                                    | Generic fallback per `rules/brand-detection.md` + universal categories in Stage 2 below                                          |
 
 ## Quick Reference
 
-| Rule File                      | Description                                                              |
-|--------------------------------|--------------------------------------------------------------------------|
-| `rules/mr-review-checklist.md` | 82-rule MR Vue checklist (9 categories). [Details](#mr-review-checklist) |
+| Rule File                      | Description                                                                                                                                  |
+|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
+| `rules/brand-detection.md`     | Brand auto-identification from git remote + user override + repo-local indicators. Always Step 0. [Details](#brand-detection)                |
+| `rules/brand-kyonax.md`        | Kyonax/RECKIT/OBS review discipline — OBS FPS budget, opt-in CSS effects, singleton composables, hot-path allocation rules. [Details](#brand-kyonax) |
+| `rules/mr-review-checklist.md` | 82-rule MR Vue checklist (9 categories). [Details](#mr-review-checklist)                                                                     |
+
+#### brand-detection
+
+Detection signals in order: (1) `git remote get-url origin` → match `Kyonax/*` → `brand-kyonax.md`, `MadisonReed/*` → no brand rule (tech-stack only), anything else → generic fallback; (2) explicit user override ("apply RECKIT rules", "generic only"); (3) repo-local indicators (`@<brand>/` folders, `sources.js` with hud/animation/scene types, OBS-WS composables, Tier 1 headers). Precedence: brand rules and domain rules are orthogonal and both apply when relevant. Ends with "correct vs incorrect" detection examples.
+
+#### brand-kyonax
+
+Kyonax/RECKIT/OBS Browser Source review discipline — reverse-engineered from a real FPS regression (the `cyberpunk-glow` mixin applied broadly to gold-text tanked OBS fps on low-core hardware). Seven rule sections: (A) CSS cost — never broadcast `filter`/`box-shadow`/`text-shadow` via utility classes, opt-in via `--hud-halo`/`--hud-glow` tokens, animate only `transform`/`opacity`, split static-from-animated onto separate layers, `contain: layout paint` on HUD sub-trees; (B) OBS WebSocket call budget — every WS composable is a module-level singleton with identity test and no `onUnmounted` cleanup, event-driven over rAF, throttle emits; (C) Zero-allocation hot path — preallocated `Float32Array`, precomputed lookup tables (`JITTER_TABLE`, `SCALE_STRINGS`), classic `for` loops, hardcode known targets; (D) Vue reactivity boundary — bypass reactivity in per-frame hot paths via template refs + direct DOM writes, write-threshold skip, expose a `tick` counter; (E) Event listener hygiene — debounce burst-prone `window.*` listeners, clear timers on unmount; (F) Pre-merge checklist with 8 questions; (G) General Kyonax conventions (kebab-case emits, snake_case props, kebab-case filenames, Vite aliases, no relative imports, colors in SCSS not JS, no-git-write discipline). Severity calibration: FPS regression risk = CRITICAL.
 
 #### mr-review-checklist
 
@@ -136,26 +153,46 @@ After all findings resolved, run the full test suite. Confirm no regressions.
 
 ## Standard Pipeline (Quick Reviews)
 
-Three stages, never skip any.
+Four stages, never skip any. Brand detection is always Stage 0.
 
-### Stage 1: Context Detection
+### Stage 0: Brand Detection
+
+Before any other analysis, identify the owning brand. Load `rules/brand-detection.md` and apply its signals:
+
+1. `git remote get-url origin` → match against brand catalog.
+2. Explicit user override (e.g., "apply RECKIT rules", "skip brand rules").
+3. Repo-local indicators (`@<brand>/` folders, OBS-WS composables, Tier 1 headers).
+
+Record the detected brand in internal working state. Load the matching `brand-<name>.md` if any:
+
+| Detected brand | Load |
+|---|---|
+| Kyonax (RECKIT, OBS overlays, any `Kyonax/*` repo) | `rules/brand-kyonax.md` |
+| MadisonReed | No brand rule — proceed directly to Stage 1 tech-stack detection |
+| Generic fallback | No brand rule — universal categories only |
+
+**Brand rules do not replace tech-stack domain rules — both apply when relevant.** A Kyonax Vue 3 HUD file loads `brand-kyonax.md` for perf discipline AND whatever Vue 3 conventions the reviewer knows. A MadisonReed Vue+Pug file loads `mr-review-checklist.md` for tech-stack conventions with no brand overlay.
+
+### Stage 1: Tech-Stack Context Detection
 
 Identify tech stack from the code:
 
 - Language, framework, template engine, style system, state management, test framework
 - **MR monorepo indicators:** path contains `website/src/vuescripts/` or `mr_modules/`, imports use `@components`/`@store` aliases, uses `trackMREvent`, `lang="pug"` + scoped Stylus
+- **Kyonax RECKIT indicators:** path contains `@<brand>/sources/{hud,animation,scene}/`, imports from `@hud/`, `@widgets/`, `@composables/use-obs-websocket.js`, `<script setup>` with Vue 3 Composition API, SCSS with `--hud-*` custom properties
 
-**Load domain skills based on detection:**
+**Load domain skills / rule files based on detection:**
 
 | Detection                                      | Load                                                          |
 |------------------------------------------------|---------------------------------------------------------------|
 | Vue 3 + Options API + Pug + Stylus + Vuex (MR) | `mr-dotcom-dev` (full skill) + `rules/mr-review-checklist.md` |
 | Express / Node.js in MR monorepo               | `mr-dotcom-dev/rules/express-routing.md`                      |
 | Test files in MR monorepo                      | `mr-dotcom-dev/rules/testing-standards.md`                    |
+| Vue 3 + Composition API + SCSS + OBS (RECKIT)  | `rules/brand-kyonax.md` (already loaded in Stage 0 for this brand) |
 
 ### Stage 2: Analysis
 
-Review against ALL applicable categories. Work systematically — do not cherry-pick.
+Review against ALL applicable categories. Work systematically — do not cherry-pick. Three axes stack: universal → brand → tech-stack. A single finding can cite any of them; cite the most specific rule that applies.
 
 **Universal (any codebase):**
 - **Architecture (CRITICAL):** Single responsibility, proper data flow, feature abstraction, no god objects
@@ -164,7 +201,16 @@ Review against ALL applicable categories. Work systematically — do not cherry-
 - **Accessibility (HIGH):** Semantic HTML, ARIA attributes, keyboard navigability, no nested interactives
 - **Code Style (LOW):** Consistent naming, formatting, file structure
 
-**Domain-specific:** Apply loaded skill rules (e.g., MR checklist — 82 rules across 9 categories).
+**Brand-specific (if a brand rule was loaded in Stage 0):** Apply the brand rule's sections. For `brand-kyonax.md` the axes are:
+- CSS cost (Section A) — CRITICAL on animated filters / broad shadow utilities
+- OBS WebSocket call budget (Section B) — CRITICAL on non-singleton WS composables
+- Zero-allocation hot path (Section C) — HIGH on per-event allocations
+- Vue reactivity boundary (Section D) — CRITICAL on reactive per-frame bindings
+- Event listener hygiene (Section E) — HIGH on un-debounced burst listeners
+- Pre-merge checklist (Section F) — run all 8 questions against every HUD-touching change
+- General conventions (Section G) — MEDIUM / LOW
+
+**Tech-stack domain-specific:** Apply loaded domain rule (e.g., MR checklist — 82 rules across 9 categories).
 
 ### Stage 3: Report + Interactive Resolution
 
