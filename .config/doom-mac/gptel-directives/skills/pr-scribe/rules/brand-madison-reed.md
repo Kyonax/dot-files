@@ -7,14 +7,16 @@ tags: brand, madison-reed, mr, dotcom, jira, DOTCOMPB, changes-pattern-a, td-fre
 
 This rule defines the specific PR-body overrides for repos under the **MadisonReed** GitHub organization. Load this alongside `pr-body-structure.md`, `changes-list.md`, `supporting-sections.md`, and `global-writing-rules.md` whenever drafting a PR for a MadisonReed/* repo.
 
-**Changes format:** Pattern A (flat `**Changes:**` list with optional ticket references). See `changes-list.md`.
+**Changes format:** Pattern A (flat `**Changes:**` list). See `changes-list.md`.
+
+**Content richness:** RICH (see `content-richness.md`). Status tags (`[NEW]/[MOD]/[DEL]/[MOV]`) on Changes entries, individual test case rows, detailed expected labels.
 
 **Variant selections:**
 
 | Section | Variant |
 |---|---|
 | Technical Details | `TD-FREEFORM` — custom `###` subheadings with prose + bullets |
-| Testing Coverage | `TEST-SINGLE` — single `### Unit Testing Coverage` table |
+| Testing Coverage | `TEST-SINGLE` — single `### Unit Testing Coverage` table (RICH: one row per test case) |
 | QA heading | `QA-INSTRUCTIONS` — `## Instructions on how QA can test this PR` |
 | Expected label | `- **Expected:**` (inline bold only, nested sub-bullet) |
 | Special Deployment | `DEPLOY-FREEFORM` — free-form prose + code blocks |

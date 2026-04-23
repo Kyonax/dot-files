@@ -37,7 +37,7 @@ The "one bold heading, then nested bullets" format. Used by teams that track wor
 | Path in parens follows the name | `(path/to/folder/)` after the backticked name — optional but common |
 | Ticket-ID after em dash | When a specific bullet addresses a specific child ticket, append `— <TICKET-ID>` between name and path |
 | Nested bullets hold specifics | Each sub-bullet is one concrete detail, one line |
-| No closed tag vocabulary | Pattern A does not use `[NEW] / [MOD] / [DEL]` — the diff shows status |
+| Status tags (optional, see `content-richness.md`) | Under RICH content richness, prepend `[NEW]` / `[MOD]` / `[DEL]` / `[MOV]` tags to each entry. Under MINIMAL, tags are omitted. See `content-richness.md` for tag vocabulary. |
 
 ### When the PR addresses multiple tickets
 
@@ -279,26 +279,32 @@ If no brand matches, fall back to Pattern A — it imposes less structure and is
   - <detail>
 ```
 
-### Example 2: Mixing patterns within one PR
+### Example 2: Tags in Pattern A (RICH content richness)
 
-**Incorrect** — mixing flat format with tag vocabulary:
-
-```markdown
-**Changes:**
-
-- **[NEW]** `src/foo.vue` — new component
-```
-
-The `[TAG]` vocabulary only belongs in Pattern B. Under `**Changes:**` (Pattern A), tags are not used.
-
-**Correct** — pick one pattern and stay in it:
+**RICH** — tags + legend provide instant visual scanning:
 
 ```markdown
 **Changes:**
 
-- **`foo.vue`** (`src/`):
-  - new component implementing the X feature
+> **[NEW]** new file · **[MOD]** modified file · **[DEL]** removed · **[MOV]** renamed or relocated
+
+- **[NEW]** **`HcbLocationSections.vue`** (`HcbLocationPageV2/HcbLocationSections/`):
+  - ALL visible section content extracted from parent
+
+- **[MOD]** **`HcbLocationPageV2.vue`** (`HcbLocationPageV2/`):
+  - Refactored to thin parent
 ```
+
+**MINIMAL** — tags omitted, detail is briefer:
+
+```markdown
+**Changes:**
+
+- **`HcbLocationSections.vue`** (`HcbLocationPageV2/HcbLocationSections/`):
+  - Extracted content from parent
+```
+
+Both are valid Pattern A. The content richness level (set by brand rule or defaulting to RICH) determines which style to use. See `content-richness.md`.
 
 ### Example 3: Pattern B release section with wrong structure
 

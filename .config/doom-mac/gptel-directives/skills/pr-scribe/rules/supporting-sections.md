@@ -72,12 +72,11 @@ One table listing test cases, no "Quality gates" parallel table.
 
 **Rules:**
 - Heading: `### Unit Testing Coverage` (exact wording).
-- Table: 3 columns — Component, Test, Status.
-- One row per individual test case (not per file).
+- **Row granularity is threshold-based** (see `content-richness.md` Enrichment 2): 30 or fewer tests use individual rows (Component, Test, Status); 31+ tests use grouped rows (Component, Tests, Key Coverage). This is a hard rule -- a 60-row table is never acceptable.
 - Status cell uses only `✅` / `❌` / `⚠️` — no other glyphs.
 - Summary line in bold below the table.
 
-**Used by:** brands that track every test case individually in the PR body and don't document CI gates per-PR.
+**Used by:** any brand that tracks test coverage in the PR body without documenting CI gates per-PR.
 
 ### Variant TEST-TWO-TABLE
 

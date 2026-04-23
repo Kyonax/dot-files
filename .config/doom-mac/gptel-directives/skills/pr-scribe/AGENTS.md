@@ -22,13 +22,14 @@ Different GitHub organizations have different PR conventions **and** different d
 
 Imposing one brand's format on the other produces PRs that fail local review. Imposing one brand's data-sourcing on the other produces PRs that are either hallucinated (e.g. "Jira URL" on a Kyonax PR) or that miss their actual content source (e.g. drafting an MR PR from git alone when the org-node was the canonical source).
 
-The skill therefore has **three axes of behavior**:
+The skill therefore has **four axes of behavior**:
 
 1. **Universal format** — section ordering, writing disciplines (no emojis / arrows / private refs / relative URLs / redundancy), checkbox scope, colon-label typography, self-documenting template invariants.
-2. **Brand format overrides** — exact checklist items, Changes format, Technical Details shape, Testing inner layout, QA heading wording + step format, Special Deployment vocabulary, Documentation vocabulary, reference-link footer on/off, required labels.
-3. **Brand data-sourcing conventions** — where PR content comes from for this brand, how to extract / parse it, which fields map to which PR slots, what is NOT available for this brand, and what must never be referenced in output.
+2. **Brand layout** — exact checklist items, Changes pattern (A vs B), Technical Details shape, Testing variant, QA heading wording + step format, Special Deployment vocabulary, Documentation vocabulary, reference-link footer on/off, required labels. This is the "what shape does the section take" axis.
+3. **Content richness** — the detail level that fills each structure: status tags on Changes entries, individual test case rows vs grouped summaries, detailed vs brief expected labels, thorough vs concise Technical Details. This is the "how detailed is each entry" axis. It is **independent of brand layout** — both a flat `**Changes:**` list (Pattern A) and themed subsections (Pattern B) can use `[NEW]/[MOD]/[DEL]` tags. Both `TEST-SINGLE` and `TEST-TWO-TABLE` can list individual test cases. Content richness defaults to RICH for all brands.
+4. **Brand data-sourcing conventions** — where PR content comes from for this brand, how to extract / parse it, which fields map to which PR slots, what is NOT available for this brand, and what must never be referenced in output.
 
-The universal axis lives in `global-writing-rules.md`, `pr-body-structure.md`, `changes-list.md` (pattern catalog), and `supporting-sections.md` (variant catalog). The brand-specific axes (both format overrides AND data-sourcing conventions) live together in each `brand-<name>.md` file — a single brand rule answers both "what does the PR look like?" and "where do I get the content from?".
+The universal axis lives in `global-writing-rules.md`, `pr-body-structure.md`, `changes-list.md` (pattern catalog), and `supporting-sections.md` (variant catalog). The content richness axis lives in `content-richness.md` and is referenced by all brand rules. The brand-specific axes (both layout overrides AND data-sourcing conventions) live together in each `brand-<name>.md` file — a single brand rule answers "what does the PR look like?", "how detailed are the entries?", and "where do I get the content from?".
 
 ## How routing works
 
@@ -52,7 +53,7 @@ Read brand-detection.md
     │
     ▼
 Load pr-body-structure.md + changes-list.md + supporting-sections.md +
-     global-writing-rules.md alongside the brand rule
+     content-richness.md + global-writing-rules.md alongside the brand rule
     │
     ▼
 Draft the PR body

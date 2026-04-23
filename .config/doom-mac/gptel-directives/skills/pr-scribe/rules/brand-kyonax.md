@@ -9,6 +9,8 @@ This rule defines the specific PR-body overrides for repos under the **Kyonax** 
 
 **Changes format:** Pattern B (themed `###` subsections with `[NEW] / [MOD] / [DEL] / [MOV]` tags). See `changes-list.md`.
 
+**Content richness:** RICH (see `content-richness.md`). Tags mandatory (inherent to Pattern B), individual test case rows, detailed expected labels.
+
 **Variant selections:**
 
 | Section | Variant |
