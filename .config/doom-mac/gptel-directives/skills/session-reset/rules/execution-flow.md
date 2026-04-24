@@ -1,11 +1,11 @@
 ---
 title: Session Reset Execution Flow
 impact: HIGH
-impactDescription: Defines the mandatory 5-step process for performing a session reset — from determining the target file through writing the final output. Following the wrong order or skipping steps produces incomplete or corrupted context blocks.
-tags: execution, flow, steps, process, reset, merge, gather, write, session, update, create, new-session, existing-session, compaction
+impactDescription: Defines the mandatory 6-step process for performing a session reset — from determining the target file through writing the final output, including optional architecture memory extraction. Following the wrong order or skipping steps produces incomplete or corrupted context blocks.
+tags: execution, flow, steps, process, reset, merge, gather, write, session, update, create, new-session, existing-session, compaction, architecture, extraction, memory, reference
 ---
 
-This rule defines the mandatory 5-step process for performing a session reset. A session reset is a knowledge compaction operation — it extracts all accumulated knowledge from the current conversation, merges it with any existing context block, and writes a single refined output. Skipping steps (e.g., not reading the existing context block before merging) produces data loss or duplication.
+This rule defines the mandatory 6-step process for performing a session reset. A session reset is a knowledge compaction operation — it extracts all accumulated knowledge from the current conversation, optionally extracts reusable architectural knowledge into persistent memory files, merges the result with any existing context block, and writes a single refined output. Skipping steps (e.g., not reading the existing context block before merging) produces data loss or duplication.
 
 ## What Is a Session Reset?
 
@@ -17,17 +17,19 @@ A session reset is triggered when:
 
 The output is always a `.md` file containing a context block between delimiter comments.
 
-## The 5 Steps (Mandatory Order)
+## The 6 Steps (Mandatory Order)
 
 ```
 Step 1: Determine Session File
     ↓ produces: file path + existing context block (if any)
 Step 2: Gather Knowledge
     ↓ produces: categorized knowledge from current conversation
+Step 2.5: Extract Architecture Memory (OPTIONAL — see criteria below)
+    ↓ produces: new/updated entries in architecture memory file(s) + reference list
 Step 3: Merge with Existing Context Block
     ↓ produces: unified, non-redundant context block content
 Step 4: Write the Context Block
-    ↓ produces: formatted markdown following all writing rules
+    ↓ produces: formatted markdown (with architecture references if Step 2.5 ran)
 Step 5: Write to File
     ↓ produces: final session file on disk
 ```
@@ -90,6 +92,67 @@ Collect ALL knowledge from the current conversation, organized by which section 
 
 ---
 
+## Step 2.5: Extract Architecture Memory (Optional)
+
+This step extracts **reusable architectural knowledge** from the gathered session data into persistent architecture memory files. Unlike the context block (which captures everything needed to resume this session), architecture memory captures only knowledge that informs future sessions across projects — decisions, patterns, constraints, and abstractions.
+
+**When to run Step 2.5:**
+
+| Run | Skip |
+|---|---|
+| Session produced 3+ architectural decisions | First session in a new project (let patterns emerge) |
+| Session validated or refined an existing pattern | Session was only implementation work (bug fixes, style changes) |
+| Session discovered a new platform constraint | Session was <30 minutes of simple tasks |
+| User explicitly requests architecture extraction | |
+
+**Step 2.5 sub-steps:**
+
+1. **Identify extraction candidates** — Scan gathered knowledge for reusable architectural insights. The core test: "Would this knowledge influence a decision in a future session on a *different* feature?" If yes, it's a candidate.
+
+   **What to extract:**
+   - Architecture decisions (chose A over B, with rationale)
+   - Design patterns (reusable structural approaches)
+   - Data flow decisions (sources, transforms, destinations)
+   - Key abstractions (global services, shared modules, dead/misleading variables)
+   - Constraints and limitations (platform, SSR, ADA, business)
+   - Reusable structures (API contracts, data shapes, schemas)
+
+   **What NOT to extract:**
+   - Code-review rules (belong in coding-standards skill)
+   - One-off fixes (the fix is in the code)
+   - Debugging steps (zero future value)
+   - PR/git workflow details (process metadata)
+   - Test counts (change constantly)
+
+2. **Determine target architecture memory file** — If one exists for this domain, use it. If 5+ candidates are identified and no file exists, create one with `{session-domain}-architecture.md` naming. If <5 candidates, hold — store in the context block and extract on next reset if the pattern continues.
+
+3. **Deduplicate against existing entries** — For each candidate, check if a matching entry already exists in architecture memory:
+   - Exact match → skip (already stored)
+   - Semantic overlap ≥80% → update existing entry with new details
+   - Contradiction → flag for user resolution (mark both entries as "contested")
+   - No match → create new entry
+
+4. **Write/update architecture memory file** — New entries get the next available ID in their section (e.g., `ad-013`, `dp-009`). Updated entries are modified in place. Section 1 (Summary) is updated with new source session and knowledge counts.
+
+5. **Generate reference list** — For every extracted/matched entry, produce a reference string for use in Step 4:
+   ```
+   [session: site-revolution-architecture > design-patterns > dp-001]
+   [session: site-revolution-architecture > architecture-decisions > ad-005]
+   ```
+
+**Architecture memory file structure (6 sections):**
+
+| Section | Content |
+|---|---|
+| 1. Summary | Domain, source sessions, knowledge category counts |
+| 2. Architecture Decisions | Decisions with context, alternatives, consequences (ID: `ad-NNN`) |
+| 3. Design Patterns | Reusable patterns with when-to-use, structure, anti-patterns (ID: `dp-NNN`) |
+| 4. Shared State & Data Flow | Data sources, transforms, consumers, gotchas (ID: `sf-NNN`) |
+| 5. Constraints & Limitations | Platform/SSR/ADA constraints with workarounds (ID: `cl-NNN`) |
+| 6. Reusable References | API contracts, data shapes, schemas (ID: `rr-NNN`) |
+
+---
+
 ## Step 3: Merge with Existing Context Block
 
 **If an existing context block exists:**
@@ -123,6 +186,47 @@ Collect ALL knowledge from the current conversation, organized by which section 
 7. **Reference actual code/artifacts when needed** — use inline code for identifiers.
 8. **Section 5 is always fully replaced** — reflects only the most recent interaction.
 9. **All entries must have dates** — creation dates, update dates, decision dates.
+10. **Use architecture references when Step 2.5 produced them.** Replace inline explanations of extracted knowledge with reference pointers. See below.
+
+### Architecture References in Context Blocks (When Step 2.5 Ran)
+
+If Step 2.5 extracted knowledge into architecture memory files, use **reference pointers** in the context block instead of duplicating the knowledge inline. The reference syntax is:
+
+```
+[session: <filename> > <section> > <entry-id>]
+```
+
+**Resolution levels:**
+- `[session: site-revolution-architecture]` → loads Summary only
+- `[session: site-revolution-architecture > design-patterns]` → loads entire section
+- `[session: site-revolution-architecture > design-patterns > dp-001]` → loads one entry
+- `[session: site-revolution-architecture > constraints > cl-001, cl-003]` → loads multiple entries
+
+**Where to use references:**
+
+| Context Block Section | Reference Usage |
+|---|---|
+| **Section 1** (Guidelines) | Reference patterns and constraints that are fully documented in architecture memory. Keep 1-2 line summaries inline for readability; use references for the full explanation. |
+| **Section 2.3** (Decisions) | Reference architecture decisions for full rationale. Keep a one-line summary inline. |
+| **Section 3** (Implementations) | Reference constraints and patterns relevant to the implementation. Most implementation detail stays inline (it's per-ticket, not architectural). |
+| **Section 4** (File Index) | No references — file paths are always inline. |
+| **Section 5** (Last Interaction) | No references — short-term memory is always inline. |
+
+**Reference density rule:** Do not reference everything. If a guideline can be stated in 1-2 lines, keep it inline even if a reference exists. Use references when the full explanation is 5+ lines. Aim for <20 references per context block.
+
+**Example — Section 1 with references:**
+```markdown
+### 1.5 Accessibility
+*   Self-contained landmarks — [session: site-revolution-architecture > design-patterns > dp-001]
+*   `aria-labelledby` must reference heading IDs, never root element IDs
+*   WCAG 2.5.3 card pattern — [session: site-revolution-architecture > design-patterns > dp-012]
+```
+
+**Example — Section 2.3 with references:**
+```markdown
+### 2.3 Key Decisions
+5. **(2026-03-30)** Cookie-based cross-app state — [session: site-revolution-architecture > architecture-decisions > ad-002]
+```
 
 ---
 

@@ -29,6 +29,11 @@ This rule defines exactly what belongs in each of the 5 context block sections, 
 
 **Graduation rule:** When a guideline in Section 1 has been stable across 3+ resets and applies beyond this session, it should be promoted into the corresponding skill's rule files and removed from Section 1. Add a one-line reference: `Promoted to [skill-domain] skill — [rule-topic]` so future sessions know it was moved, not lost.
 
+**Architecture memory references:** When an architecture memory file exists for this session's domain, Section 1 guidelines that are fully documented there can use reference syntax instead of inline explanations. Keep 1-2 line summaries inline for readability; use `[session: filename > section > entry-id]` references for the full explanation (5+ lines). This prevents duplication and reduces context block size. Example:
+```markdown
+*   Self-contained landmarks — [session: site-revolution-architecture > design-patterns > dp-001]
+```
+
 ---
 
 ## Section 2: Session Overview

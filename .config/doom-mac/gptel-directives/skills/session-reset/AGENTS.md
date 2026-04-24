@@ -51,6 +51,18 @@ Context blocks are bounded — they cannot grow forever. The compression protoco
 Every reset must pass a verification checklist before writing to file. Compression can create inconsistencies (orphaned entries, stale statuses, broken references) that the checklist catches.
 *   **Reference:** `rules/quality-checklist.md`
 
+## Pillar 6: Architecture Memory Extraction
+
+Session resets solve **session continuity** — preserving context for the next conversation about the same work. Architecture memory extraction solves **cross-session learning** — identifying knowledge that is reusable across sessions and storing it in a persistent, referenceable format.
+
+The extraction process runs as an optional Step 2.5 in the reset flow. It applies a strict filter: "Would this knowledge influence a decision in a future session that works on a *different* feature?" Only architectural decisions, design patterns, data flow insights, constraints, and reusable structures pass this filter. Implementation noise (one-off fixes, debugging steps, test counts) is excluded.
+
+Extracted knowledge is stored in **architecture memory files** — persistent documents with a 6-section structure (Summary, Architecture Decisions, Design Patterns, Shared State & Data Flow, Constraints & Limitations, Reusable References). Each entry has a unique, stable ID that enables the **reference syntax system**: `[session: filename > section > entry-id]`.
+
+The reference syntax enables context blocks to point to architectural knowledge instead of duplicating it inline. This creates a single source of truth for each piece of architectural knowledge, reduces context block size, and ensures updates propagate automatically.
+
+*   **Reference:** `rules/execution-flow.md` (Step 2.5 and Step 4 architecture references)
+
 ## Why This Architecture?
 
 The session reset skill exists because AI conversations are ephemeral but projects are not. Without structured compaction:
@@ -60,4 +72,4 @@ The session reset skill exists because AI conversations are ephemeral but projec
 - Decisions get re-debated because no one remembers the rationale
 - Implementation details get re-discovered through expensive codebase searches
 
-The context block is the bridge between ephemeral conversations and persistent projects. The 5-section architecture, mandatory dates, and compression protocol ensure this bridge remains usable as sessions accumulate knowledge over weeks and months.
+The context block is the bridge between ephemeral conversations and persistent projects. Architecture memory files extend this bridge across projects — enabling knowledge reuse beyond a single session's scope. The 5-section context block architecture, 6-section memory file structure, mandatory dates, compression protocol, and reference syntax ensure both bridges remain usable as sessions accumulate knowledge over weeks and months.

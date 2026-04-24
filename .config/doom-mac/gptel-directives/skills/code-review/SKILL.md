@@ -3,7 +3,7 @@ name: code-review
 description: "Code review and quality analysis. Detects architecture violations, performance issues, accessibility gaps, styling inconsistencies, naming breaks, and unused code. Auto-detects brand (Kyonax/RECKIT/OBS vs MadisonReed vs generic) AND tech stack (Vue/Pug/Stylus/Vuex), loading matching rule files — e.g., brand-kyonax.md for OBS Browser-Source FPS discipline, mr-review-checklist.md for MR Vue conventions. Supports parallel subagent review for large rulesets. Trigger: 'review this code', 'code review', 'review PR', 'check quality', 'audit code', 'style check', 'find issues', 'RECKIT review', 'OBS HUD perf', or any code quality/accessibility audit request."
 metadata:
   author: Kyonax
-  version: "2.1.0"
+  version: "3.0.0"
 ---
 
 # Code Review Skill
@@ -31,8 +31,14 @@ Reference these guidelines when:
 | **Any review (Step 0 — brand detection)**                                                      | `rules/brand-detection.md`                                                                                                       |
 | Any Kyonax-owned repo (remote `Kyonax/*`, or `@<brand>/` folders, or `use-obs-websocket.js`)   | `rules/brand-kyonax.md` + any tech-stack rule matched below                                                                      |
 | HUD overlays or OBS-WS composables specifically                                                | `rules/brand-kyonax.md` (Sections A–F are the FPS budget)                                                                        |
-| Any file in `website/src/vuescripts/`                                                          | `rules/mr-review-checklist.md` (82 rules, 9 categories) — MR has no brand rule                                                   |
-| Express routes or controllers in `mr_modules/`                                                 | `rules/mr-review-checklist.md` § Backend / API only                                                                              |
+| Any file in `website/src/vuescripts/`                                                          | `rules/mr-review-checklist.md` (84 rules, 9 categories) — MR has no brand rule                                                   |
+| CMS Partials, SSR serverPrefetch, or Vue Router children on CMS pages                          | `rules/cms-ssr-routing.md` (12 rules) + `rules/mr-review-checklist.md`                                                           |
+| Express routes or controllers in `mr_modules/`                                                 | `rules/mr-review-checklist.md` § Backend / API + `rules/cms-ssr-routing.md` if CMS-served                                        |
+| Third-party SDK integration (Dash Hudson, Birdeye, Google Maps, Stripe)                        | `rules/third-party-sdk.md` (5 rules)                                                                                             |
+| Experiment-gated components or A/B test code                                                    | `rules/experiment-patterns.md` (3 rules)                                                                                          |
+| Mobile viewport, fullscreen overlays, scroll containers, iOS Safari                            | `rules/mobile-viewport.md` (5 rules)                                                                                              |
+| Advanced ADA: live regions, focus management, aria-controls, sticky offsets                     | `rules/advanced-ada.md` (7 rules)                                                                                                 |
+| Component patterns: accordion, carousel, CMS data, dead code removal, V1/V2 reuse             | `rules/component-patterns.md` (10 rules)                                                                                          |
 | Non-Kyonax, non-MR codebase                                                                    | Generic fallback per `rules/brand-detection.md` + universal categories in Stage 2 below                                          |
 
 ## Quick Reference
@@ -41,7 +47,13 @@ Reference these guidelines when:
 |--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
 | `rules/brand-detection.md`     | Brand auto-identification from git remote + user override + repo-local indicators. Always Step 0. [Details](#brand-detection)                |
 | `rules/brand-kyonax.md`        | Kyonax/RECKIT/OBS review discipline — OBS FPS budget, opt-in CSS effects, singleton composables, hot-path allocation rules. [Details](#brand-kyonax) |
-| `rules/mr-review-checklist.md` | 82-rule MR Vue checklist (9 categories). [Details](#mr-review-checklist)                                                                     |
+| `rules/mr-review-checklist.md` | 84-rule MR Vue checklist (9 categories). [Details](#mr-review-checklist)                                                                     |
+| `rules/cms-ssr-routing.md`     | 12 rules: CMS parseUrl validation, req.url/SSR coupling, Express child route coverage, component-less parent, global SSR registration, cookie state transfer, breadcrumb canonical URLs. [Details](#cms-ssr-routing) |
+| `rules/third-party-sdk.md`     | 5 rules: SDK DOM scoping via $refs, :deep() versioned overrides, content detection with timeout, listener cleanup in beforeUnmount, conditional aria-labelledby. [Details](#third-party-sdk) |
+| `rules/experiment-patterns.md` | 3 rules: href/click parity under experiments, SSR hydration flash (this.experiments = {} on server), variant set consistency across siblings. [Details](#experiment-patterns) |
+| `rules/mobile-viewport.md`     | 5 rules: 100dvh over 100vh, env(safe-area-inset) requires viewport-fit=cover, single scroll container per panel, overflow-y auto, overscroll-behavior contain. [Details](#mobile-viewport) |
+| `rules/advanced-ada.md`        | 7 rules: live region outside v-if + interaction flag, focus return on collapse, aria-controls pair, div[role=link] for multi-content cards (WCAG 2.5.3), :focus-visible, sticky sub-header ResizeObserver, :deep() override comments. [Details](#advanced-ada) |
+| `rules/component-patterns.md`  | 10 rules: CSS max-height accordion, store-free sticky UI, MountedFlag body class, carousel overflow, pre-wrap CMS textarea, dead code audit, V1/V2 reuse evaluation, v-if guard specificity, CMS URL strip, dataToolSvc null-guard. [Details](#component-patterns) |
 
 #### brand-detection
 
@@ -53,7 +65,31 @@ Kyonax/RECKIT/OBS Browser Source review discipline — reverse-engineered from a
 
 #### mr-review-checklist
 
-45 core + 22 AD (senior reviewer) + 14 SG (session-graduated) rules. 9 categories: Template, Script, Styling, Naming, ADA, Images+Tracking, Code Style, MrBtn+Components, Backend/API. Each category has inline examples for complex rules. Maps to the 8-category parallel subagent flow.
+45 core + 22 AD (senior reviewer) + 17 SG (session-graduated) rules. 9 categories: Template, Script, Styling, Naming, ADA, Images+Tracking, Code Style, MrBtn+Components, Backend/API. Each category has inline examples for complex rules. Maps to the 8-category parallel subagent flow.
+
+#### cms-ssr-routing
+
+12 rules for the CMS + SSR + Express routing integration layer. Covers: CMS Partial store dependency auditing in serverPrefetch (silent render failures), parseUrl parameter-count validation against Tophat urlParameterList (silent 404s), route cache refresh via Redis PARAM_ROUTES_INVALID broadcast, req.url coupling between CMS htmlRenderer and Vue Router SSR (hydration mismatch from URL rewriting), Express :path? optional param for child route validation coverage, component-less parent routes for CMS pages with Vue Router children (double-render prevention), global component dual registration for SSR, CSS-only responsive layouts over matchMedia, SSR timezone hydration, cookie-based cross-app state transfer, trackMREventAndRedirect for cross-CMS-context navigation, breadcrumb canonical URL verification.
+
+#### third-party-sdk
+
+5 rules for components hosting third-party SDK scripts (Dash Hudson, Birdeye, Google Maps, Stripe). Covers: DOM query scoping to $refs (prevents wrong-instance selection), :deep() versioned style overrides with SDK identification comments, content detection polling with timeout and graceful section hiding, event listener tracking and cleanup in beforeUnmount, conditional aria-labelledby when heading depends on SDK load state.
+
+#### experiment-patterns
+
+3 rules for A/B experiment-gated Vue components. Covers: href and @click.prevent handler URL parity (right-click vs left-click divergence under experiments), this.experiments = {} during SSR (control flash, dead serverPrefetch), variant set consistency across sibling components checking the same experiment (live bug: LocationCard checks B+C, LocationsDirectory checks B only).
+
+#### mobile-viewport
+
+5 rules for mobile viewport behavior in fullscreen overlays and scroll containers. Covers: 100dvh over 100vh (iOS Safari URL bar/Dynamic Island/home indicator), env(safe-area-inset-*) requires viewport-fit=cover (all MR Pug skeletons lack it — all env() is dead CSS), single scroll container per mobile panel (no nested scroll traps), overflow-y auto over scroll, overscroll-behavior contain in overlay scroll containers.
+
+#### advanced-ada
+
+7 advanced ADA accessibility rules beyond the base checklist (rules 27-33, sg-9 to sg-12). Covers: aria-live region placement outside v-if with filtersEverUsed interaction flag, focus return to toggle on collapse via $event.currentTarget in $nextTick, mandatory aria-controls pairing with aria-expanded, div[role=link] for multi-content cards when WCAG 2.5.3 scanners flag native <a>, :focus-visible over :focus, sticky sub-header ResizeObserver offset on .sticky-header-wrap.is-sticky, :deep() override comments on design system and SDK components.
+
+#### component-patterns
+
+10 Vue component implementation pattern rules. Covers: CSS max-height accordion (not TransitionExpand — flash bug), store-free fixed/sticky overlay UI (props+emits only), MountedFlag body class for cross-tree sibling coordination, Swiper carousel viewport-relative max-width overflow fix, white-space pre-wrap for CMS textarea content, exhaustive dead code removal across 5 artifact layers, V1-to-V2 reuse evaluation before building, v-if guard specificity on Vuex object state (empty {} is truthy), CMS media URL query param stripping before ImgBox, dataToolSvc null-guard before destructuring.
 
 ---
 

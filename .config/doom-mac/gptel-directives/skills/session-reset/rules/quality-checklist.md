@@ -60,6 +60,19 @@ Run this checklist **after Step 4 (Write the Context Block)** and **before Step 
 - [ ] Includes a fallback "new task" path pointing to Section 2.4
 - [ ] Pending items are comprehensive (session-scope + item-specific)
 
+## Architecture Memory (When Step 2.5 Was Performed)
+
+- [ ] Architecture memory file exists and is structurally valid (6 sections present)
+- [ ] All new entries have unique, stable IDs with correct prefixes (`ad-`, `dp-`, `sf-`, `cl-`, `rr-`)
+- [ ] Extracted knowledge passes the reusability test ("influences future sessions on different features")
+- [ ] No implementation noise leaked into architecture memory (one-off fixes, debugging steps, test counts)
+- [ ] Deduplication check was performed — no duplicate entries created
+- [ ] Contradictions flagged as "contested" with cross-references (not silently overwritten)
+- [ ] Architecture memory Summary (Section 1) updated with source session and knowledge counts
+- [ ] Context block references resolve correctly (file exists, section exists, entry ID exists)
+- [ ] Reference density is reasonable (<20 references per context block)
+- [ ] Short guidelines (1-2 lines) kept inline even when a reference exists — references used only for 5+ line explanations
+
 ## Overall
 
 - [ ] No raw conversation fragments remain — everything is abstracted
@@ -91,6 +104,10 @@ Run this checklist **after Step 4 (Write the Context Block)** and **before Step 
 | CRITICAL entry was compressed                   | Section 3         | Restore it — CRITICAL entries must survive all compression levels     |
 | Impact labels left on uncompressed entries      | Sections 1-4      | Remove transient labels after compression completes                   |
 | Component tree missing for multi-component item | Section 3         | Add ASCII tree diagram                                                |
+| Architecture reference points to nonexistent entry | Sections 1-3   | Verify entry ID exists in the target architecture memory file         |
+| Implementation noise in architecture memory     | Arch. memory      | Apply extraction criteria — remove one-off fixes, debugging steps     |
+| Duplicate entry in architecture memory          | Arch. memory      | Merge entries, update references to point to surviving entry          |
+| Contradiction not flagged                       | Arch. memory      | Mark both entries as "contested", add cross-references                |
 
 ---
 
