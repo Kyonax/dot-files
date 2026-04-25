@@ -12,6 +12,7 @@ This rule defines the universal top-level skeleton every PR body produced by thi
 Every PR body uses these top-level anchors in this order. The exact headings, wording, and per-section inner format are brand-configurable (see below). What is **universal** is the vertical ordering:
 
 ```
+[0]  PR Title (always generated, not inside the body — shown separately)
 [1]  [optional] Top line (e.g. bare ticket URL)
 [2]  ## Checklist
 [3]  ## What does this PR do?
@@ -30,6 +31,22 @@ Every PR body uses these top-level anchors in this order. The exact headings, wo
 **Vertical order is fixed across brands.** Reviewers scan top-to-bottom; moving a section changes their mental flow. What varies is *how each slot is filled* — not *where it sits*.
 
 ## Per-slot universal rules
+
+### Slot [0] — PR Title (always generated)
+
+Every PR output includes a title above the body. The title is NOT part of the body text — it is a separate field. The skill always generates it and presents it clearly before the body.
+
+**Universal rules:**
+- Always output the title on its own line, prefixed with `**PR Title:**` so it's easy to copy.
+- The title format is brand-configurable (ticket prefix, scope, casing, max length).
+- Max ~70 characters. Use the body for details, not the title.
+
+| Brand | Title pattern | Example |
+|---|---|---|
+| Madison Reed | `[DOTCOMPB-XXXX]: <Subtitle>` | `[DOTCOMPB-7942]: Add Google Sign-On into the New Booking Flow` |
+| Kyonax (feature) | `feat(<scope>): <lowercase summary>` | `feat(widgets): extract audio meter + readout` |
+| Kyonax (release) | `[vX.Y]: <Short Release Title>` | `[v0.3]: Vue App + CAM-LOG Overlay` |
+| Generic fallback | `<imperative summary>` | `Add user authentication to checkout flow` |
 
 ### Slot [1] — Top line (optional)
 

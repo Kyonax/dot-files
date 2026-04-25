@@ -109,6 +109,68 @@ Two-table format — Automated tests + Quality gates — plus metadata lines.
 | License headers | <workflow path> | ✅ |
 ```
 
+### Variant TEST-COMPACT
+
+Collapsible grouped format for PRs with 30+ tests. Uses GitHub `<details>` to keep the PR body scannable.
+
+**Unit Testing — Template:**
+
+```markdown
+### Unit Testing Coverage
+
+<details>
+<summary><strong>N tests</strong> across M test files — all passing (click to expand)</summary>
+
+| File | Tests | Status | Key Coverage |
+|------|-------|--------|-------------|
+| `useGoogleSignIn.test.js` | 18 | ✅ | Init, retry, callback, error mapping, loading state, cleanup |
+| `SignInOptions.test.js` | 14 | ✅ | Render states, Google button, skeleton, OR divider, auth, ADA |
+| `InfoPage.test.js` | 23 | ✅ | SignInOptions integration, Contact Info, handleSignInSuccess |
+
+</details>
+```
+
+**Unit Testing Rules:**
+- Heading: `### Unit Testing Coverage` (same as TEST-SINGLE).
+- Wrapped in `<details><summary>` — collapsed by default. Bold total in `<summary>`.
+- One row per test FILE, not per test case.
+- Status cell: `✅` per file (or `❌` / `⚠️` on failure).
+- "Key Coverage" column: comma-separated coverage areas (5-8 keywords max per row).
+- Use when test count exceeds 30. Below 30, use TEST-SINGLE with individual rows.
+
+**E2E / Playwright — Template:**
+
+When the PR includes E2E tests, add a separate `### E2E Testing Coverage` section. Group by SCENARIO, and list each AC concisely so reviewers know exactly what was verified:
+
+```markdown
+### E2E Testing Coverage
+
+<details>
+<summary><strong>N tests</strong> across M scenarios — K passed, J skipped (click to expand)</summary>
+
+| Scenario | AC | Test | Status |
+|---|---|---|---|
+| Display | AC1 | Express Sign In section visible above form | ✅ |
+| Display | AC2 | Google SSO button rendered | ✅ |
+| Display | AC4 | OR divider visible with correct text | ✅ |
+| Auth Flow | AC7 | Google OAuth popup opens | ⏭️ real OAuth |
+| Error States | AC36 | Form accessible when provider unavailable | ✅ |
+| Design | DESIGN1 | OR separator uppercase + correct color | ✅ |
+| ADA | ADA1 | WCAG 2.1 AA scan passes | ⏭️ axe-core |
+
+</details>
+```
+
+**E2E Rules:**
+- Heading: `### E2E Testing Coverage`.
+- Wrapped in `<details><summary>` — collapsed by default.
+- One row per individual AC/test — concise description (≤10 words).
+- Status cell: `✅` passed, `⏭️` skipped (with brief reason inline after the emoji).
+- Group rows by scenario for visual scanning.
+- AC column for traceability back to acceptance criteria.
+
+**Used by:** any brand with large test suites (30+ unit tests or any E2E suite). Prevents PR body from being dominated by test tables.
+
 **No-tests variant** — replace the Automated tests table with one paragraph:
 
 ```markdown
@@ -127,6 +189,47 @@ No automated tests in this PR. A test suite is tracked as a follow-up in <tracke
 
 ## `## How to test this PR` heading variants
 
+### Universal QA Patterns (apply to ALL variants)
+
+These patterns are brand-agnostic and should be used by any variant when applicable:
+
+**1. ASCII flow tree (optional, recommended for 4+ test sections):**
+
+When the QA section has multiple distinct testing areas, open with an ASCII tree overview showing the test structure at a glance. This lets reviewers see the full scope before diving into steps.
+
+```markdown
+    <PR title or scope>
+    ├─ Setup
+    ├─ Feature A — description
+    ├─ Feature B — description
+    ├─ ADA / Accessibility checks
+    └─ Regression check
+```
+
+**2. Prereqs blockquote (mandatory per test section):**
+
+Each test section must open with a `> **Prereqs:**` blockquote stating what the tester needs before starting those steps. Never assume the reader knows the setup.
+
+```markdown
+> **Prereqs:** dev server running at `localhost:3000`, not signed in.
+```
+
+Common prereqs: branch checkout, `npm ci`, dev server running, browser/DevTools open, logged in/out state, OBS running, specific route navigated to.
+
+**3. Section subheadings for multi-feature PRs:**
+
+Split QA into `###` subheadings when the PR covers 3+ distinct features or testing concerns. Each subheading gets its own Prereqs blockquote.
+
+**4. Inline architecture notes in Documentation section:**
+
+When the PR introduces non-obvious architecture (token systems, hot-path patterns, data flow), add descriptive captions under `## Documentation` headings. These serve as inline architectural diagrams for reviewers:
+
+```markdown
+### DIAGRAM — Token architecture
+
+> `:root` declares `--token-a` / `--token-b`. Consumers opt in per element: `<ComponentA>` applies `filter: var(--token-a)`; `.child-class` composes `text-shadow: var(--token-b)`. Never auto-applied via utility class.
+```
+
 ### Variant QA-INSTRUCTIONS
 
 Heading: `## Instructions on how QA can test this PR`.
@@ -134,6 +237,8 @@ Heading: `## Instructions on how QA can test this PR`.
 **Format per step:**
 
 ```markdown
+> **Prereqs:** dev server running at `localhost:3000`.
+
 1. <action>
    - **Expected:** <observable outcome>
 2. <action> — `<command or url>`
@@ -143,7 +248,8 @@ Heading: `## Instructions on how QA can test this PR`.
 **Rules:**
 - Numbered list.
 - Expected label: `- **Expected:**` (bold only) as a nested sub-bullet under the step.
-- No ASCII flow tree at the top.
+- `> **Prereqs:**` blockquote before each test section.
+- ASCII flow tree at the top when 4+ sections exist.
 - Usually preceded by the route to test.
 
 **Used by:** brands with a dedicated QA team where the heading signals the PR is handed off.

@@ -1,314 +1,183 @@
 ---
 name: code-review
-description: "Code review and quality analysis. Detects architecture violations, performance issues, accessibility gaps, styling inconsistencies, naming breaks, and unused code. Auto-detects brand (Kyonax/RECKIT/OBS vs MadisonReed vs generic) AND tech stack (Vue/Pug/Stylus/Vuex), loading matching rule files — e.g., brand-kyonax.md for OBS Browser-Source FPS discipline, mr-review-checklist.md for MR Vue conventions. Supports parallel subagent review for large rulesets. Trigger: 'review this code', 'code review', 'review PR', 'check quality', 'audit code', 'style check', 'find issues', 'RECKIT review', 'OBS HUD perf', or any code quality/accessibility audit request."
+description: "Code review and quality analysis for any web/JS project. Three-tier detection (brand → project → tech-stack) with 135 atomic rules (one per file). Parallel worker dispatch. Covers: ADA accessibility, code style, script patterns, mobile viewport, third-party SDK, Vue 3, Express, plus brand/project-specific rules. Trigger: 'review this code', 'code review', 'review PR #N', 'audit PR #N', 'check ADA', 'check styles', 'quality check'."
 metadata:
   author: Kyonax
-  version: "3.0.0"
 ---
 
 # Code Review Skill
 
-Structural code quality analysis beyond linting — architectural patterns, design principles, performance, accessibility, testability, and brand-scoped + tech-stack-scoped conventions. Brand detection runs first (OBS FPS discipline for Kyonax, no brand rule for MadisonReed, conservative fallback otherwise); tech-stack domain detection runs second. Both sets of rules can apply to the same review.
+Structural code quality analysis with three-tier detection (brand → project → tech-stack), atomic one-rule-per-file architecture, and parallel worker dispatch. Works on any web/JS project.
 
 ## When to Apply
 
-Reference these guidelines when:
+- Reviewing Vue, React, Express, or any JS/TS web project
+- Running pre-PR quality gates or post-implementation reviews
+- Auditing ADA accessibility, mobile viewport, or third-party SDK integration
+- Checking code style, naming, or architectural consistency
 
-*   Reviewing any Vue component, JS module, or SCSS file in a Kyonax / RECKIT / OBS Browser Source codebase
-*   Reviewing Vue components, Pug templates, Stylus styles, or Vuex stores in the MR website
-*   Running a pre-PR quality gate or post-implementation review
-*   Checking ADA/accessibility compliance on any web component
-*   Auditing code style, naming, or architectural consistency
-*   Evaluating backend Express routes, controllers, or webservices
-*   Auditing HUD overlays, widgets, or composables that drive OBS WebSocket subscriptions for FPS-regression risk
+## How to Trigger
 
-## When to Read Which Rules
+- "review this code" / "code review" / "review PR #123"
+- "check ADA" / "check accessibility" / "check styles"
+- "audit PR #123" (report mode — no code changes)
 
-**Step 0 — Always first: brand detection.** Load `rules/brand-detection.md` on every review to identify the owning brand, then load the matching `brand-<name>.md` (if any). Brand rules and domain rules both apply — they address orthogonal axes.
+## Detection Flow (3 tiers)
 
-| If reviewing...                                                                                | Read                                                                                                                             |
-|------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------|
-| **Any review (Step 0 — brand detection)**                                                      | `rules/brand-detection.md`                                                                                                       |
-| Any Kyonax-owned repo (remote `Kyonax/*`, or `@<brand>/` folders, or `use-obs-websocket.js`)   | `rules/brand-kyonax.md` + any tech-stack rule matched below                                                                      |
-| HUD overlays or OBS-WS composables specifically                                                | `rules/brand-kyonax.md` (Sections A–F are the FPS budget)                                                                        |
-| Any file in `website/src/vuescripts/`                                                          | `rules/mr-review-checklist.md` (84 rules, 9 categories) — MR has no brand rule                                                   |
-| CMS Partials, SSR serverPrefetch, or Vue Router children on CMS pages                          | `rules/cms-ssr-routing.md` (12 rules) + `rules/mr-review-checklist.md`                                                           |
-| Express routes or controllers in `mr_modules/`                                                 | `rules/mr-review-checklist.md` § Backend / API + `rules/cms-ssr-routing.md` if CMS-served                                        |
-| Third-party SDK integration (Dash Hudson, Birdeye, Google Maps, Stripe)                        | `rules/third-party-sdk.md` (5 rules)                                                                                             |
-| Experiment-gated components or A/B test code                                                    | `rules/experiment-patterns.md` (3 rules)                                                                                          |
-| Mobile viewport, fullscreen overlays, scroll containers, iOS Safari                            | `rules/mobile-viewport.md` (5 rules)                                                                                              |
-| Advanced ADA: live regions, focus management, aria-controls, sticky offsets                     | `rules/advanced-ada.md` (7 rules)                                                                                                 |
-| Component patterns: accordion, carousel, CMS data, dead code removal, V1/V2 reuse             | `rules/component-patterns.md` (10 rules)                                                                                          |
-| Non-Kyonax, non-MR codebase                                                                    | Generic fallback per `rules/brand-detection.md` + universal categories in Stage 2 below                                          |
+```
+1. Brand:     git remote → brand/kyonax/ or none
+2. Project:   changed file paths → project/mr-dotcom/ or none
+3. Tech-stack: package.json → framework/vue3/ or none
+4. Always:    universal/** (loaded for every project)
+```
 
-## Quick Reference
-
-| Rule File                      | Description                                                                                                                                  |
-|--------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------|
-| `rules/brand-detection.md`     | Brand auto-identification from git remote + user override + repo-local indicators. Always Step 0. [Details](#brand-detection)                |
-| `rules/brand-kyonax.md`        | Kyonax/RECKIT/OBS review discipline — OBS FPS budget, opt-in CSS effects, singleton composables, hot-path allocation rules. [Details](#brand-kyonax) |
-| `rules/mr-review-checklist.md` | 84-rule MR Vue checklist (9 categories). [Details](#mr-review-checklist)                                                                     |
-| `rules/cms-ssr-routing.md`     | 12 rules: CMS parseUrl validation, req.url/SSR coupling, Express child route coverage, component-less parent, global SSR registration, cookie state transfer, breadcrumb canonical URLs. [Details](#cms-ssr-routing) |
-| `rules/third-party-sdk.md`     | 5 rules: SDK DOM scoping via $refs, :deep() versioned overrides, content detection with timeout, listener cleanup in beforeUnmount, conditional aria-labelledby. [Details](#third-party-sdk) |
-| `rules/experiment-patterns.md` | 3 rules: href/click parity under experiments, SSR hydration flash (this.experiments = {} on server), variant set consistency across siblings. [Details](#experiment-patterns) |
-| `rules/mobile-viewport.md`     | 5 rules: 100dvh over 100vh, env(safe-area-inset) requires viewport-fit=cover, single scroll container per panel, overflow-y auto, overscroll-behavior contain. [Details](#mobile-viewport) |
-| `rules/advanced-ada.md`        | 7 rules: live region outside v-if + interaction flag, focus return on collapse, aria-controls pair, div[role=link] for multi-content cards (WCAG 2.5.3), :focus-visible, sticky sub-header ResizeObserver, :deep() override comments. [Details](#advanced-ada) |
-| `rules/component-patterns.md`  | 10 rules: CSS max-height accordion, store-free sticky UI, MountedFlag body class, carousel overflow, pre-wrap CMS textarea, dead code audit, V1/V2 reuse evaluation, v-if guard specificity, CMS URL strip, dataToolSvc null-guard. [Details](#component-patterns) |
-
-#### brand-detection
-
-Detection signals in order: (1) `git remote get-url origin` → match `Kyonax/*` → `brand-kyonax.md`, `MadisonReed/*` → no brand rule (tech-stack only), anything else → generic fallback; (2) explicit user override ("apply RECKIT rules", "generic only"); (3) repo-local indicators (`@<brand>/` folders, `sources.js` with hud/animation/scene types, OBS-WS composables, Tier 1 headers). Precedence: brand rules and domain rules are orthogonal and both apply when relevant. Ends with "correct vs incorrect" detection examples.
-
-#### brand-kyonax
-
-Kyonax/RECKIT/OBS Browser Source review discipline — reverse-engineered from a real FPS regression (the `cyberpunk-glow` mixin applied broadly to gold-text tanked OBS fps on low-core hardware). Seven rule sections: (A) CSS cost — never broadcast `filter`/`box-shadow`/`text-shadow` via utility classes, opt-in via `--hud-halo`/`--hud-glow` tokens, animate only `transform`/`opacity`, split static-from-animated onto separate layers, `contain: layout paint` on HUD sub-trees; (B) OBS WebSocket call budget — every WS composable is a module-level singleton with identity test and no `onUnmounted` cleanup, event-driven over rAF, throttle emits; (C) Zero-allocation hot path — preallocated `Float32Array`, precomputed lookup tables (`JITTER_TABLE`, `SCALE_STRINGS`), classic `for` loops, hardcode known targets; (D) Vue reactivity boundary — bypass reactivity in per-frame hot paths via template refs + direct DOM writes, write-threshold skip, expose a `tick` counter; (E) Event listener hygiene — debounce burst-prone `window.*` listeners, clear timers on unmount; (F) Pre-merge checklist with 8 questions; (G) General Kyonax conventions (kebab-case emits, snake_case props, kebab-case filenames, Vite aliases, no relative imports, colors in SCSS not JS, no-git-write discipline). Severity calibration: FPS regression risk = CRITICAL.
-
-#### mr-review-checklist
-
-45 core + 22 AD (senior reviewer) + 17 SG (session-graduated) rules. 9 categories: Template, Script, Styling, Naming, ADA, Images+Tracking, Code Style, MrBtn+Components, Backend/API. Each category has inline examples for complex rules. Maps to the 8-category parallel subagent flow.
-
-#### cms-ssr-routing
-
-12 rules for the CMS + SSR + Express routing integration layer. Covers: CMS Partial store dependency auditing in serverPrefetch (silent render failures), parseUrl parameter-count validation against Tophat urlParameterList (silent 404s), route cache refresh via Redis PARAM_ROUTES_INVALID broadcast, req.url coupling between CMS htmlRenderer and Vue Router SSR (hydration mismatch from URL rewriting), Express :path? optional param for child route validation coverage, component-less parent routes for CMS pages with Vue Router children (double-render prevention), global component dual registration for SSR, CSS-only responsive layouts over matchMedia, SSR timezone hydration, cookie-based cross-app state transfer, trackMREventAndRedirect for cross-CMS-context navigation, breadcrumb canonical URL verification.
-
-#### third-party-sdk
-
-5 rules for components hosting third-party SDK scripts (Dash Hudson, Birdeye, Google Maps, Stripe). Covers: DOM query scoping to $refs (prevents wrong-instance selection), :deep() versioned style overrides with SDK identification comments, content detection polling with timeout and graceful section hiding, event listener tracking and cleanup in beforeUnmount, conditional aria-labelledby when heading depends on SDK load state.
-
-#### experiment-patterns
-
-3 rules for A/B experiment-gated Vue components. Covers: href and @click.prevent handler URL parity (right-click vs left-click divergence under experiments), this.experiments = {} during SSR (control flash, dead serverPrefetch), variant set consistency across sibling components checking the same experiment (live bug: LocationCard checks B+C, LocationsDirectory checks B only).
-
-#### mobile-viewport
-
-5 rules for mobile viewport behavior in fullscreen overlays and scroll containers. Covers: 100dvh over 100vh (iOS Safari URL bar/Dynamic Island/home indicator), env(safe-area-inset-*) requires viewport-fit=cover (all MR Pug skeletons lack it — all env() is dead CSS), single scroll container per mobile panel (no nested scroll traps), overflow-y auto over scroll, overscroll-behavior contain in overlay scroll containers.
-
-#### advanced-ada
-
-7 advanced ADA accessibility rules beyond the base checklist (rules 27-33, sg-9 to sg-12). Covers: aria-live region placement outside v-if with filtersEverUsed interaction flag, focus return to toggle on collapse via $event.currentTarget in $nextTick, mandatory aria-controls pairing with aria-expanded, div[role=link] for multi-content cards when WCAG 2.5.3 scanners flag native <a>, :focus-visible over :focus, sticky sub-header ResizeObserver offset on .sticky-header-wrap.is-sticky, :deep() override comments on design system and SDK components.
-
-#### component-patterns
-
-10 Vue component implementation pattern rules. Covers: CSS max-height accordion (not TransitionExpand — flash bug), store-free fixed/sticky overlay UI (props+emits only), MountedFlag body class for cross-tree sibling coordination, Swiper carousel viewport-relative max-width overflow fix, white-space pre-wrap for CMS textarea content, exhaustive dead code removal across 5 artifact layers, V1-to-V2 reuse evaluation before building, v-if guard specificity on Vuex object state (empty {} is truthy), CMS media URL query param stripping before ImgBox, dataToolSvc null-guard before destructuring.
-
----
+See `detection/brand.md`, `detection/project.md`, `detection/tech-stack.md` for full signal tables.
 
 ## Review Modes
 
-| User Request                                 | Mode                  | Flow                                                             |
-|----------------------------------------------|-----------------------|------------------------------------------------------------------|
-| "Full review", "code review", 3+ files       | **Parallel subagent** | 8 category agents in parallel → summary → interactive resolution |
-| "Quick review", 1-2 files, specific category | **Standard pipeline** | Context detection → analysis → report                            |
-| "Check ADA only", "check styles"             | **Scoped pipeline**   | Context detection → single category → report                     |
+| Mode | Trigger | Flow |
+|---|---|---|
+| **Full review** | "code review", 3+ files | Scripts → CI gate → parallel workers → one-by-one resolution |
+| **PR review** | "review PR #123" | Fetch PR diff → same flow as full review |
+| **PR audit** | "audit PR #123" | Fetch PR → workers → markdown report (no code changes) |
+| **Quick review** | "check this file" | Single worker inline, ~3000 tokens |
+| **Scoped** | "check ADA only" | Load only the specified category |
 
----
+## Rule Catalog
 
-## Parallel Subagent Review Flow
+135 rules across 4 tiers, 15 directories.
 
-Use when reviewing 3+ files against the full checklist (82 rules). Each subagent focuses on 4-15 rules, eliminating false positives from rule confusion. Execution: ~3-5 min per round.
+### Universal (always loaded) — 45 rules
 
-### Step 1: Show Checklist
+| Directory | Rules | Coverage |
+|---|---|---|
+| `universal/ada/` | 20 | Landmarks, headings, focus, ARIA, live regions, keyboard |
+| `universal/code-style/` | 6 | Comments, spacing, JSDoc, minimal-touch |
+| `universal/script/` | 9 | Unused vars, optional chaining, error domains, singletons |
+| `universal/mobile/` | 5 | 100dvh, safe-area, scroll, overscroll |
+| `universal/third-party-sdk/` | 5 | DOM scope, polling, cleanup, :deep(), ARIA conditional |
 
-Load `rules/mr-review-checklist.md`. Display the Categories table so the user sees what's being checked.
+### Framework (loaded when detected) — 17 rules
 
-### Step 2: Launch 8 Subagents in Parallel
+| Directory | Rules | Detected by |
+|---|---|---|
+| `framework/vue3/` | 11 | `vue` in package.json |
+| `framework/vue3-composition/` | 3 | `<script setup>` or Composition API imports |
+| `framework/express/` | 3 | `express` in package.json |
 
-Split rules into 8 categories. Launch ALL in a single message as parallel agents.
+### Brand (loaded when remote matches) — 21 rules
 
-| # | Category           | Rules                             |
-|---|--------------------|-----------------------------------|
-| 1 | Template           | 1-4, sg-1, ad-6, ad-7             |
-| 2 | Script Structure   | 5-13, sg-2 to sg-5, ad-4, ad-15, ad-23, ad-24 |
-| 3 | Styling            | 14-21, sg-6 to sg-8, ad-14, ad-16 |
-| 4 | Naming             | 22-26                             |
-| 5 | ADA Accessibility  | 27-33, sg-9 to sg-12, ad-1, ad-17 |
-| 6 | Images + Tracking  | 34-38, sg-13, ad-9, ad-13         |
-| 7 | Code Style         | 39-41, ad-4, ad-15, ad-20         |
-| 8 | MrBtn + Components | 42-45, sg-14, ad-11, ad-12, ad-22 |
+| Directory | Rules | Detected by |
+|---|---|---|
+| `brand/kyonax/` | 21 | Remote `Kyonax/*` — FPS discipline, OBS-WS, hot paths |
 
-**Each subagent receives:**
-- Full rule descriptions for its category (not just numbers)
-- ALL file paths to review
-- Output format: YAML per finding (rule, file, line, severity, problem, before/after code)
-- Instruction: return `NO VIOLATIONS` if clean
+### Project (loaded when file paths match) — 52 rules
 
-### Step 3: Collect Results → Summary Table
+| Directory | Rules | Detected by |
+|---|---|---|
+| `project/mr-dotcom/template/` | 6 | Paths in `website/src/vuescripts/` |
+| `project/mr-dotcom/styling/` | 13 | Paths in `website/src/vuescripts/` |
+| `project/mr-dotcom/naming/` | 5 | Paths in `website/src/vuescripts/` |
+| `project/mr-dotcom/images-tracking/` | 8 | Paths in `website/src/vuescripts/` |
+| `project/mr-dotcom/components/` | 8 | Paths in `website/src/vuescripts/` |
+| `project/mr-backend/` | 12 | Paths in `mr_modules/` |
 
-As subagents complete, build a tally:
+## Worker Dispatch
+
+Each directory = one potential worker. Small dirs merge (min 5 rules). Max 8 workers.
 
 ```
-| Category | Result |
+Pre-AI (zero-token):
+  detect.sh → brand/project/stack
+  select-rules.sh → filtered rule paths (two-pass: directory + tag matching)
+  worker-dispatch.sh → worker assignments JSON
+  sfc-split.sh → template/script/style sections per file
+  variable-crossref.sh → template↔script cross-reference map
+  pr-review-digest.sh → existing PR comments classified
+  worker-prompt-builder.sh → per-worker targeted context JSON
+
+AI workers (Sonnet, targeted context only):
+  Each worker: INDEX.md + relevant rules + ONLY its section (not full SFC) → YAML findings
+
+Post-AI (zero-token):
+  findings-dedup.sh → cross-worker + digest de-duplication
+  format-findings.sh → sorted, formatted markdown
+
+AI presenter → one-by-one: implement or skip?
+```
+
+## Scripts
+
+| Script | Purpose |
 |---|---|
-| Template | NO VIOLATIONS |
-| Script | 3 findings (1 MEDIUM, 2 LOW) |
-| Styling | 7 findings (2 HIGH, 3 MEDIUM, 2 LOW) |
+| `scripts/detect.sh` | 3-tier detection → JSON |
+| `scripts/list-changed.sh` | Changed files with metadata → JSON |
+| `scripts/pr-fetch.sh` | PR metadata + diff + existing reviews → JSON (`--full-body` for complete comment bodies) |
+| `scripts/select-rules.sh` | Two-pass rule selection → file paths |
+| `scripts/worker-dispatch.sh` | Rule grouping → worker assignments JSON |
+| `scripts/diff-context.sh` | Structured diff + imports + store deps → JSON |
+| `scripts/component-tree.sh` | Vue component hierarchy → JSON |
+| `scripts/lint-changed.sh` | ESLint on changed files → JSON |
+| `scripts/test-changed.sh` | Test runner on changed files → JSON |
+| `scripts/ci-local.sh` | Discover + run CI workflows locally → JSON |
+| `scripts/pr-review-digest.sh` | PR review comments → resolved/pending/dismissed digest JSON |
+| `scripts/sfc-split.sh` | Vue SFC → template/script/style sections JSON |
+| `scripts/variable-crossref.sh` | Vue SFC → template↔script cross-reference map JSON |
+| `scripts/worker-prompt-builder.sh` | All pre-computed JSON → per-worker targeted context JSON |
+| `scripts/findings-dedup.sh` | Raw YAML findings → de-duplicated YAML (cross-worker + digest) |
+| `scripts/format-findings.sh` | De-duplicated YAML → formatted findings markdown |
+
+## 6-Stage Review Flow
+
+```
+STAGE 0: PR FETCH   (shell, zero tokens) → pr.json + diff file
+STAGE 1: DISCOVERY  (shell, zero tokens) → detection.json, files.json, context.json, sections.json, crossref.json, digest.json
+STAGE 2: CI GATE    (shell, zero tokens) → fix deterministic issues first
+STAGE 3: TRIAGE     (shell, zero tokens) → workers.json + per-worker targeted prompts
+STAGE 4: AI REVIEW  (parallel Sonnet workers, targeted context only) → raw-findings.yaml
+STAGE 5: FORMAT     (shell, zero tokens) → dedup against digest + sort → findings.md
+STAGE 6: RESOLUTION (Opus presenter) → one-by-one implement/skip
 ```
 
-### Step 4: Interactive Resolution (One-by-One)
+## Output Format
 
-**MANDATORY: Present findings ONE AT A TIME.** Never batch. Never show the next finding until the user responds. Sort by severity (CRITICAL → LOW).
+```
+Finding N/Total | Severity | Rule ID | File:Line
 
-**For each finding, show this exact structure:**
+Problem: one sentence.
 
----
+Before:
+  L<num>: code
 
-**Finding N/Total** | **Severity** | **Rule** | **File:Line**
+After:
+  L<num>: fixed code
 
-**Problem:** One-sentence description.
-
-**Before:**
-```lang
-L<num>: context line above
-L<num>: problematic line(s)
-L<num>: context line below
+Implement or skip?
 ```
 
-**After:**
-```lang
-corrected code (copy-paste ready)
-```
+## Severity Levels
 
-> Pre-existing? If yes, flag: "This is pre-existing code (ad-5: minimal-touch). Skip recommended."
-
-**Implement or skip?**
-
----
-
-**Flow:**
-1. Show finding with before/after code blocks (real line numbers, 2 context lines)
-2. Wait for user response
-3. If **implement** → apply the fix immediately using Edit tool, then show next finding
-4. If **skip** → show next finding
-5. Repeat until all findings resolved
-
-### Step 5: Test Run
-
-After all findings resolved, run the full test suite. Confirm no regressions.
-
----
-
-## Standard Pipeline (Quick Reviews)
-
-Four stages, never skip any. Brand detection is always Stage 0.
-
-### Stage 0: Brand Detection
-
-Before any other analysis, identify the owning brand. Load `rules/brand-detection.md` and apply its signals:
-
-1. `git remote get-url origin` → match against brand catalog.
-2. Explicit user override (e.g., "apply RECKIT rules", "skip brand rules").
-3. Repo-local indicators (`@<brand>/` folders, OBS-WS composables, Tier 1 headers).
-
-Record the detected brand in internal working state. Load the matching `brand-<name>.md` if any:
-
-| Detected brand | Load |
+| Level | Meaning |
 |---|---|
-| Kyonax (RECKIT, OBS overlays, any `Kyonax/*` repo) | `rules/brand-kyonax.md` |
-| MadisonReed | No brand rule — proceed directly to Stage 1 tech-stack detection |
-| Generic fallback | No brand rule — universal categories only |
+| CRITICAL | Breaks functionality, runtime errors, security |
+| HIGH | Degrades accessibility, performance, UX |
+| MEDIUM | Convention violation, maintainability |
+| LOW | Minor consistency |
 
-**Brand rules do not replace tech-stack domain rules — both apply when relevant.** A Kyonax Vue 3 HUD file loads `brand-kyonax.md` for perf discipline AND whatever Vue 3 conventions the reviewer knows. A MadisonReed Vue+Pug file loads `mr-review-checklist.md` for tech-stack conventions with no brand overlay.
+## Architecture
 
-### Stage 1: Tech-Stack Context Detection
+## Token Budget (PR Review)
 
-Identify tech stack from the code:
+| Component | Without Scripts | With Scripts | Savings |
+|---|---|---|---|
+| PR comments | ~15K (raw) | ~2K (digest) | ~13K |
+| SFC code per worker | ~20K (full) | ~7K (split) | ~13K |
+| Cross-ref false positives | ~3K (re-review) | 0K | ~3K |
+| Worker context assembly | ~15K (all data) | ~5K (targeted) | ~10K |
+| Duplicate findings | ~2K | 0K | ~2K |
+| **Total** | **~69K** | **~24-28K** | **~41K (59-65%)** |
 
-- Language, framework, template engine, style system, state management, test framework
-- **MR monorepo indicators:** path contains `website/src/vuescripts/` or `mr_modules/`, imports use `@components`/`@store` aliases, uses `trackMREvent`, `lang="pug"` + scoped Stylus
-- **Kyonax RECKIT indicators:** path contains `@<brand>/sources/{hud,animation,scene}/`, imports from `@hud/`, `@widgets/`, `@composables/use-obs-websocket.js`, `<script setup>` with Vue 3 Composition API, SCSS with `--hud-*` custom properties
+## Architecture
 
-**Load domain skills / rule files based on detection:**
-
-| Detection                                      | Load                                                          |
-|------------------------------------------------|---------------------------------------------------------------|
-| Vue 3 + Options API + Pug + Stylus + Vuex (MR) | `mr-dotcom-dev` (full skill) + `rules/mr-review-checklist.md` |
-| Express / Node.js in MR monorepo               | `mr-dotcom-dev/rules/express-routing.md`                      |
-| Test files in MR monorepo                      | `mr-dotcom-dev/rules/testing-standards.md`                    |
-| Vue 3 + Composition API + SCSS + OBS (RECKIT)  | `rules/brand-kyonax.md` (already loaded in Stage 0 for this brand) |
-
-### Stage 2: Analysis
-
-Review against ALL applicable categories. Work systematically — do not cherry-pick. Three axes stack: universal → brand → tech-stack. A single finding can cite any of them; cite the most specific rule that applies.
-
-**Universal (any codebase):**
-- **Architecture (CRITICAL):** Single responsibility, proper data flow, feature abstraction, no god objects
-- **Performance (HIGH):** No unnecessary re-computation, efficient event handling, module-level constants
-- **Testability (HIGH):** No inline complex logic, no magic numbers, DRY, no unused code, modern syntax
-- **Accessibility (HIGH):** Semantic HTML, ARIA attributes, keyboard navigability, no nested interactives
-- **Code Style (LOW):** Consistent naming, formatting, file structure
-
-**Brand-specific (if a brand rule was loaded in Stage 0):** Apply the brand rule's sections. For `brand-kyonax.md` the axes are:
-- CSS cost (Section A) — CRITICAL on animated filters / broad shadow utilities
-- OBS WebSocket call budget (Section B) — CRITICAL on non-singleton WS composables
-- Zero-allocation hot path (Section C) — HIGH on per-event allocations
-- Vue reactivity boundary (Section D) — CRITICAL on reactive per-frame bindings
-- Event listener hygiene (Section E) — HIGH on un-debounced burst listeners
-- Pre-merge checklist (Section F) — run all 8 questions against every HUD-touching change
-- General conventions (Section G) — MEDIUM / LOW
-
-**Tech-stack domain-specific:** Apply loaded domain rule (e.g., MR checklist — 82 rules across 9 categories).
-
-### Stage 3: Report + Interactive Resolution
-
-**Always output a summary table first**, then resolve findings one-by-one.
-
-**Step A — Summary table:**
-
-| # | Severity | Rule | File             | Location | Problem                                            |
-|---|----------|------|------------------|----------|----------------------------------------------------|
-| 1 | CRITICAL | sg-4 | HeroV2.vue       | L21-L23  | Uses `window.resize` instead of `matchMedia`       |
-| 2 | HIGH     | 27   | AboutSection.vue | L5       | `aria-labelledby` on parent wrapper without `role` |
-
-**Step B — One-by-one resolution (same flow as Step 4 of parallel review):**
-
-Present each finding with before/after code blocks. Wait for user response before proceeding.
-
----
-
-**Finding 1/2** | **CRITICAL** | **sg-4** | **HeroV2.vue:L21-L23**
-
-**Problem:** Uses `window.addEventListener('resize')` for responsive detection.
-
-**Before:**
-```javascript
-L20: mounted() {
-L21:   window.addEventListener('resize', this.checkWidth);
-L22: },
-```
-
-**After:**
-```javascript
-mounted() {
-  this.mobileQuery = window.matchMedia('(max-width: 559px)');
-  this.mobileQuery.addEventListener('change', this.onMediaChange);
-},
-```
-
-**Implement or skip?**
-
----
-
-**Severity levels:**
-
-| Level    | Meaning                                             |
-|----------|-----------------------------------------------------|
-| CRITICAL | Breaks architecture, causes bugs, runtime failures  |
-| HIGH     | Degrades performance, accessibility, or testability |
-| MEDIUM   | Convention violation hurting maintainability        |
-| LOW      | Minor consistency issue                             |
-
-**No issues found:** Return the `No Conflicts` ASCII art banner.
-
----
-
-## Quality Principles
-
-1. **One finding at a time** — NEVER batch findings. Show one, wait for response, then next. This is the most important UX rule
-2. **Before/after code blocks on every finding** — always show the actual code diff with real line numbers
-3. **"Implement or skip?"** — always end each finding with this question. No other options
-4. Report only genuine issues — when unsure, don't flag
-5. One report per root cause — group nearby same-issue lines
-6. Include 2 context lines before/after with real `L<number>:` prefixes
-7. Every `after` block must be copy-paste ready
-8. Don't report what linters catch — focus on architectural/semantic issues
-9. Respect project conventions over external "best practice"
+See `AGENTS.md` for: why one-rule-per-file, worker protocol, token optimization architecture, how to add rules/projects/brands, model routing.
+See `RULE_TEMPLATE.md` for: rule file format, ID convention, tag guidelines, severity guide.

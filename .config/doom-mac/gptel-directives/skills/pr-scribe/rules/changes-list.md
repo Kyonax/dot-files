@@ -38,6 +38,7 @@ The "one bold heading, then nested bullets" format. Used by teams that track wor
 | Ticket-ID after em dash | When a specific bullet addresses a specific child ticket, append `— <TICKET-ID>` between name and path |
 | Nested bullets hold specifics | Each sub-bullet is one concrete detail, one line |
 | Status tags (optional, see `content-richness.md`) | Under RICH content richness, prepend `[NEW]` / `[MOD]` / `[DEL]` / `[MOV]` tags to each entry. Under MINIMAL, tags are omitted. See `content-richness.md` for tag vocabulary. |
+| Tag legend (RICH only) | When status tags are used, add a legend blockquote before the first entry: `> **[NEW]** new file · **[MOD]** modified file · **[DEL]** removed · **[MOV]** renamed or relocated`. This is a universal convention — applies to both Pattern A and Pattern B. |
 
 ### When the PR addresses multiple tickets
 

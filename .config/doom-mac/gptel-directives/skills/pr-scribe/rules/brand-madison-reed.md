@@ -16,7 +16,7 @@ This rule defines the specific PR-body overrides for repos under the **MadisonRe
 | Section | Variant |
 |---|---|
 | Technical Details | `TD-FREEFORM` — custom `###` subheadings with prose + bullets |
-| Testing Coverage | `TEST-SINGLE` — single `### Unit Testing Coverage` table (RICH: one row per test case) |
+| Testing Coverage | `TEST-SINGLE` (≤30 tests) or `TEST-COMPACT` (31+ tests) — auto-selects based on test count |
 | QA heading | `QA-INSTRUCTIONS` — `## Instructions on how QA can test this PR` |
 | Expected label | `- **Expected:**` (inline bold only, nested sub-bullet) |
 | Special Deployment | `DEPLOY-FREEFORM` — free-form prose + code blocks |
@@ -94,10 +94,12 @@ When an org-node section is empty, **omit the corresponding PR section entirely*
 
 Only include information that exists in the org-node or the optional code files. Do not invent test cases, deployment steps, Figma links, or QA instructions. If the org-node is incomplete for a given slot, either omit the slot or flag the gap back to the user — never fill it in from assumptions.
 
-## Title format
+## Title format (Slot [0] — always output separately before the body)
+
+Always output the PR title on its own line before the body, prefixed with `**PR Title:**`:
 
 ```
-[DOTCOMPB-XXXX]: <Subtitle>
+**PR Title:** [DOTCOMPB-XXXX]: <Subtitle>
 ```
 
 - Bracket the ticket key.
@@ -263,9 +265,46 @@ Use `TEST-SINGLE` variant.
 ```
 
 - Heading exactly `### Unit Testing Coverage` (not `### Testing Coverage`).
-- Group rows by component file — repeat the Component cell for each test in that file.
+- **Threshold-based format selection:**
+  - **≤30 tests:** Use `TEST-SINGLE` — one row per test case (Component, Test, Status). Group by file.
+  - **31+ tests:** Use `TEST-COMPACT` — collapsible `<details>`, one row per FILE (File, Tests count, Key Coverage). Keeps PR scannable.
 - Status cell uses `✅` only (or `❌` / `⚠️` on a known failure / warning).
-- Bold summary line below the table with total test + file counts.
+- Bold summary line below the table (or in `<summary>` tag for TEST-COMPACT) with total test + file counts.
+
+### E2E / Playwright Testing Coverage (optional, compact)
+
+When the PR includes Playwright E2E tests, add a separate `### E2E Testing Coverage` section AFTER the unit testing table. Use a **compact summary format** — NOT one row per test (E2E suites can have 30-50+ tests). Wrap in a GitHub `<details>` tag to keep the PR concise.
+
+**Template:**
+
+```markdown
+### E2E Testing Coverage
+
+<details>
+<summary><strong>N tests</strong> across M scenarios — K passed, J skipped (click to expand)</summary>
+
+| Scenario | Tests | Passed | Skipped | Notes |
+|---|---|---|---|---|
+| Display (AC1-6) | 6 | 6 | 0 | |
+| Auth Flow (AC7-11) | 5 | 3 | 2 | AC7-8: real OAuth required |
+| Pre-Fill (AC12-16) | 5 | 2 | 3 | AC12,23,25: SSO callback flow |
+| Account Handling | 10 | 2 | 8 | Backend verification |
+| State & Preferences | 7 | 7 | 0 | |
+| Security (AC33-35) | 3 | 2 | 1 | Storage inspection |
+| Error States (AC36-39) | 4 | 4 | 0 | |
+| Design (DESIGN1-7) | 7 | 7 | 0 | |
+| ADA (ADA1-2) | 2 | 1 | 1 | axe-core not installed |
+| Tracking (TRACK1-3) | 3 | 2 | 1 | Real auth required |
+
+</details>
+```
+
+**Rules:**
+- One row per scenario GROUP (not per individual test)
+- AC ranges in parentheses for traceability
+- Skipped tests include brief reason in Notes column
+- `<details>` collapsed by default — keeps PR body scannable
+- Bold summary in `<summary>` tag with pass/skip counts
 
 ## QA section (Slot [4])
 
