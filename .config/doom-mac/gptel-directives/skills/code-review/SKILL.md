@@ -40,7 +40,7 @@ See `detection/brand.md`, `detection/project.md`, `detection/tech-stack.md` for 
 | **Full review** | "code review", 3+ files | Scripts → CI gate → parallel workers → one-by-one resolution |
 | **PR review** | "review PR #123" | Fetch PR diff → same flow as full review |
 | **PR audit** | "audit PR #123" | Fetch PR → workers → markdown report (no code changes) |
-| **Quick review** | "check this file" | Single worker inline, ~3000 tokens |
+| **Quick review** | "check this file" | Single worker inline |
 | **Scoped** | "check ADA only" | Load only the specified category |
 
 ## Rule Catalog
@@ -87,7 +87,7 @@ See `detection/brand.md`, `detection/project.md`, `detection/tech-stack.md` for 
 Each directory = one potential worker. Small dirs merge (min 5 rules). Max 8 workers.
 
 ```
-Pre-AI (zero-token):
+Pre-AI (shell scripts):
   detect.sh → brand/project/stack
   select-rules.sh → filtered rule paths (two-pass: directory + tag matching)
   worker-dispatch.sh → worker assignments JSON
@@ -96,10 +96,10 @@ Pre-AI (zero-token):
   pr-review-digest.sh → existing PR comments classified
   worker-prompt-builder.sh → per-worker targeted context JSON
 
-AI workers (Sonnet, targeted context only):
+AI workers (Sonnet):
   Each worker: INDEX.md + relevant rules + ONLY its section (not full SFC) → YAML findings
 
-Post-AI (zero-token):
+Post-AI (shell scripts):
   findings-dedup.sh → cross-worker + digest de-duplication
   format-findings.sh → sorted, formatted markdown
 
@@ -130,13 +130,13 @@ AI presenter → one-by-one: implement or skip?
 ## 6-Stage Review Flow
 
 ```
-STAGE 0: PR FETCH   (shell, zero tokens) → pr.json + diff file
-STAGE 1: DISCOVERY  (shell, zero tokens) → detection.json, files.json, context.json, sections.json, crossref.json, digest.json
-STAGE 2: CI GATE    (shell, zero tokens) → fix deterministic issues first
-STAGE 3: TRIAGE     (shell, zero tokens) → workers.json + per-worker targeted prompts
-STAGE 4: AI REVIEW  (parallel Sonnet workers, targeted context only) → raw-findings.yaml
-STAGE 5: FORMAT     (shell, zero tokens) → dedup against digest + sort → findings.md
-STAGE 6: RESOLUTION (Opus presenter) → one-by-one implement/skip
+STAGE 0: PR FETCH   (shell) → pr.json + diff file
+STAGE 1: DISCOVERY  (shell) → detection.json, files.json, context.json, sections.json, crossref.json, digest.json
+STAGE 2: CI GATE    (shell) → fix deterministic issues first
+STAGE 3: TRIAGE     (shell) → workers.json + per-worker targeted prompts
+STAGE 4: AI REVIEW  (parallel Sonnet workers) → raw-findings.yaml
+STAGE 5: FORMAT     (shell) → dedup against digest + sort → findings.md
+STAGE 6: RESOLUTION (presenter) → one-by-one implement/skip
 ```
 
 ## Output Format
@@ -166,18 +166,5 @@ Implement or skip?
 
 ## Architecture
 
-## Token Budget (PR Review)
-
-| Component | Without Scripts | With Scripts | Savings |
-|---|---|---|---|
-| PR comments | ~15K (raw) | ~2K (digest) | ~13K |
-| SFC code per worker | ~20K (full) | ~7K (split) | ~13K |
-| Cross-ref false positives | ~3K (re-review) | 0K | ~3K |
-| Worker context assembly | ~15K (all data) | ~5K (targeted) | ~10K |
-| Duplicate findings | ~2K | 0K | ~2K |
-| **Total** | **~69K** | **~24-28K** | **~41K (59-65%)** |
-
-## Architecture
-
-See `AGENTS.md` for: why one-rule-per-file, worker protocol, token optimization architecture, how to add rules/projects/brands, model routing.
+See `AGENTS.md` for: worker protocol, how to add rules/projects/brands, model routing.
 See `RULE_TEMPLATE.md` for: rule file format, ID convention, tag guidelines, severity guide.

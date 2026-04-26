@@ -1,10 +1,10 @@
 # Code Review Skill — Architecture & Worker Protocol
 
-## Why One Rule Per File
+## One Rule Per File
 
-Each rule is a standalone `.md` file (~120-200 tokens). Workers load only the rules they need — no wasted context. A worker reviewing 12 rules consumes ~2400 tokens for rules vs ~5000 for a monolithic category file.
+Each rule is a standalone `.md` file. Workers load only the rules they need.
 
-## Why Directory = Worker Boundary
+## Directory = Worker Boundary
 
 Each subdirectory maps to one potential worker category. The dispatcher lists directories, groups small ones (min 5 rules), and assigns one worker per group. No cross-directory dependencies — workers are fully isolated.
 
@@ -102,11 +102,9 @@ Worker output format (YAML per finding):
 
 Return `NO VIOLATIONS` if clean.
 
-## Token Optimization Architecture
+## Pre-AI Pipeline (shell scripts)
 
-The skill uses a shell-first preprocessing pipeline. Every byte of context that can be computed, filtered, or deduplicated by shell scripts NEVER reaches the AI. The AI receives only what it uniquely needs.
-
-### Pre-AI Pipeline (zero tokens)
+Run these BEFORE launching AI workers:
 
 ```
 pr-fetch.sh --full-body → raw PR data
@@ -116,32 +114,22 @@ sfc-split.sh → SFC sections (template, script, style separately)
 variable-crossref.sh → template↔script usage map
   ↓
 worker-prompt-builder.sh → per-worker targeted context JSON
-  (each worker gets ONLY its relevant section + crossref hints + dedup list)
 ```
 
-### Post-AI Pipeline (zero tokens)
+## Post-AI Pipeline (shell scripts)
+
+Run these AFTER workers complete:
 
 ```
-Worker YAML outputs
-  ↓
 findings-dedup.sh → cross-worker merge + digest filtering
   ↓
 format-findings.sh → sorted, formatted markdown for presenter
 ```
 
-### Why This Matters
-
-| Without scripts | With scripts | Savings |
-|---|---|---|
-| Each worker gets full SFC (~5K) | Each worker gets 1 section (~1.5K) | 70% per worker |
-| AI parses 137KB raw comments | Shell produces 2KB digest | 98% |
-| Script worker flags template-used vars | Crossref prevents false positives | Eliminates re-review |
-| Overlapping findings from 2 workers | Shell merges before presentation | ~2K saved |
-
 ## Model Routing
 
-| Role | Model | Why |
-|---|---|---|
-| Dispatcher | Opus | Detection reasoning, user interaction |
-| Workers | Sonnet | Pattern matching, focused (5x cheaper) |
-| Presenter | Opus | Decision support, implement/skip |
+| Role | Model |
+|---|---|
+| Dispatcher | Opus |
+| Workers | Sonnet |
+| Presenter | Opus |
