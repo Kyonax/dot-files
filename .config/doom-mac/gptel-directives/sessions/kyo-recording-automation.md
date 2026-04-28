@@ -15,7 +15,7 @@ This file is the **single source of truth** for the **RECKIT** project (repo: `K
 
 **Key principle:** Data may appear in multiple sections with different framing. Section 1 frames it as a rule to follow. Section 2 frames it as context to understand. Section 3 frames it as an implementation to reference. This is intentional — each section answers a different question about the same knowledge.
 
-**Compaction sources:** Sessions 1-5 (2026-04-08 to 2026-04-15 — brand bootstrap through v0.3 PR system), Session 6 (2026-04-16 to 2026-04-17 — overlay card fixes, modal abstraction, cam-log rename, Tier 1 file headers, ESLint Vue + naming conventions, brand-driven architecture refactor, Vite aliases, CONTRIBUTING.org, SECURITY.org, Doom Emacs config for Vue development), Session 7 Part A (2026-04-20 early — component architecture & naming convention §1.12: views restructured into sections/elements/modals, shared file renames, 7 new kind-aliases, four-layer naming pattern, Rules A–I codified), Session 7 Part B (2026-04-20 late — utils topic libraries §Rule J, three new ui/ primitives, widgets split by kind, ambiguous filename corrections, brand folder restructure into sources/, UiIcon multi-pool SVG discovery, SCSS single source of truth for brand theming, 27/27 tests), Session 8 prep (2026-04-21 — post PR #3 merge + `feat-brand_kot` branch creation; PR #4 opened for `dev` → `master` v0.4 release; release-PR composition pattern codified in §1.13; `release: v0.4 — Architectural Baseline` title chosen via title-body alignment rule; triad pending on `dev`), Session 9 (2026-04-21 continuation — first code on `feat-brand_kot`: cam-log "REC FRAME" replaced with dynamic dayjs UTC session-date `UTC ∇ DD.MM.YYYY // DDD`, status-dot switched from hard blink to smooth breathe animation, preview modal iframe-scale sub-pixel fix via `getBoundingClientRect()`, dayjs added as runtime dep), Session 10 (2026-04-22 → 2026-04-23 — FPS-preservation performance pass on `feat-brand_kot`: blanket `cyberpunk-glow` mixin diagnosed as OBS FPS killer and removed; halo/glow reborn as opt-in design tokens on `:root` (`--hud-halo`, `--hud-halo-text`, `--hud-glow`); `useRecordingStatus`, `useSceneName`, `useAudioAnalyzer` collapsed to module-level singletons; audio analyzer rewritten event-driven off `InputVolumeMeters` with `Float32Array` + precomputed JITTER_TABLE + no rAF; `<AudioMeter>` writes bar transforms directly to the DOM via template refs (quantized SCALE_STRINGS, write-threshold skip, emit throttled ~10 Hz); `transform: scaleY()` replaces animated `height`; `contain: layout paint` applied to every HUD sub-tree; `<UiStatusDot>` split into static halo shell + animated-opacity `.glow` layer; cam-log layout restructured around `.hud-group` system; `brand.js` gains `host` + `region`; preview resize debounced; emit names kebab-cased; neutral-200 → neutral-100 harmonization; new `composables.test.js` (27 → 33 tests); §1.14 Performance Budget codified).
+**Compaction sources:** Sessions 1-5 (2026-04-08 to 2026-04-15 — brand bootstrap through v0.3 PR system), Session 6 (2026-04-16 to 2026-04-17 — overlay card fixes, modal abstraction, cam-log rename, Tier 1 file headers, ESLint Vue + naming conventions, brand-driven architecture refactor, Vite aliases, CONTRIBUTING.org, SECURITY.org, Doom Emacs config for Vue development), Session 7 Part A (2026-04-20 early — component architecture & naming convention §1.12: views restructured into sections/elements/modals, shared file renames, 7 new kind-aliases, four-layer naming pattern, Rules A–I codified), Session 7 Part B (2026-04-20 late — utils topic libraries §Rule J, three new ui/ primitives, widgets split by kind, ambiguous filename corrections, brand folder restructure into sources/, UiIcon multi-pool SVG discovery, SCSS single source of truth for brand theming, 27/27 tests), Session 8 prep (2026-04-21 — post PR #3 merge + `feat-brand_kot` branch creation; PR #4 opened for `dev` → `master` v0.4 release; release-PR composition pattern codified in §1.13; `release: v0.4 — Architectural Baseline` title chosen via title-body alignment rule; triad pending on `dev`), Session 9 (2026-04-21 continuation — first code on `feat-brand_kot`: cam-log dayjs UTC session-date, status-dot breathe animation, preview-modal iframe-scale sub-pixel fix via `getBoundingClientRect()`, dayjs runtime dep), Session 10 (2026-04-22 → 2026-04-23 — FPS-preservation performance pass on `feat-brand_kot`: cyberpunk-glow mixin removed, halo/glow reborn as opt-in :root tokens, singleton composables, event-driven audio analyzer with Float32Array + JITTER_TABLE, AudioMeter direct DOM writes via template refs, contain: layout paint everywhere, UiStatusDot layered halo+glow, brand.js gains host+region, §1.14 Performance Budget codified, 27→33 tests), Session 11 (2026-04-23 → 2026-04-26 — post-perf-pass deliverables: §1.14 exported into code-review skill as 135 atomic three-tier rules; COMMIT.org collapsed to hyper-concise 27-line shape; PR.org as full Pattern B Feature PR; §1.15 commit convention codified; feat-brand_kot deliverables ready), **Session 12 (2026-04-26 → 2026-04-27 — Plan #context-screen end-to-end on new `context-screen` branch: roam-node system bootstrapped (Index Reckit + Architecture + Naming Conventions split nodes + Plan #context-screen at ~/.brain.d/roam-nodes/), `reckit-roam-node` skill mirroring `mr-roam-node` with git/gh state extraction; full Plan executed across 6 phases — Geomanist font pulled from kyo-web-online, surface-bg + motion tokens, uniorg-parse runtime dep + custom AST renderer (UiOrgContent), useContextChannel singleton with HTTP polling cross-process bridge through Vite middleware (replaces unreliable import.meta.hot for OBS CEF), context-screen.vue with 4 surfaces (lower-third + marquee + sidebar + peek), ContextControlModal on landing page, third CONTROLS button on Card; multi-round visual refinement: 4.5px corner squares via per-corner pseudo-element mixins (corner-square-tl/tr) for overflow visibility, full-black surface backgrounds with white squares + var(--clr-border-100) borders, --clr-primary-100-{02..14} + --clr-neutral-50-{02..12} alpha tokens, alpha-tint/darken/lighten SCSS helpers, Shiki tokyo-night syntax highlighting via Vue-template token walk (no v-html), whitespace 2px-square markers per 1ch column with per-block --ws-marker, list-item flex-baseline fix, sidebar manually scrollable with 5s user-interaction pause, marquee 90s/scroll 16px/s slow pacing, headline `\|` accent replacing corner-bracket SVG; 79/79 tests, 0 lint errors).**
 
 **CRITICAL:** NEVER run `git commit`, `git push`, `gh pr create`, or any git write command. The user handles all git operations manually. Write to `COMMIT.org` and `PR.org` only.
 
@@ -367,6 +367,113 @@ Every release PR body must make the triad visible to reviewers:
 6. Is this a frequently-updating sub-tree without `contain: layout paint`? → Add containment.
 7. Does this own a burst-prone `window.*` event listener? → Debounce.
 
+### 1.15 Commit Message Convention (Hyper-Concise)
+
+**(2026-04-26)** RECKIT commit message bodies follow a hyper-concise shape — captured after the user collapsed a verbose 180-line draft into 27 lines for `feat(kot): brand refinement + OBS FPS perf pass`.
+
+#### 1.15.1 Shape
+
+```
+<subject ≤ 60 chars>           ← Conventional Commits prefix + lowercase summary
+
+<one-paragraph rationale>      ← 1–3 sentences max, present tense
+
+- <verb-led bullet>            ← scannable; one concern per bullet
+- <verb-led bullet>            ← group by subsystem when 3+ files share one
+- ...                            (e.g. "useRecordingStatus / useSceneName /
+                                  useAudioAnalyzer → module-level singletons")
+
+Validation: <one line>         ← lint + tests + visual, single sentence
+```
+
+#### 1.15.2 Rules
+
+- **Subject** uses Conventional Commits (`feat(scope):`, `fix(scope):`, `refactor(scope):`, `perf(scope):`, `chore(scope):`). Scope matches the branch suffix when applicable (`kot`, `ci`, `widgets`).
+- **Rationale paragraph** explains *why* in 1–3 sentences, not *what* (the bullets do that).
+- **Bullets are verb-led** (`remove`, `add`, `convert`, `bypass`, `debounce`, `harmonize`). No prose paragraphs inside the bullet list.
+- **Group bullets by subsystem** when 3+ files share one concern (`useRecordingStatus / useSceneName / useAudioAnalyzer → module-level singletons`).
+- **One validation line** at the end summarizing lint + tests + visual sanity. Not a separate `Validation` section.
+- **No file inventory inside the commit body.** The exhaustive "Files in the diff" table lives in `COMMIT.org` BELOW the `#+END_SRC` gitcommit block as org-mode metadata — useful for staging review, not part of the commit message.
+- **No "Scope note" / "Documentation sync" / "Trade-off" sub-sections.** Those belong in the PR body (which has TD-4FIELD blocks for trade-offs), not the commit.
+
+#### 1.15.3 PR body shape stays unchanged
+
+This convention applies to commit messages only. PR bodies keep the full Pattern B Kyonax Feature-PR shape (§1.13) — themed Changes subsections, TD-4FIELD Technical Details, TEST-TWO-TABLE Testing Coverage, QA-HOW-TO-TEST with ASCII flow tree, DOC-MEDIA-VOCAB. Commit and PR have different audiences: commits are scanned in `git log`, PRs are reviewed in GitHub.
+
+### 1.16 Cross-Process State Sync (Landing Page ↔ OBS Browser Source)
+
+**(2026-04-27)** When a feature needs to synchronize state between the user's regular browser tab AND the OBS Browser Source (a separate embedded Chromium / CEF process), `BroadcastChannel` is NOT enough — it works only within a single browser process. Vite HMR custom events (`import.meta.hot.send/on`) proved unreliable in OBS CEF (silent failure of the WebSocket handoff). The validated path is **HTTP polling + push through a Vite dev-server middleware**:
+
+1.  **Vite plugin** in `vite.config.js` registers a middleware on a path (e.g. `/__context_state`) that handles `GET` (return current state) + `POST` (replace state). State held in a closure on the dev server.
+2.  **Composable** polls every ~300 ms via `fetch('/__context_state')` and pushes via `fetch('/__context_state', { method: 'POST', body: JSON.stringify(snapshot) })` on every local action.
+3.  **Echo suppression:** before pushing, the composable sets `last_pushed_hash = JSON.stringify(snapshot)`. The polling tick compares incoming JSON's hash; if it matches the last pushed hash, skip applying (prevents own-message echo loops).
+4.  **`BroadcastChannel` is kept as a same-process accelerator** (sub-50 ms cross-tab sync within the regular browser); the HTTP path is the universal fallback that reaches OBS CEF.
+5.  **Production-friendly:** the middleware-style endpoint can be hosted by any HTTP server in production. `import.meta.hot` is undefined in production, so any HMR-based bridge would break — HTTP doesn't.
+
+**Debuggability:** `curl http://localhost:5173/__context_state` returns the current state JSON. Solving "state not propagating" is a one-liner check. This is the canonical pattern for any future RECKIT control plane crossing the regular-browser ↔ OBS boundary.
+
+### 1.17 Color-Shade Tokens + SCSS Helpers
+
+**(2026-04-27)** Inline `rgba(255, 215, 0, 0.0X)` and `rgba(255, 255, 255, 0.0X)` literals are forbidden — they bypass the brand theming pipeline. Every alpha-tinted color uses a token. The token convention extends the existing `--clr-primary-100-40` / `-80` pattern to lower opacities:
+
+*   `--clr-primary-100-{02, 03, 04, 06, 10, 14, 40, 80}` declared at `:root` in `src/app/scss/abstracts/_theme.scss`. Each is `color-mix(in srgb, var(--clr-primary-100) X%, transparent)`.
+*   `--clr-neutral-50-{02, 04, 12}` for white-on-dark tints.
+*   For one-off opacities not covered by a named token, three SCSS helpers in `_mixins.scss`:
+    *   `alpha-tint($color-var, $percent)` — `color-mix` with transparent (alpha)
+    *   `darken($color-var, $by)` — `color-mix` with black
+    *   `lighten($color-var, $by)` — `color-mix` with white
+*   Helpers take a CSS-variable NAME (e.g. `--clr-primary-100`), not a value, because they emit `color-mix(... var(--clr-X) ..., target)` — the variable name is interpolated into the `var()` call.
+*   Prefer named tokens over helpers. Helpers exist for ad-hoc one-offs (e.g. `lighten(--clr-neutral-500, 8%)` for a slightly-lifted-from-black banner background).
+
+### 1.18 Corner-Square HUD Chrome
+
+**(2026-04-26 → 2026-04-27)** Every "container with a background" surface in the HUD ships with two visual elements: a 1px solid border AND 4.5px squares at corner intersections. Two mixin variants in `src/app/scss/abstracts/_mixins.scss`:
+
+1.  **`corner-dots($color, $size: 4.5px, $corners: tl tr bl br)`** — paints squares as `background-image` layers (one `linear-gradient` per requested corner). Uses `background-origin: border-box; background-clip: border-box` so position `0 0` / `100% 100%` reference the OUTER border edge. Square sits flush WITH the corner (not overflowing). Default size 4.5px. `$corners` accepts a list of any of `tl tr bl br`. Used for INTERIOR surfaces where overflow isn't needed (code blocks, quotes, tables, peek arrow).
+2.  **`corner-square-tl($color, $size)` + `corner-square-tr($color, $size)`** — pseudo-element variants (::before / ::after) with negative offsets (`-$size * 0.5`) so the square sits CENTERED on the corner intersection (half outside, half inside). Used when overflow visibility matters (strip + sidebar at canvas-interior boundaries). **Critical:** the consumer must already be a positioned element (`position: relative | absolute | fixed | sticky`) — the mixin does NOT set `position: relative` so it doesn't clobber existing `position: absolute` consumers (the bug that broke the sidebar in mid-session). Consumer must NOT use `contain: paint` (which would clip the overflowing pseudo-element). Use `contain: layout` only.
+
+**Per-surface corner spec rule:** corners that touch the canvas edge get NO square (since OBS canvases don't have a visible boundary there); corners at interior intersections DO get squares. For context-screen specifically:
+*   `.context-strip`: `tl tr` (bottom is at canvas bottom) — pseudo-element variant
+*   `.context-marquee`: NONE (decorative gold strip — no border, no squares)
+*   `.context-sidebar`: `tl` only (top-right + bottom-right at canvas right; bottom-left dropped per design)
+*   `.context-peek`: all 4 (small interior floating element) — `corner-dots` variant
+*   Code blocks (src/results/example) + quote + table: all 4 — `corner-dots` variant
+*   `.context-sidebar__header::after` standalone — square at LEFT end of separator line (right end at canvas edge)
+
+**Color rule:** on full-black surfaces, squares are `var(--clr-neutral-50)` (bright white, pops against black); borders stay `var(--clr-border-100)` (white at 20% alpha — subtle line). The two are deliberately different: borders define structure quietly; squares are accent markers that demand attention.
+
+**Z-index rule for overlapping squares:** when a corner square needs to render above an adjacent surface (strip's TR over the sidebar at the strip-right ↔ sidebar-left boundary), set `z-index: 110` on the OWNING container (e.g. `.context-lower`) so it stacks above the sidebar's `z-index: 100`. Drop `paint` from `contain` on that container so the pseudo-element isn't clipped.
+
+**Shared-border rule between adjacent surfaces:** when two surfaces meet at an interior boundary (strip-right ↔ sidebar-left), DROP one side's border (e.g. `border-right: none` on the strip) so the pair shares a single 1px line instead of stacking into 2px.
+
+### 1.19 Plan-Node Documentation Lifecycle (`reckit-roam-node` skill)
+
+**(2026-04-26)** Project-scoped knowledge — plans, bugs, releases — lives as `.org` roam nodes parallel to the canonical session file. The system mirrors `mr-roam-node` (Madison Reed's JIRA-driven flow) but is git/gh-driven instead. New skill: `reckit-roam-node` at `dot-files/.config/doom-mac/gptel-directives/skills/reckit-roam-node/` (auto-loaded via the existing symlink to `~/.config/doom/gptel-directives/`).
+
+**Three node types:**
+
+| Variant | `#+TITLE:` | `#+FILETAGS:` | Body sections |
+|---|---|---|---|
+| Standard (Feature) | `Plan #<slug>` | `:RECKIT:PLAN:` | SCOPE & GOAL → DESIGN & ARCHITECTURE → DOCUMENTATION |
+| Bug | `(BUG) Plan #<slug>` | `:RECKIT:BUG:` | SYMPTOM → REPRO → ROOT CAUSE → INVESTIGATION NOTEs |
+| Release | `Release v<X.Y> — <Name>` | `:RECKIT:RELEASE:` | RELEASE SCOPE (with TRIAD STATUS) → RELEASE TASKs → RELEASE NOTES |
+
+**Index dashboard:** `~/.brain.d/roam-nodes/2026-04-26-index_reckit.org` (root-level, alongside other index files like `2025-11-18-index_madison_reed.org`). Two-layer architecture: BACKLOG (org-roam `id:` links — source of truth) + PLAN BOARD (six lanes: IN PLANNING / IN DEVELOPMENT / IN REVIEW / IN TEST / ALL RELEASED / SHELVED). Lane assignment derives from git/gh state via `gh pr list --head <branch>`, `git log dev..<branch>`, and `git tag --contains`.
+
+**Architecture nodes** (split from the original consolidated `reckit_project.org`):
+*   `~/.brain.d/roam-nodes/reckit/2026-04-17-reckit_architecture.org` — ASCII project tree, auto-discovery flow, OBS data flow, brand theme flow, composition flow, import patterns, brand creation guide. UUID `ac49fa6e-4520-47b4-b01a-477d7f135add` (preserved from original).
+*   `~/.brain.d/roam-nodes/reckit/2026-04-20-reckit_naming_conventions.org` — Six categories + kind folders + 11 alias registry + Rules A–J + decision tree + refinement log. UUID `680e3a77-9f0f-477b-b9ec-94ce7a87416b`.
+
+**Plan node template (Standard):** `:PROPERTIES: :ID:` → metadata stack (`#+TITLE`, `#+SUBTITLE`, `#+EFFORT`, `#+TARGET_RELEASE`, `#+BRANCH`, `#+STATUS`) → SCOPE AND GOAL (REQUIREMENTS as GIVEN/WHEN/THEN, OUT OF SCOPE, OPEN QUESTIONS with Recommendations) → DESIGN AND ARCHITECTURE (DATA FLOW ASCII diagrams, DECISIONS as `*D<n>* (date)` blocks with `*Choice* / *Why* / *Alternatives* / *Cross-ref*`, TRADE-OFFS) → IMPLEMENTATION DISCIPLINE (file-header convention, naming convention table, ESLint rules, Vue patterns, composable singleton skeleton, SCSS pattern, test pattern, animation discipline, sharp-corner rule, pre-merge gate) → MEDIA → RELEVANT LINKs → TODO PLAN TASKs (phased, statistics-cookied) → DOCUMENTATION (STRUCTURE / DEPLOYMENT / TESTS / QA / FINDINGS — Phase 2 fill) → DELIVERABLEs → COMMENTs.
+
+**Workflow:** during planning conversation, the skill drives REQUIREMENTS / DECISIONS / OPEN QUESTIONS authoring. As Phase 0 questions get answered, `Q<n> [ ]` flips to `[X]` and the corresponding `D<n> (deferred)` stub gets fully populated. As tasks complete, checkboxes flip + statistics cookies recalculate. Bug plans use `** UPDATE [<date>]` sub-headings under INVESTIGATION NOTEs as findings accumulate. Release plans gate the v<X.Y> triad (package.json + README.org + CHANGELOG.org).
+
+**Cross-link convention:** every plan node's `RELEVANT LINKs` includes the branch URL, PR URL (once opened), Index Reckit, Reckit Architecture, Reckit Naming Conventions, and the canonical session file path with relevant section numbers. Plan UUIDs:
+*   Index Reckit: `93c9b466-676d-48bf-9d1b-ec8b93816b5d`
+*   Reckit Architecture: `ac49fa6e-4520-47b4-b01a-477d7f135add`
+*   Reckit Naming Conventions: `680e3a77-9f0f-477b-b9ec-94ce7a87416b`
+*   Plan #context-screen: `cabd1489-23cc-4ce3-9825-7b5a8eb065b9`
+
 ---
 
 ## SECTION 2: SESSION OVERVIEW
@@ -383,10 +490,13 @@ Build **RECKIT** — a capture-time OBS automation system with cyberpunk HUD ove
 | Phase 3: Vue app + CAM-LOG + landing | **DONE v0.3 on `dev`** |
 | Phase 3.5: CI + Vitest + PR template | **DONE** |
 | Phase 3.6: Fixes, refinement, architecture (Session 7 A+B) | **DONE on `dev` — `feat-fixes-and-refinement-v3` merged (PR #3)** |
-| Phase 3.7: @kyonax_on_tech brand expansion (Session 8) | **IN PROGRESS on `feat-brand_kot`** (branched from `dev` 2026-04-20) |
+| Phase 3.7: @kyonax_on_tech brand expansion (Sessions 8–11, `feat-brand_kot`) | **READY TO COMMIT/PR** — perf pass + brand refinement; PR.org + COMMIT.org staged |
+| Phase 3.8: Plan #context-screen — second web source (Session 12, `context-screen`) | **READY TO COMMIT/PR** — full implementation shipped, 79/79 tests, 0 lint errors |
 | Phase 4: Polish + packaging | NOT STARTED |
 
-**Current working branch:** `feat-brand_kot` ("feature brand Kyonax-on-Tech") — branched from `dev` after PR #3 merge. Scope: brand-specific work for `@kyonax_on_tech`, likely including `sources/animation/item-explain.vue`, brand-private primitives under `@kyonax_on_tech/components|composables|widgets/`, and/or brand SVGs at `@kyonax_on_tech/assets/svg/`. All conventions from §1.12 (Component Architecture & Naming Rules) + §1.5 (SCSS theming) + §1.11 (Brand Metadata Schema) apply.
+**Current working branch:** `context-screen` (since 2026-04-26, branched from `dev`). Plan #context-screen fully implemented (Plan node at `~/.brain.d/roam-nodes/reckit/2026-04-26-150000-reckit_plan_context_screen.org`). All implementation conforms to §1.12 (Component Architecture) + §1.14 (Performance Budget) + §1.16 (Cross-Process State Sync) + §1.17 (Color Tokens + SCSS Helpers) + §1.18 (Corner-Square Chrome) + §1.19 (Plan-Node Lifecycle).
+
+**Other open branches:** `feat-brand_kot` (Sessions 9–11) — still uncommitted, deliverables ready (`COMMIT.org` + `PR.org` regenerated for the perf pass). PR #4 (`dev` → `master`, v0.4 release) — open with triad pending on `dev`.
 
 ### 2.3 Key Decisions
 
@@ -443,6 +553,24 @@ Decisions 1-78 from Sessions 1-6 remain (see prior compaction). Session 6 contin
 127. **(2026-04-22)** Unused SCSS utilities purged from `src/app/scss/abstracts/_mixins.scss`: `cyberpunk-glow` mixin (perf-fatal — #116), `max-media-query` mixin (unused anywhere), `@use "sass:math"` (only consumer was `cyberpunk-glow`). New `hud-text-base` mixin added as the minimal label-text core (font family, size, uppercase, letter-spacing, color); `hud-label-base` now composes it + adds `position: absolute` (positioned variant). Consumers that just want the typography tokens use `hud-text-base`; consumers that position themselves via the base use `hud-label-base`.
 128. **(2026-04-22)** `<UiStatusDot>` composition refined for per-frame paint cost. Before: one `<span>` with animated `opacity` + `box-shadow` inside a single `breathe` keyframe — the browser re-rasterized the (expensive) shadow every frame. After: outer `<span>` owns the STATIC dark halo (`box-shadow: var(--hud-halo-text)`, never animated); inner `<span class="glow">` owns a red `box-shadow: var(--hud-glow)` with `opacity: 0` by default, animated to a `1 ↔ 0.35` pulse via a 2s ease-in-out `breathe` keyframe while `.active`. Only `opacity` changes per frame — the dark shadow stays cached. `--hud-glow-color` scoped inside `.glow` to `var(--clr-error-100)` so the halo-color-mix resolves to red without the root element changing color. Split-static-from-animated pattern codified in §1.14.3.
 129. **(2026-04-22)** `composables.test.js` added at `src/shared/composables/composables.test.js` covering the three newly-singleton composables. Mocks `useObsWebsocket` at module scope (stub `obs` + a `connected` ref). For each of `useRecordingStatus`, `useSceneName`, `useAudioAnalyzer`: asserts documented initial state (`is_recording.value === false`, `scene_name.value === ''`, `levels instanceof Float32Array` of length 16, `tick.value === 0`) AND asserts the singleton identity contract (`expect(a).toBe(b)` with same sub-references). 6 new tests, test count 27 → 33. No assertions on event-driven mutation yet — singleton-identity + initial-state contract first; dynamic-behavior tests follow after the audio analyzer (#119) stabilizes.
+130. **(2026-04-23 → 2026-04-26)** Performance discipline exported into the `code-review` skill at `/home/kyonax/.config/doom/gptel-directives/skills/code-review/`. Initial form (2026-04-23): added `rules/brand-detection.md` + `rules/brand-kyonax.md` mirroring pr-scribe's brand-aware rule-loading pattern — git-remote-driven detection, atomic Kyonax brand rule covering the seven §1.14 rule groups (CSS cost, OBS WS budget, zero-allocation hot path, reactivity boundary, event listener hygiene, pre-merge checklist, general conventions), MR detection left untouched. **Refactored form (2026-04-26):** the skill was externally rewritten to a more sophisticated three-tier detection (brand → project → tech-stack) with **135 atomic one-rule-per-file rules** across 15 directories, parallel worker dispatch (max 8 workers, min 5 rules per directory), 6-stage shell-script-driven flow (PR fetch → discovery → CI gate → triage → AI review → format → resolution), and an audit mode for PR review without code changes. Brand-Kyonax rules now live at `brand/kyonax/` as **21 atomic rules** instead of one monolithic file. Implication: reviewing any Kyonax repo auto-loads the FPS discipline; reviewing a HUD source loads `framework/vue3/` + `framework/vue3-composition/` + `brand/kyonax/` + `universal/` (~80 rules total), dispatched across parallel Sonnet workers with per-worker targeted prompts.
+131. **(2026-04-23)** Lint-warnings acknowledgment — the 15 non-blocking warnings on hot-path files (8 in `use-audio-analyzer.js`, 5 in `audio-meter.vue`, 1 in `brand-loader.js`, 1 in `cam-log.vue`) are NOT defects. 14 are `security/detect-object-injection` static-analysis false positives on intentional typed-array indexing (`levels[i]`, `JITTER_TABLE[cursor]`, `els[i].style.transform = SCALE_STRINGS[idx]`) — patterns MANDATED by §1.14.6. The 1 `no-magic-numbers` is cosmetic on `.toFixed(3)` in cam-log debug-text formatting. Treat lint as **green at 0 errors**; warning count is informational. If future cleanup is desired: add file-level `/* eslint-disable security/detect-object-injection */` with an inline comment pointing at §1.14.6, OR extract `DEBUG_PEAK_PRECISION = 3` for the magic number. Either is optional — neither is required to merge.
+132. **(2026-04-26)** Commit message hyper-concise convention codified in §1.15. Form: subject ≤ 60 chars (Conventional Commits) + 1-paragraph rationale + verb-led bullets (grouped by subsystem when 3+ files share a concern) + single validation line. Detailed file inventory lives in `COMMIT.org` BELOW the `#+END_SRC` gitcommit block as org-mode metadata, never inside the commit body. Captured after the user collapsed a verbose 180-line draft of `feat(kot): brand refinement + OBS FPS perf pass` into 27 lines. PR bodies keep their full Pattern B shape — different audiences (git log scanning vs GitHub review) get different densities.
+133. **(2026-04-26)** RECKIT roam-node system bootstrapped at `~/.brain.d/roam-nodes/`. Index file at root (`2026-04-26-index_reckit.org`, UUID `93c9b466-676d-48bf-9d1b-ec8b93816b5d`); architecture + naming-conventions + plan nodes split into `~/.brain.d/roam-nodes/reckit/` subfolder. Old monolithic `content_creation/2026-04-17-162011-reckit_project.org` removed (architecture UUID preserved on the split file). New skill `reckit-roam-node` at `dot-files/.config/doom-mac/gptel-directives/skills/reckit-roam-node/` mirrors `mr-roam-node` shape but uses git+gh state instead of JIRA: 6 rule files (templates, gh-parsing, org-mode-reference, index-management, node-lifecycle, writing-standards). Three plan variants: Standard (Plan), Bug, Release. Two-layer index: BACKLOG (org-roam links) + PLAN BOARD (lane derived from `gh pr list` + `git log` + `git tag --contains`). Lifecycle codified in §1.19.
+134. **(2026-04-26)** Plan #context-screen (UUID `cabd1489-23cc-4ce3-9825-7b5a8eb065b9`) — second `@kyonax_on_tech` web source, on new `context-screen` branch off `dev`. News-style HUD targeting a CONTEXT scene (separate from MAIN where `cam-log` lives): lower-third strip + marquee row + toggleable right sidebar that renders any `.org`-authored context (headlines, lists, checklists, tables, code blocks, `#+RESULTS:`, quotes, links) — content authored as small `.org` files at `@kyonax_on_tech/data/contexts/<slug>.org`, control surface on landing page (`<ContextControlModal>` triggered from a third "CONTROLS" button on the source card). Cross-page state propagation via the new bridge documented in §1.16. Plan node carries 7 R-items (R1, R2a-R2f, R3-R7), 15 D-decisions (D1-D15), 7 phases / 46 tasks. All phases shipped this session (44/46 — 2 deferred to user: OBS smoke test + git commit/push).
+135. **(2026-04-26)** D1: BroadcastChannel over OBS WebSocket relay for landing→HUD control plane — keeps OBS WS budget free per §1.14.5. D2: `.org` as authoring format (Emacs symmetry with project's `.org` governance docs). D3: `uniorg-parse` AST + custom Vue renderer (battle-tested parser at ~25 KB gzipped beats a 400+ LoC custom regex parser as soon as scope exceeds title+description+code; AST cached at glob-time, walked by `<UiOrgContent>` template branches). D4: library + active-selector model via `<ContextControlModal>` (multiple `.org` files coexist, user picks active one). D5: hybrid 3-surface layout (lower-third + marquee + sidebar with dynamic split — strip width transitions 100% ↔ 62% on toggle). D6: code blocks render in sidebar (consequence of D5 — keeps strip minimal). D7: `.org` v1 schema lock (required `#+TITLE` + `#+DESCRIPTION`; optional `#+SUBTITLE`, `#+TAGS`, `#+begin_marquee` block; body = anything supported by uniorg). All in Plan #context-screen DECISIONS section.
+136. **(2026-04-26)** D8: `--surface-bg` gradient token at `:root` (`linear-gradient(135deg, hsl(0 0% 2%) 0%, hsl(0 0% 7%) 50%, hsl(0 0% 14%) 100%)`). D9: Geomanist titles + SpaceMono body (Geomanist .ttf pulled from sibling `kyo-web-online` — `--font-display` token alongside existing `--font-mono`; NOTICE updated with Atipo Foundry credit). D10: per-node styling for `<UiOrgContent>` (Geomanist headlines, SpaceMono prose, custom checkbox glyphs `▢ ▣ ▨`, table borders, src-block lang label, `#+RESULTS:` OUTPUT label, etc.).
+137. **(2026-04-26)** D11: recursive Vue template walk inside `<UiOrgContent>`, NEVER `v-html` — project's `eslint.config.mjs` `no-restricted-syntax` rule bans `innerHTML` assignment, and `v-html` compiles to `innerHTML` under the hood. Token-based render: each Shiki token → `<span :style="{ color }">{{ tok.content }}</span>`. Hard rule for any future render of arbitrary user content.
+138. **(2026-04-26)** D12: reuse existing `@ui/` primitives over inventing new ones. Sidebar tag chips → `<UiChip variant="solid" shape="square">`; active-slug indicator → `<UiBadge variant="active">`; modal shell → `<BaseModal>`; iframe scaling → `getBoundingClientRect()` (decision #114 pattern). Only new primitive this plan introduced: `<UiOrgContent>` at `@ui/org-content.vue`. `<UiChip>` extended with `shape` prop (`pill | square`, both currently `border-radius: 0`; pill reserved for a future redesign that may introduce radius).
+139. **(2026-04-26)** D13: animation discipline — single easing curve `--motion-strip-ease: cubic-bezier(0.22, 1, 0.36, 1)` across all motion; shared duration `--motion-sidebar-ms: 280ms` for sidebar slide + lower-third reflow + peek-arrow fade (sync'd off the `.context-sidebar-open` class flip); `--motion-peek-pulse-s: 2.5s` for closed-state peek breathe; `--motion-marquee-s: 90s` for marquee scroll. All animations are `transform`/`opacity` only EXCEPT the one acknowledged exception: `.context-strip` `width` transition on sidebar toggle (~280 ms × 2 toggles per session — amortized layout cost). D14: closed-sidebar peek indicator with layered halo + animated opacity (mirrors `<UiStatusDot>` decision #128). D15: sharp corners across all context-screen surfaces (`border-radius: 0` mandatory).
+140. **(2026-04-27)** D11 enforcement strengthened — when integrating `shiki@^4.0.2` for syntax highlighting (theme `tokyo-night`), used `codeToTokens` API (returns 2-D `tokens[line][token]` array with `content + color`) and rendered tokens through Vue's template engine as `<span :style="{ color: tok.color }">`. Skipped `uniorg-rehype` and `shiki/codeToHtml` entirely — both produce HTML strings that would require `v-html`. Bundle: ~25 KB gzipped for shiki core + onig wasm; per-language grammars lazy-loaded as separate chunks. localhost-only delivery — no network cost concern.
+141. **(2026-04-27)** Cross-process bridge revised. Initial implementation used Vite HMR custom events via `import.meta.hot.send/on` with a `server.ws.on/send` plugin. This proved unreliable in OBS browser source (CEF process) — the WebSocket handoff or import.meta.hot init silently failed in CEF, leaving the OBS source on the "NO CONTEXT ACTIVE" placeholder. Replaced with HTTP polling + push through a Vite middleware on `/__context_state` (GET returns current state, POST replaces it; state held in a closure on the dev server). Composable polls every 300 ms via `fetch`, pushes via POST on every local action, with `last_pushed_hash` echo suppression. Universal across browser processes; debuggable with `curl`. Pattern codified in §1.16.
+142. **(2026-04-27)** Color shade tokens added at `:root`: `--clr-primary-100-{02, 03, 04, 06, 10, 14}` (low-alpha gold tints) and `--clr-neutral-50-{02, 04, 12}` (low-alpha white tints) — replaces all inline `rgba(255, 215, 0, 0.0X)` and `rgba(255, 255, 255, 0.0X)` literals across the codebase (16+ occurrences in card.vue, context-control.vue, chip.vue, preview.vue, setup.vue, sources.vue). For one-off opacities, three SCSS helpers in `_mixins.scss`: `alpha-tint($color-var, $percent)`, `darken($color-var, $by)`, `lighten($color-var, $by)` — each takes a CSS variable NAME (e.g. `--clr-primary-100`) and emits a runtime `color-mix()` expression. Pattern codified in §1.17.
+143. **(2026-04-26 → 2026-04-27)** Corner-square HUD chrome treatment — every "container with bg" gets a 1px solid border AND 4.5px squares at corner intersections. Two mixin variants in `_mixins.scss`: `corner-dots($color, $size, $corners)` for interior surfaces (background-image-based, sits flush with corner via `background-origin: border-box`); `corner-square-tl($color, $size)` + `corner-square-tr($color, $size)` for surfaces where the square should overflow the border (pseudo-element-based with negative offsets `-$size * 0.5`, requires consumer to be a positioned element + NOT use `contain: paint`). Per-corner exclusion based on canvas-edge proximity (corners at canvas edge get NO square). Color rule: white squares (`--clr-neutral-50`) on full-black surfaces; subtle border (`--clr-border-100`) for border lines. Pattern codified in §1.18.
+144. **(2026-04-27)** Strip + sidebar share a single 1px border at their interior boundary (when sidebar is open). Strip has `border: 1px solid var(--clr-border-100); border-right: none` so the sidebar's left border is the only visible line at the strip-right ↔ sidebar-left intersection — prevents the 2px-stacking artifact. When sidebar is closed, strip's right edge sits at canvas right edge (no missing visual since canvas has no boundary). Strip's TR corner square overflows ABOVE the sidebar via `z-index: 110` on `.context-lower` (sidebar at z=100) plus `contain: layout` (no `paint` — paint would clip the overflowing pseudo-element).
+145. **(2026-04-27)** Sidebar manually scrollable. Body switched from `overflow: hidden` + translateY trick to native `overflow-y: auto`. Auto-scroll now drives `body.scrollTop` programmatically via the rAF tick. User interaction (`wheel` / `touchstart`) sets `last_user_interaction_at = performance.now()`; auto-scroll pauses for `USER_INTERACTION_PAUSE_MS = 5000` after any input. Native scrollbar hidden via `scrollbar-width: none` + `::-webkit-scrollbar { width: 0 }`. Custom lateral indicator was tried then removed (per user — scroll progress UI not needed; the auto-scroll behavior speaks for itself).
+146. **(2026-04-27)** Whitespace markers in code blocks. `splitWhitespaceSegments(content)` helper splits each Shiki token's content into alternating runs (whitespace vs non-whitespace). Whitespace runs render as `<span class="org-src-block__ws">{{ raw_spaces }}</span>` with a CSS overlay: `linear-gradient(to right, transparent calc((1ch - 2px)/2), var(--ws-marker), transparent calc((1ch + 2px)/2))` sized `1ch × 2px`, `repeat-x` — paints a 2px square at the center of every `1ch` column. Per-block `--ws-marker` CSS variable: src/example use `--clr-neutral-300`, OUTPUT uses `--clr-primary-300` (darker gold).
+147. **(2026-04-27)** List/checklist line-wrap fix. `<li>` originally contained a `<p>` paragraph (block-level → broke to new line under bullet/checkbox). Fix: unordered list-items use `display: flex; align-items: baseline; gap: 0.45em` so bullet/checkbox glyph + paragraph sit on the same line. Ordered list-items keep block flow so the browser-rendered `list-style: decimal` numbering still works. Headline marker also revised: was a 0.4em corner-bracket (border-left + border-top L-shape); now a `3px` vertical bar (border-left only) — reads as `| TITLE` cleanly.
 
 ### 2.4 Pending Work
 
@@ -478,6 +606,11 @@ Decisions 1-78 from Sessions 1-6 remain (see prior compaction). Session 6 contin
 *   [x] ~~Purge `max-media-query` + `cyberpunk-glow` mixins + `sass:math` import from `_mixins.scss`; add `hud-text-base` mixin.~~ (2026-04-22)
 *   [x] ~~New `composables.test.js` — 6 tests covering initial state + singleton identity contract. Test count 27 → 33.~~ (2026-04-22)
 *   [x] ~~Codify §1.14 Performance Budget — reverse-engineered discipline from the perf pass.~~ (2026-04-23)
+*   [x] ~~Run lint + tests on the staged perf-pass diff. 0 errors, 15 non-blocking warnings (typed-array indexing per §1.14.6 + 1 cosmetic), 33/33 tests passing in 371ms.~~ (2026-04-23)
+*   [x] ~~Export §1.14 discipline into the `code-review` skill — initially as `rules/brand-detection.md` + `rules/brand-kyonax.md` (pr-scribe-style brand loading); subsequently refactored externally into three-tier detection with 135 atomic rules across 15 directories.~~ (2026-04-23 → 2026-04-26)
+*   [x] ~~Regenerate `COMMIT.org` (hyper-concise — see §1.15) + `PR.org` (full Pattern B Kyonax Feature PR) for the perf pass + brand refinement.~~ (2026-04-23, refined 2026-04-26)
+*   [x] ~~Codify §1.15 hyper-concise commit-message convention.~~ (2026-04-26)
+*   [ ] User stages remaining unstaged perf iterations (10 files) + new `composables.test.js`, runs commit using `COMMIT.org` body, opens PR using `PR.org`. NEVER run git write commands on user's behalf.
 *   [ ] Build `item-explain.vue` at `@kyonax_on_tech/sources/animation/item-explain.vue` (follows the new kind-alias conventions — imports from `@hud/*`, `@widgets/hud/*`, `@widgets/ui/*`, `@composables/*`; template tags in PascalCase). Update `sources.js` status to `'ready'` once the file lands. **Must conform to §1.14 from day 1.**
 *   [ ] Brand-private primitives as needed at `@kyonax_on_tech/components/{hud,ui}/`, `@kyonax_on_tech/composables/`, `@kyonax_on_tech/widgets/{hud,ui}/` — create each folder only when 2+ files of that kind exist (Rule F). Cross-brand primitives stay in `src/shared/`.
 *   [ ] Brand SVGs at `@kyonax_on_tech/assets/svg/` — any SVG dropped there is auto-picked up by `<UiIcon name="<file>" />` via the multi-pool glob; brand SVGs win filename collisions with shared SVGs.
@@ -682,6 +815,245 @@ Session-wide FPS-preservation refactor triggered by the `cyberpunk-glow` mixin d
 
 **Pending validation:** user will run `npm test` + `npm run lint` + browser-source smoke test in OBS before committing.
 
+### 3.16 Context-Screen Web Source (Session 12)
+
+**Created:** 2026-04-26 | **Last updated:** 2026-04-27
+**Status:** Implementation complete on `context-screen` branch; pending commit + PR + OBS smoke test.
+
+Second `@kyonax_on_tech` web source. News-style HUD targeting a CONTEXT scene — surfaces per-video context (title + description + tags + talking-point marquee + full deep-dive sidebar) authored as a small `.org` file per video at `@kyonax_on_tech/data/contexts/<slug>.org`. State synchronizes from the landing page (`<ContextControlModal>` triggered from a third "CONTROLS" button on the source card) to every mounted browser source via the cross-process bridge (BroadcastChannel for same-process speed + HTTP polling on `/__context_state` Vite middleware for OBS CEF — see §1.16).
+
+#### File structure (Session 12 net-new)
+
+```
+src/
+├── app/
+│   ├── fonts/Geomanist/                 NEW — pulled from kyo-web-online
+│   │   ├── GeomanistRegular.ttf
+│   │   ├── GeomanistBold.ttf
+│   │   └── GeomanistItalic.ttf
+│   └── scss/
+│       ├── abstracts/
+│       │   ├── _theme.scss              MOD — +--font-display, +--surface-bg,
+│       │   │                                  +--motion-{sidebar-ms,strip-ease,
+│       │   │                                              peek-pulse-s,marquee-s},
+│       │   │                                  +--clr-primary-100-{02,03,04,06,10,14},
+│       │   │                                  +--clr-neutral-50-{02,04,12}
+│       │   └── _mixins.scss             MOD — +alpha-tint/darken/lighten functions,
+│       │                                       +corner-dots, +corner-square-tl/tr
+│       └── base/_typography.scss        MOD — +3 Geomanist @font-face declarations
+├── shared/
+│   ├── brand-loader.js                  MOD — +CONTEXTS glob, +getContexts(),
+│   │                                          +buildContextsMap()
+│   ├── brand-loader.test.js             MOD — +7 CONTEXTS shape/discovery tests
+│   ├── components/ui/
+│   │   ├── chip.vue                     MOD — +shape prop (pill | square)
+│   │   ├── org-content.vue              NEW — recursive Vue AST renderer (D11);
+│   │   │                                       per-node styling per D10; whitespace
+│   │   │                                       markers via splitWhitespaceSegments
+│   │   └── org-content.test.js          NEW — 11 mount tests
+│   ├── composables/
+│   │   ├── use-context-channel.js       NEW — singleton + BroadcastChannel +
+│   │   │                                       HTTP poll/push + localStorage debounce
+│   │   │                                       + .context-sidebar-open class toggle
+│   │   └── composables.test.js          MOD — +5 useContextChannel tests
+│   └── utils/
+│       ├── org.js                       NEW — Rule J topic library wrapping
+│       │                                       uniorg-parse; OrgSchemaError;
+│       │                                       parseOrg/extractMetaKey/extractFiletags/
+│       │                                       extractMarqueeBlock/collectBodyNodes
+│       ├── org.test.js                  NEW — 14 tests covering happy + error paths
+│       └── highlight.js                 NEW — Shiki async wrapper, theme=tokyo-night,
+│                                              codeToTokens API, 18-language allowlist,
+│                                              memo cache keyed by lang::code
+├── views/components/
+│   ├── elements/card.vue                MOD — +CONTROLS button (conditional on
+│   │                                          source.id === 'context-screen'),
+│   │                                          +<ContextControlModal> mount,
+│   │                                          +.card-secondary-actions flex row
+│   └── modals/context-control.vue       NEW — slug list + sidebar toggle + live
+│                                              preview iframe (reuses BaseModal +
+│                                              getBoundingClientRect scaling)
+└── ...
+
+@kyonax_on_tech/
+├── data/contexts/                       NEW
+│   ├── obs-browser-sources.org          NEW — fixture-rich (every D10 node type)
+│   └── quick-note.org                   NEW — minimal no-marquee fixture
+├── sources.js                           MOD — +context-screen registry entry
+└── sources/hud/context-screen.vue       NEW — full HUD source (~370 LoC)
+
+vite.config.js                            MOD — +context_relay_plugin (HTTP middleware)
+package.json + package-lock.json          MOD — +uniorg-parse@^3.2.1, +shiki@^4.0.2
+NOTICE                                    MOD — +Third-Party Fonts section (Geomanist
+                                                + SpaceMono credits)
+```
+
+#### Component layout (the four HUD surfaces)
+
+```
+.context-screen-overlay        position: fixed; inset: 0
+├── .context-lower             absolute bottom-0 width=100%/62% (dynamic split);
+│   │                          z-index: 110 (overlays sidebar at boundary);
+│   │                          contain: layout (NOT paint — TR square overflows).
+│   ├── .context-strip         border 1px (border-right: none — sidebar owns
+│   │                          the shared boundary); corner-square-tl + tr in
+│   │                          --clr-neutral-50 (white squares overflow corners
+│   │                          with negative offsets via pseudo-elements).
+│   │                          Bg: --clr-neutral-500 (full black).
+│   │   ├── __title            font-display Geomanist, --fs-700, color:
+│   │   │                       --clr-neutral-200 (no full white per user)
+│   │   ├── __subtitle         font-display, --fs-400 (optional)
+│   │   └── __description      font-mono SpaceMono, --fs-300
+│   └── .context-marquee       Bg: --clr-primary-100 (gold); color: --clr-neutral-500;
+│                              NO border, NO corner squares (per user — clean strip);
+│                              translateX(0% → -50%) infinite at --motion-marquee-s
+│                              (90s); items repeated 3× per half then doubled for
+│                              seamless loop; 3px-square ::after separator between
+│                              items.
+├── .context-sidebar           absolute top-0 right-0 width=38% height=100%;
+│   │                          z-index: 100; bg: --clr-neutral-500; border 1px;
+│   │                          corner-square-tl only (TR + BR at canvas edge,
+│   │                          BL dropped per design); slide-in via translateX
+│   │                          + opacity over --motion-sidebar-ms (280ms).
+│   ├── __header               border-bottom 1px; ::after = white square at
+│   │                          left end of separator (right end at canvas edge).
+│   │                          Renders parsed.tags as <UiChip variant="solid"
+│   │                          shape="square">.
+│   ├── __body                 overflow-y: auto (native scroll); scrollbar
+│   │                          hidden via scrollbar-width: none. Auto-scrolls
+│   │                          body.scrollTop after 3s open delay at 16 px/s
+│   │                          via rAF; pauses 5s on user wheel/touch input;
+│   │                          bottom-hold 3s + reset to top + loop.
+│   │                          Mounts <UiOrgContent :ast="parsed.body_ast" />.
+│   └── (no lateral indicator — removed per user)
+└── .context-peek              absolute right-edge, vertically centered;
+                               z-index: 99; bg: --clr-neutral-500; border 1px;
+                               corner-dots all 4 corners (small floating element);
+                               glyph "❮"; layered halo (static box-shadow on
+                               outer span) + animated opacity (.pulse inner span,
+                               1 ↔ 0.55 over --motion-peek-pulse-s ease-in-out
+                               infinite); fades to opacity 0 when sidebar opens.
+```
+
+#### Org rendering pipeline (build-time + runtime)
+
+```
+USER EDITS @kyonax_on_tech/data/contexts/<slug>.org
+  ↓
+BUILD TIME (Vite glob, eager + ?raw)
+  brand-loader.js: import.meta.glob('/@*/data/contexts/*.org', { eager: true, query: '?raw' })
+  ↓
+  org.js parseOrg(raw_string) — uniorg-parse → unified AST → partition:
+    keyword nodes  → metadata { title, subtitle, description, tags }
+    marquee block  → marquee_items[] (split by \n, trimmed, empties dropped)
+    everything else → body_ast (Array<OrgNode>)
+  Required key violation throws OrgSchemaError.
+  ↓
+  CONTEXTS map exposed: { brand: { slug: { raw, parsed, parse_error } } }
+  ↓
+RUNTIME (HUD source mounts)
+  parsed = computed(() => CONTEXTS[BRAND_HANDLE]?.[active_slug]?.parsed)
+  ↓
+  <UiOrgContent :ast="parsed.body_ast" /> walks AST recursively:
+    - headline → <h2|h3|h4> with corner-bracket replaced by 3px vertical bar (D10 + user 2026-04-27)
+    - paragraph → <p>
+    - bold/italic/verbatim/code/strike → semantic inline elements
+    - plain-list (unordered) → <ul> with <li> in flex baseline (paragraph stays
+      on same line as bullet/checkbox per user 2026-04-27)
+    - plain-list (ordered) → <ol> with default decimal numbering
+    - list-item → <li> with custom checkbox glyphs (▢ ▣ ▨) + color per state
+    - table → <table> with thin borders + header row distinct + alt-row stripes
+              + corner-dots all 4 corners
+    - src-block → <pre> + lang label + Shiki tokenized output (theme tokyo-night,
+                  codeToTokens async); each token's content split into whitespace
+                  vs non-whitespace runs; WS runs render with --ws-marker overlay
+                  showing 2px square per 1ch column
+    - fixed-width with affiliated.RESULTS → OUTPUT block (gold-tint bg + gold
+      border + corner-dots; OUTPUT label has lifted-black bg + pure-black border
+      + neutral-200 text per user 2026-04-27)
+    - quote-block → <blockquote> with gold left-border + gold-tint bg
+    - link → <a target="_blank" rel="noopener noreferrer">
+    - horizontal-rule, etc.
+```
+
+#### State propagation
+
+```
+USER ACTION on landing page
+  ↓
+useContextChannel.setActiveSlug(slug) / toggleSidebar() / hideSidebar()
+  ↓
+broadcastSnapshot({ active_slug, sidebar_open }):
+  - channel.postMessage(snapshot)              ← BroadcastChannel: same-process speed
+  - pushState(snapshot) → fetch POST           ← HTTP: cross-process universality
+                                                  (last_pushed_hash echo guard set)
+  ↓
+DELIVERED TO ALL CONSUMERS
+  - same-tab + iframe in same browser: BroadcastChannel sub-50ms
+  - OBS browser source (separate CEF process): HTTP poll picks up within 300ms
+  ↓
+applyRemote(snapshot):
+  active_slug.value = snapshot.active_slug
+  sidebar_open.value = snapshot.sidebar_open
+  ↓
+WATCHERS:
+  - watch([active_slug, sidebar_open]) → schedulePersist (localStorage debounce 100ms)
+  - watch(sidebar_open) → applyDocumentClass — toggle .context-sidebar-open on <html>
+  - watch(channel.sidebar_open) inside context-screen.vue → start/stop auto-scroll
+  - .context-sidebar-open class flips → CSS transitions fire (sidebar slide,
+    strip width reflow, peek-arrow fade — all sync'd over --motion-sidebar-ms)
+```
+
+#### Key Decisions Table (recap, full detail in plan node)
+
+| ID  | Date         | Decision                                                                        |
+|-----|--------------|---------------------------------------------------------------------------------|
+| D1  | 2026-04-26   | BroadcastChannel over OBS WS for same-process control plane                     |
+| D2  | 2026-04-26   | `.org` as authoring format (not `.json`/`.yaml`)                                 |
+| D3  | 2026-04-26   | `uniorg-parse` AST + custom Vue renderer                                         |
+| D4  | 2026-04-26   | Library + active-selector via `<ContextControlModal>`                           |
+| D5  | 2026-04-26   | Hybrid 3-surface layout (lower-third + marquee + sidebar)                       |
+| D6  | 2026-04-26   | Code blocks render in sidebar                                                   |
+| D7  | 2026-04-26   | `.org` v1 schema lock                                                           |
+| D8  | 2026-04-26   | `--surface-bg` gradient token (later replaced by solid `--clr-neutral-500` per user) |
+| D9  | 2026-04-26   | Geomanist (titles) + SpaceMono (body)                                           |
+| D10 | 2026-04-26   | Per-node styling for `<UiOrgContent>` (D11 + Shiki)                             |
+| D11 | 2026-04-26   | Recursive Vue template walk; never `v-html`                                     |
+| D12 | 2026-04-26   | Reuse existing `@ui/` primitives                                                |
+| D13 | 2026-04-26   | Animation discipline (single curve + sync'd duration)                           |
+| D14 | 2026-04-26   | Closed-sidebar peek indicator (layered halo + opacity)                          |
+| D15 | 2026-04-26   | Sharp corners across all context-screen surfaces                                |
+| —   | 2026-04-27   | Cross-process bridge → HTTP polling (replaces unreliable Vite HMR for OBS CEF)  |
+| —   | 2026-04-27   | 4.5px corner squares via `corner-square-tl/tr` mixins (overflow visible)        |
+| —   | 2026-04-27   | Strip drops `border-right` → single shared 1px line with sidebar               |
+| —   | 2026-04-27   | Strip's TR square overflows above sidebar (`z-index: 110` on `.context-lower`) |
+| —   | 2026-04-27   | Whitespace markers (2px squares per 1ch) in code blocks                         |
+| —   | 2026-04-27   | List-item flex-baseline fix (bullet + paragraph on same line)                   |
+| —   | 2026-04-27   | Shiki tokyo-night theme; tokens rendered via Vue templates (no v-html)          |
+| —   | 2026-04-27   | OUTPUT label: lifted-black bg + pure-black border + neutral-200 text            |
+
+#### Validation
+
+`npm run lint` → 0 errors / 38 expected warnings (intentional typed-array indexing per §1.14.6 + decision #131 — false-positive `security/detect-object-injection` on indexed access).
+`npm test` → 79/79 passing in ~900 ms (33 baseline + 14 org parser + 7 brand-loader CONTEXTS + 11 UiOrgContent + 5 useContextChannel + 9 derived from per-source `it.each` assertions added by the new `context-screen` registry entry).
+`npm run build` → ~2.1 s. Bundle: index ~67 KB gzipped (unchanged), context-screen route chunk ~70 KB gzipped (Shiki core + onig wasm). Per-language grammar chunks lazy-loaded as separate files.
+
+#### Pre-merge gate (passed)
+
+`grep -rE 'innerHTML\|v-html' src/ @kyonax_on_tech/` → 0 hits (D11 enforcement).
+`grep -rE 'document\.write' src/ @kyonax_on_tech/` → 0 hits.
+`grep -rE 'border-radius:\s*[1-9]'` on context-screen-related files → 0 hits (D15).
+`grep -rE 'rgba\(255'` on src + brand → 0 hits (token discipline §1.17).
+Every new file has the MPL-2.0 header. Every new filename is `kebab-case` (only `App.vue` exempt).
+§1.14.8 perf-checklist 7/7 pass (no broad CSS filters; only `transform` + `opacity` for continuous animation; one acknowledged `width` exception on strip toggle; no OBS-WS subscriptions; zero allocations per rAF tick; `contain` on every updating sub-tree; resize-debounced 100 ms in `<ContextControlModal>`).
+
+#### Deliverables
+
+`COMMIT.org`: regenerated for `context-screen` branch — subject `feat(context): news-style lower-third + sidebar HUD` (51 chars), 11 verb-led bullets grouped by subsystem, validation line. PERMANENT runbook untouched.
+`PR.org`: full Pattern B Kyonax Feature PR via `pr-scribe` skill — title `feat(context): news-style lower-third + sidebar HUD`, 13-item checklist, themed Implementation subsections (Brand assets / Org parser + AST renderer / BroadcastChannel composable / HUD source / Landing-page control surface), Dependencies section, 6 TD-4FIELD decisions, TEST-TWO-TABLE Testing Coverage, QA-HOW-TO-TEST with ASCII flow tree + 7 feature groups, DOC-MEDIA-VOCAB Documentation. Global writing rules satisfied (no emojis except `✅` in test status cells, no arrows, no private-file refs, absolute GitHub URLs).
+
+User runs `git commit -F <(awk ... COMMIT.org)` + `gh pr create --base dev --head context-screen --title "..." --body-file <(awk ... PR.org)`. Per absolute prohibition in repo + global `CLAUDE.md`, this skill never runs git write commands.
+
 ---
 
 ## SECTION 4: FILE INDEX
@@ -704,6 +1076,23 @@ Session-wide FPS-preservation refactor triggered by the `cyberpunk-glow` mixin d
 | `.gitignore` | the void |
 | `.gitattributes` | the lab |
 
+### Roam-node Documentation (Session 12)
+
+| Path | Association |
+|---|---|
+| `~/.brain.d/roam-nodes/2026-04-26-index_reckit.org` | Index Reckit (root dashboard) |
+| `~/.brain.d/roam-nodes/reckit/2026-04-17-reckit_architecture.org` | Architecture (project tree, flows) |
+| `~/.brain.d/roam-nodes/reckit/2026-04-20-reckit_naming_conventions.org` | Naming Conventions (Rules A–J) |
+| `~/.brain.d/roam-nodes/reckit/2026-04-26-150000-reckit_plan_context_screen.org` | Plan #context-screen |
+| `dot-files/.../skills/reckit-roam-node/SKILL.md` | reckit-roam-node skill — entry point |
+| `dot-files/.../skills/reckit-roam-node/AGENTS.md` | reckit-roam-node skill — philosophy |
+| `dot-files/.../skills/reckit-roam-node/rules/templates.md` | Plan/Bug/Release node templates |
+| `dot-files/.../skills/reckit-roam-node/rules/gh-parsing.md` | git+gh state extraction (replaces JIRA polling) |
+| `dot-files/.../skills/reckit-roam-node/rules/index-management.md` | 8-step index update flow |
+| `dot-files/.../skills/reckit-roam-node/rules/node-lifecycle.md` | 7-step node lifecycle |
+| `dot-files/.../skills/reckit-roam-node/rules/org-mode-reference.md` | Org-mode syntax reference |
+| `dot-files/.../skills/reckit-roam-node/rules/writing-standards.md` | Writing standards per section |
+
 ### Brand: @kyonax_on_tech/
 
 | Path | Association |
@@ -711,6 +1100,9 @@ Session-wide FPS-preservation refactor triggered by the `cyberpunk-glow` mixin d
 | `@kyonax_on_tech/brand.js` | Brand metadata + identity + `host: "KYO-LABS"` + `region: "COL"` (NO colors — those live in `styles/_theme.scss`) |
 | `@kyonax_on_tech/sources.js` | Web source registry (data file) |
 | `@kyonax_on_tech/sources/hud/cam-log.vue` | CAM-LOG HUD overlay (session-date via dayjs, breathing status dot) |
+| `@kyonax_on_tech/sources/hud/context-screen.vue` | CONTEXT-SCREEN HUD overlay (Session 12 — strip + marquee + sidebar + peek) |
+| `@kyonax_on_tech/data/contexts/obs-browser-sources.org` | Fixture-rich `.org` context (every D10 node type) |
+| `@kyonax_on_tech/data/contexts/quick-note.org` | Minimal no-marquee `.org` fixture |
 | `@kyonax_on_tech/styles/_theme.scss` | Brand CSS overrides |
 | `@kyonax_on_tech/assets/` | Brand images; `assets/svg/` auto-scanned by `<UiIcon>` |
 | `@kyonax_on_tech/components/` | [reserved] brand-private components |
@@ -758,6 +1150,15 @@ Session-wide FPS-preservation refactor triggered by the `cyberpunk-glow` mixin d
 | `src/shared/components/ui/data-point.vue` | `@ui` | `<UiDataPoint>` (label/value tile, `size` prop) |
 | `src/shared/components/ui/chip.vue` | `@ui` | `<UiChip>` (lowercase pill, `variant` prop) |
 | `src/shared/components/ui/badge.vue` | `@ui` | `<UiBadge>` (uppercase status pill, `variant` prop) |
+| `src/shared/components/ui/org-content.vue` | `@ui` | `<UiOrgContent>` (Session 12 — recursive AST renderer, no v-html) |
+| `src/shared/components/ui/org-content.test.js` | — | 11 mount tests (Session 12) |
+| `src/shared/utils/org.js` | `@shared/utils` | parser topic library (Session 12 — uniorg-parse wrap) |
+| `src/shared/utils/org.test.js` | — | 14 parser tests (Session 12) |
+| `src/shared/utils/highlight.js` | `@shared/utils` | Shiki async wrapper (Session 12 — tokyo-night) |
+| `src/shared/composables/use-context-channel.js` | `@composables` | `useContextChannel()` singleton (Session 12) |
+| `src/views/components/modals/context-control.vue` | `@modals` | `<ContextControlModal>` (Session 12 — slug list + sidebar toggle + iframe preview) |
+| `src/app/fonts/Geomanist/{Regular,Bold,Italic}.ttf` | — | Geomanist font assets (Session 12, pulled from kyo-web-online) |
+| `vite.config.js` | — | MOD: `+context_relay_plugin` HTTP middleware (Session 12) |
 | `src/shared/composables/use-obs-websocket.js` | `@composables` | `useObsWebsocket()` (singleton) |
 | `src/shared/composables/use-recording-status.js` | `@composables` | `useRecordingStatus()` (singleton — Session 10) |
 | `src/shared/composables/use-audio-analyzer.js` | `@composables` | `useAudioAnalyzer()` (singleton, event-driven, Float32Array — Session 10) |
@@ -783,132 +1184,111 @@ Session-wide FPS-preservation refactor triggered by the `cyberpunk-glow` mixin d
 
 ## SECTION 5: LAST INTERACTION
 
-### What was done last (2026-04-22 → 2026-04-23 — Session 10: performance pass on `feat-brand_kot`)
+### What was done last (2026-04-28 — `PR.org` regenerated for `context-screen`, ground-truth refresh)
 
-Root-cause FPS incident + reverse-engineered performance discipline. All work on `feat-brand_kot`; no new architectural shifts to §1.12 conventions. One new test file. Net −73 LoC across ~30 files — mostly cleanup on top of a deep hot-path rewrite.
+Single-task follow-up to Session 12: regenerated `PR.org` body via the `pr-scribe` skill (Kyonax brand, Pattern B Feature PR), this time grounding every claim against the actual working tree rather than the original Plan node text. Title preserved (`feat(context): news-style lower-third + sidebar HUD`). Scope of the refresh:
 
-1. **FPS regression diagnosed and mixin removed.** The user had previously applied the `cyberpunk-glow` mixin to every element inheriting `var(--clr-primary-100)` (gold labels, audio meter bars, timer, status dots) to get the signature cyberpunk aura. Inside OBS Browser Source, the HUD felt slow on low-core-processor hardware. Profiling-by-elimination traced it to the mixin: each gold element spawned its own animated `box-shadow` keyframe → the compositor rasterized a new layer per element per frame. Removal path: `cyberpunk-glow` mixin + `.cyberpunk-glow` utility class + `sass:math` import deleted from `_mixins.scss` + `_theme.scss`. Cost principle captured in new §1.14: **never apply `filter` / `box-shadow` / `text-shadow` chains via a utility that hits every element of a color class.**
+1. **Ground-truth pass against working tree.** Read `git status`, the diff vs `dev`, and the contents of `vite.config.js`, `_mixins.scss`, `use-context-channel.js`, `highlight.js`, `context-screen.vue` to anchor every PR claim. Found that several plan-time values had drifted during refinement: auto-scroll constants `OPEN_DELAY_MS = 3000` (plan said 2000), `SCROLL_SPEED_PX_PER_SEC = 16` (plan said 25), plus a NEW `USER_INTERACTION_PAUSE_MS = 5000` constant added during the manual-scroll iteration.
+2. **Implementation realities NOT in the original plan or prior PR.org.** Surfaced four items that landed during Session 12 refinement but never made it into the prior PR body:
+    *   **Shiki `tokyo-night` syntax highlighting** — D3 plan explicitly said "no syntax highlighting in v1", but the user later asked for it. Shipped via `src/shared/utils/highlight.js` (async `codeToTokens` + per-`<lang>:<code>` `Map` cache) plus the dedicated `shiki@^4.0.2` runtime dep. Whitespace markers via `splitWhitespaceSegments` + 1ch×2px background-image gradient with per-block `--ws-marker` (neutral-300 for src, primary-300 for OUTPUT).
+    *   **HTTP polling cross-process relay** — `context_relay_plugin` Vite plugin mounting middleware on `/__context_state`; `useContextChannel` polls + pushes via `fetch`, echo-suppressed via `last_pushed_hash`. Required because `BroadcastChannel` cannot cross OBS's CEF process boundary (the `import.meta.hot.send` first attempt failed silently). Replaces — not augments — the broadcast-only design from the original plan.
+    *   **Corner-square pseudo-element SCSS mixins** — `corner-square-tl($color, $size: 4.5px)` / `corner-square-tr` added to `_mixins.scss` for overflow-visible corner markers; `corner-dots` + `alpha-tint` / `darken` / `lighten` SCSS functions also surfaced. Mixin documented to NOT set `position: relative` itself (consumer handles it) — this was the regression that broke the sidebar's `position: absolute` anchor mid-Session-12.
+    *   **Alpha-tint token migration sweep** — `setup.vue`, `sources.vue`, `preview.vue` `rgba(255, 215, 0, 0.04)` literals replaced with `var(--clr-primary-100-04)` shade tokens. Surfaced as polish entries in the Implementation list.
+3. **Single shared border / TR overflow** — Strip drops `border-right`; sidebar's left border is the single 1px line; strip's TR corner-square overflows above sidebar via `z-index: 110` + `contain: layout` (no `paint`). Captured in both Implementation prose and the DIAGRAM blockquote.
+4. **Test counts + perf gates updated to actual.** 79/79 tests in 826 ms (was 33 / 357 ms baseline); lint 0 errors / 33 expected warnings; build 1.37 s. Runtime deps: `uniorg-parse@^3.2.1`, `shiki@^4.0.2`. PR.org Quality-gates table reflects real numbers.
+5. **TD-4FIELD section expanded to 8 decisions.** Added the Shiki tokenization decision and the Corner-square HUD-chrome decision alongside the original 6 (BroadcastChannel+HTTP relay, uniorg-parse, recursive Vue template, hybrid 3-surface layout, sidebar auto-scroll, layered peek indicator, primitive reuse).
+6. **QA "How to test" rewritten** — 8-group ASCII flow tree (Setup, Lower-third+marquee, Sidebar toggle, Org rendering coverage with Shiki + per-node styling, Sidebar auto-scroll + interaction pause, Closed-state peek indicator, Cross-process bridge with `curl http://localhost:5173/__context_state`, OBS smoke test deferred). Each step uses `***Expected:***` 6-space-indent bold-italic per Kyonax variant.
+7. **Global writing rules sweep.** No emojis outside `✅` in Testing-Coverage status cells; `↔` arrow chars replaced with "to" (`opacity 1 to 0.55 over 2.5 s`); zero private-file references; every repo link absolute to `Kyonax/reckit/blob/master/`.
 
-2. **Halo/glow re-expressed as opt-in design tokens.** Replaced the mixin with four CSS custom properties on `:root` in `src/app/scss/abstracts/_theme.scss` — `--hud-halo` (filter chain), `--hud-halo-text` (text-shadow chain), `--hud-glow` (brand-primary glow, rebindable via `--hud-glow-color`), `--hud-group-gap`. Plus `--clr-primary-100-80/40` via `color-mix()`. Consumers now opt in per element (`filter: var(--hud-halo)` on a container; `text-shadow: var(--hud-halo-text), var(--hud-glow)` on a leaf). Decision #117.
+Final `PR.org`: 307 lines, body inside the standard `#+BEGIN_SRC markdown` block, runbook header preserved.
 
-3. **All OBS-WS composables converted to module-level singletons.** `useRecordingStatus`, `useSceneName`, `useAudioAnalyzer` now follow the `useObsWebsocket` pattern: `let shared_state = null;` at module scope; first call wires the WS handler and populates state; subsequent calls return the same object. Callers dropped `{ obs, connected }` params. Rationale: many HUD leaves on one page subscribing to the same event used to register N handlers per event → singleton collapses to 1. `onUnmounted` cleanup dropped (singletons live for page lifetime). Decision #118.
+### State of `context-screen` at reset
 
-4. **Audio analyzer rewritten event-driven + zero-allocation.** `use-audio-analyzer.js` was the biggest hot path (OBS fires `InputVolumeMeters` ~50 Hz). Changes: preallocated `Float32Array(bar_count)` for levels/smoothed; 256-entry `JITTER_TABLE: Float32Array` seeded once at module load, cursor-advanced per tick (replaces per-frame `Math.random()`); `requestAnimationFrame` loop **deleted** (OBS already gives us a clock); reactivity surface collapsed to a single `tick: ref(0)` counter plus `active` / `source_name` refs — bar levels are NOT reactive, consumers watch the tick and read `levels` synchronously; target input hardcoded to `Mic/Aux` (eliminates per-event `Array.find`). Decision #119.
-
-5. **AudioMeter bypasses Vue reactivity in the hot path.** `audio-meter.vue` no longer uses `:style` binding on bars. Architecture: static `v-for` of `<div ref="bar_els" class="bar" />`; `watch(tick, ...)` callback reads `levels[i]` and assigns `el.style.transform = SCALE_STRINGS[idx]`. `SCALE_STRINGS` is a precomputed 101-entry string table (`scaleY(0.00)`...`scaleY(1.00)`). Write-threshold skip: `|scale − last_scale[i]| < 0.01` → skip DOM write. `update:state` emit throttled to ~10 Hz via `performance.now()`. CSS animation switched from `height` → `transform: scaleY()` with `transform-origin: bottom` — GPU-composited, zero layout cost. `source_name` prop removed (analyzer owns target). Decision #120.
-
-6. **CSS containment + GPU-friendly transforms applied across the HUD.** `contain: layout paint` added to `.hud-group`, `.status-bar`, `.audio-meter`, `.recording-timer`, `.ui-data-point`, `.debug-info`, `.hud-frame`, `.cam-log-overlay`. `<UiStatusDot>` split into static outer halo shell + animated-opacity `.glow` inner span so the dark shadow never re-rasterizes per frame — only `opacity` changes. Decision #121 + #128.
-
-7. **`cam-log.vue` layout restructured around a `.hud-group` system.** Four positioned groups (`top-left`, `top-right`, `bottom-left`, `identity`) replace ad-hoc absolute-positioned labels. Unified `.hud-text` + `.hud-text--primary` classes. `.dynamic-layer` sibling extracted for OBS-state widgets (timer / audio meter / debug readout). Deprecates `labels` prop on `<HudFrame>` for brand HUDs. Decision #123.
-
-8. **`brand.js` gains `host` + `region`.** `@kyonax_on_tech/brand.js` adds `host: 'KYO-LABS'` (top-left non-primary label) and `region: 'COL'` (replaces hardcoded `"UTC"` in the session-date format → `${region} ∇ DD.MM.YYYY // ddd` → `COL ∇ 22.04.2026 // WED`). Colors-in-SCSS rule unchanged. Decision #122.
-
-9. **Smaller polish.** Preview-modal resize handler debounced 100 ms (decision #124). Vue emit event names kebab-cased: `consume_trigger` → `consume-trigger` on `<PreviewModal>` + `<Card>` (decision #125). Secondary text upgraded `--clr-neutral-200` → `--clr-neutral-100` across ~10 view surfaces; brand theme's `--clr-neutral-100` lightened `95%` → `85%` to preserve tonal separation (decision #126). Frame.vue dead `.border-*` divs removed. `LiveReadout` skips no-op writes. Comment stripping across config files matching the "default no comments" CLAUDE.md guidance.
-
-10. **Tests.** New `src/shared/composables/composables.test.js` — 6 tests covering initial state + singleton identity contract (`expect(a).toBe(b)`) for `useRecordingStatus`, `useSceneName`, `useAudioAnalyzer`. Mocks `useObsWebsocket` at module scope. Dynamic-behavior tests deferred. Decision #129.
-
-11. **This reset** — added §1.14 Performance Budget for OBS Browser Sources (the codified discipline, reverse-engineered from this session's work); added decisions #116–#129 to §2.3; updated §3.8 cam-log with the new layout system + brand.host/region consumption; refined §3.13 UiStatusDot composition note; added halo-token line to §3.14; new §3.15 Performance Pass implementation entry; §4 file index adds `composables.test.js`; §1.1 HUD vocabulary updated to note `brand.region` drives the session-date prefix; intro compaction-sources extended.
-
-**Staged + unstaged at reset (~32 files modified + 1 new test file):**
-
-Staged (baseline of the perf pass): `@kyonax_on_tech/brand.js`, `@kyonax_on_tech/sources/hud/cam-log.vue`, `@kyonax_on_tech/styles/_theme.scss`, `eslint.config.mjs`, `src/App.vue`, `src/app/scss/abstracts/_mixins.scss`, `src/app/scss/abstracts/_theme.scss`, `src/app/scss/base/_global.scss`, `src/app/scss/components/_index.scss`, `src/app/scss/layout/_index.scss`, `src/main.js`, `src/shared/brand-loader.js`, `src/shared/components/hud/frame.vue`, `src/shared/components/hud/timer.vue`, `src/shared/components/ui/badge.vue`, `src/shared/components/ui/data-point.vue`, `src/shared/components/ui/status-dot.vue`, `src/shared/composables/use-audio-analyzer.js`, `src/shared/composables/use-obs-websocket.js`, `src/shared/composables/use-recording-status.js`, `src/shared/composables/use-scene-name.js`, `src/shared/version.js`, `src/shared/widgets/hud/audio-meter.vue`, `src/shared/widgets/ui/live-readout.vue`, `src/views/components/elements/card.vue`, `src/views/components/modals/preview.vue`, `src/views/components/sections/footer.vue`, `src/views/components/sections/sources.vue`, `src/views/utils/markup.js`, `vite.config.js`, `package.json`, `package-lock.json`.
-
-Unstaged (in-progress iteration on 10 of the above): `@kyonax_on_tech/sources/hud/cam-log.vue`, `src/app/scss/abstracts/_mixins.scss`, `src/shared/components/hud/frame.vue`, `src/shared/components/ui/data-point.vue`, `src/shared/components/ui/status-dot.vue`, `src/shared/composables/use-audio-analyzer.js`, `src/shared/composables/use-recording-status.js`, `src/shared/widgets/hud/audio-meter.vue`, `src/views/components/elements/card.vue`, `src/views/components/modals/preview.vue`.
-
-Untracked: `src/shared/composables/composables.test.js`.
-
-**No validation run yet** — user will run `npm test` + lint before committing (pre-commit hooks handle linting).
-
-**Documentation sync:** this reset writes the perf discipline into §1.14 (new) + decisions #116–#129 + §3.15 (new). The user also asked for a reverse-engineered rules table at the bottom of the chat response — that table is the conversational counterpart to §1.14's structured form. COMMIT.org + PR.org for Session 10 are pending.
+*   Branch: `context-screen` (off `dev`, since 2026-04-26). 11 untracked + 16 modified files in working tree. NO commits yet.
+*   Validation: `npm run lint` → 0 errors / 33 expected warnings; `npm test` → 79/79 in 826 ms; `npm run build` → 1.37 s.
+*   Deliverables ready: `COMMIT.org` (hyper-concise per §1.15) + `PR.org` (Pattern B Kyonax Feature PR, 307 lines, refreshed 2026-04-28). User runs `git commit` + `gh pr create` themselves.
+*   OBS smoke test: deferred to user — see the dedicated "OBS smoke test" QA group inside `PR.org`.
 
 ### Pending / Not yet started
 
+**Immediate — context-screen ship (this branch):**
+*   [ ] User stages all working-tree changes + runs `git commit -F <(awk '/^#\+BEGIN_SRC gitcommit$/{f=1; next} /^#\+END_SRC$/{f=0} f' COMMIT.org)`.
+*   [ ] User runs `git push -u origin context-screen` + `gh pr create --base dev --head context-screen --title "$(awk '/^#\+BEGIN_SRC text$/{f=1; next} /^#\+END_SRC$/{f=0} f' PR.org)" --body-file <(awk '/^#\+BEGIN_SRC markdown$/{f=1; next} /^#\+END_SRC$/{f=0} f' PR.org)`.
+*   [ ] OBS smoke test at `http://localhost:5173/@kyonax_on_tech/context-screen` — verify cross-process state sync, fps holds, all four surfaces render correctly.
+*   [ ] After PR open, `reckit-roam-node` skill's `gh-parsing.md` lane derivation auto-moves Plan #context-screen from `IN PLANNING` → `IN DEVELOPMENT` (first commit) → `IN REVIEW` (PR open) on next index sync.
+
 **Immediate — v0.4 release (UNCHANGED; still gates PR #4 merge):**
-*   [ ] **CRITICAL:** `package.json` bump to `0.4.0` on `dev` — `npm version 0.4.0 --no-git-tag-version`. *Note: Sessions 9 + 10 added deps / tests / code on `feat-brand_kot` — those rides v0.5+, NOT v0.4. Triad lives on `dev` only.*
-*   [ ] **CRITICAL:** `README.org` version markers on `dev` — four `sed -i -E` patches (see §1.8 + `COMMIT.org` PERMANENT runbook step 3).
-*   [ ] **CRITICAL:** `CHANGELOG.org` on `dev` — new `[v0.4] — <date> :: Architectural Baseline` block above `[v0.3]` with Added / Changed / Removed / Decided subsections.
-*   [ ] Push refined PR.org body + title to PR #4 — `gh pr edit 4 --title "release: v0.4 — Architectural Baseline" --body-file <(awk ...)`.
-*   [ ] Post-merge: tag `v0.4` on `master`, optional GitHub Release + branch protection.
+*   [ ] **CRITICAL:** `package.json` bump to `0.4.0` on `dev` — `npm version 0.4.0 --no-git-tag-version`.
+*   [ ] **CRITICAL:** `README.org` version markers on `dev` — four `sed -i -E` patches per `COMMIT.org` PERMANENT runbook step 3.
+*   [ ] **CRITICAL:** `CHANGELOG.org` on `dev` — new `[v0.4] — <date> :: Architectural Baseline` block above `[v0.3]`.
+*   [ ] Push refined PR.org body + title to PR #4.
+*   [ ] Post-merge: tag `v0.4` on `master`.
 
-**Immediate — Session 9 + 10 commit/PR (on `feat-brand_kot`):**
-*   [ ] User stages + commits remaining unstaged perf iterations (10 files listed above) + the new `composables.test.js`.
-*   [ ] User generates `COMMIT.org` — likely two logical commits: `feat(kot)` for Session 9 HUD polish (if not yet committed) + `perf` for Session 10 (audio pipeline, singletons, halo tokens, containment). Alternatively one combined commit since both are on the same feature branch.
-*   [ ] User opens PR `feat-brand_kot` → `dev` via pr-scribe (Kyonax brand, **Feature PR shape**). Title candidate: `feat(kot): live session-date + performance pass (halo tokens, singleton composables, GPU-composited audio meter)`.
-*   [ ] Expected next release including Session 9 + 10: **v0.5** — performance discipline is a named baseline feature, not a patch-level fix.
+**Immediate — Sessions 9 + 10 commit/PR (on `feat-brand_kot`, DELIVERABLES still ready):**
+*   [ ] User stages remaining unstaged perf iterations on `feat-brand_kot` + runs `git commit` using that branch's `COMMIT.org`. Title pre-set: `feat(kot): brand refinement + OBS FPS perf pass`.
+*   [ ] User opens PR `feat-brand_kot` → `dev` using that branch's `PR.org`.
 
-**On current branch `feat-brand_kot` (Phase 3.7 — remaining scope):**
-*   [ ] Build `item-explain.vue` at `@kyonax_on_tech/sources/animation/item-explain.vue`. Kind-alias imports; PascalCase tags. Flip `sources.js` to `'ready'` on land. **Must conform to §1.14 from day 1** — no blanket filter/shadow utilities, `transform`/`opacity`-only animations, `contain: layout paint` on the root.
+**On `context-screen` branch (Plan Phase 0 → 6 finished — minor follow-ups):**
+*   [ ] `<ContextControlModal>` could grow per-context-block toggles (currently just slug-select + sidebar-on/off). User explicitly de-scoped this in Phase 0 — sidebar is all-or-nothing, lower-third always visible (R2a + D6).
+*   [ ] Consider `prefers-reduced-motion: reduce` gate for `breathe` + `pulse` continuous animations + `marquee` scroll (carryover from Session 11 cross-branch list).
+*   [ ] Optional cleanup: file-level `/* eslint-disable security/detect-object-injection */` on hot-path files with comment pointing at §1.14.6. Drops the warning count to 0. Not required to merge.
+
+**On `feat-brand_kot` (Phase 3.7 — remaining scope):**
+*   [ ] Build `item-explain.vue` at `@kyonax_on_tech/sources/animation/item-explain.vue`. Conform to §1.14 from day 1.
 *   [ ] Brand-private primitives under `@kyonax_on_tech/components|composables|widgets/` as needed (Rule F — 2+ files before folder).
 *   [ ] Brand SVGs at `@kyonax_on_tech/assets/svg/` — multi-pool glob auto-discovers.
-*   [ ] Brand theme tuning at `@kyonax_on_tech/styles/_theme.scss` — single source of truth (never re-add `colors` to `brand.js`).
 
 **Cross-branch / ongoing:**
-*   [ ] Broaden Vitest coverage beyond the now-33 baseline — 5 sections, 4 renamed shared primitives, 3 new `ui/` primitives, brand theming integration, `<AudioMeter>` DOM-write correctness (render levels → assert `style.transform`), `tick`-driven event propagation.
-*   [ ] Shared widgets showcase on landing page (new `@sections/widgets.vue` or dedicated route).
+*   [ ] Broaden Vitest coverage — section components, brand-theming integration, AudioMeter DOM-write correctness, tick-driven event propagation.
+*   [ ] Shared widgets showcase on landing page.
 *   [ ] Fix YouTube subscriber badge subscribe link.
 *   [ ] **OPEN SOURCE:** Contribute to `wallyqs/org-ruby` for GitHub alert syntax in `.org` files.
 *   [ ] Phase 4 (packaging, scene collection export).
-*   [ ] Consider `prefers-reduced-motion` gates on `breathe` and any future continuous pulsations.
-
-### Post-Session-10 status
-
-`feat-brand_kot` now carries: (a) Session 9 HUD polish (live session-date, breathing status, iframe sub-pixel fix, dayjs); (b) Session 10 performance pass (cyberpunk-glow-mixin removal, halo/glow design tokens, 3 singleton composables, event-driven audio analyzer, DOM-direct AudioMeter, CSS containment, GPU-composited transforms, resize debounce, UiStatusDot layered composition, color harmonization, 6 new singleton-contract tests). **§1.14 Performance Budget** now codifies the discipline for all future HUD work. PR #4 (v0.4 Architectural Baseline — `dev` → `master`) still open, triad still pending on `dev`.
 
 ### Where to resume
 
 **Branch & PR context at resume:**
-- Current branch: `feat-brand_kot`. Staged (Session 10 baseline) + 10 unstaged iterations + 1 new untracked test file (`composables.test.js`).
-- Open PRs: **PR #4** (`dev` → `master`, `release: v0.4 — Architectural Baseline`, triad pending on `dev`).
-- Merged: PR #3 (`feat-fixes-and-refinement-v3` → `dev`).
-- Expected next PR: `feat-brand_kot` → `dev` (post-v0.4 merge). Title candidate: `feat(kot): live session-date + performance pass`.
+*   Current branch: `context-screen`. Working tree: ~18 files changed/added. No commits yet.
+*   Open PRs: **PR #4** (`dev` → `master`, v0.4 release, triad pending).
+*   Other open branch: `feat-brand_kot` — uncommitted (deliverables on disk).
+*   Today's date at reset: 2026-04-28.
 
 **Resume paths (by task):**
 
-If the user asks to **commit Session 10 work**: do NOT run `git commit`. Regenerate `COMMIT.org` with a subject under 72 chars summarizing the perf pass (halo tokens, singleton composables, audio-meter GPU path). Consider splitting Session 9 (HUD polish) and Session 10 (perf) into two commits for clean PR-readability, OR one combined commit — user's call. Keep all commits on `feat-brand_kot`; triad stays on `dev`.
+If the user asks to **commit/push the context-screen PR**: do NOT run git write commands yourself (absolute prohibition in repo + global `CLAUDE.md`). Walk them through the awk one-liners in `COMMIT.org` PERMANENT runbook step 9–10, OR simply remind them where the title + body live.
 
-If the user asks to **generate the PR for Session 9 + 10**: invoke the `pr-scribe` skill with Kyonax brand, **Feature PR shape** (not Release). Changes block: Pattern B flat `**Changes:**` with `[MOD]` / `[NEW]` tags. Technical Details must cover at minimum: (a) the `cyberpunk-glow` FPS regression + halo-token mitigation; (b) singleton composable pattern; (c) event-driven audio analyzer + Float32Array / precomputed tables; (d) DOM-direct AudioMeter rationale; (e) GPU-composited `scaleY()` over animated `height`; (f) CSS containment adoption. Testing Coverage: 33 tests (27 baseline + 6 new singleton contract). Reference §1.14 inline for the codified discipline. Reference §1.13 for feature-PR conventions.
+If the user asks to **debug the OBS bridge** (controls not propagating to OBS source): start with `curl http://localhost:5173/__context_state` — should return current state JSON. If empty, the Vite middleware isn't registered (check `vite.config.js` for `context_relay_plugin`). If state updates on landing-page actions but OBS source doesn't reflect: check OBS Studio dev tools (right-click source → Interact → F12) for fetch errors. Pattern fully documented in §1.16.
 
-If the user asks to **complete the release triad on `dev`**: see §2.4 — check out `dev`, run the three CRITICAL commands, push, then `gh pr edit 4 --title ... --body-file ...`. After CI green, merge PR #4. Session 9 + 10 PR rebases on top of `dev` after the merge.
+If the user asks to **regenerate `COMMIT.org`** for context-screen: follow §1.15 (hyper-concise) — subject ≤ 60 chars, 1-paragraph rationale, verb-led bullets grouped by subsystem, one validation line. Files-in-the-diff table BELOW `#+END_SRC`. PERMANENT runbook untouched.
 
-If the user asks to **generate commit / PR text**: write to `COMMIT.org` or `PR.org` only (NEVER run git write commands). Follow Kyonax Feature-PR or §1.13 release-PR conventions.
+If the user asks to **regenerate `PR.org`** for context-screen: invoke the `pr-scribe` skill (Kyonax brand, Pattern B Feature PR). 8 TD-4FIELD decisions are settled (BroadcastChannel + HTTP relay over OBS-WS, uniorg-parse + custom Vue renderer, recursive Vue template + no v-html, Shiki `tokyo-night` async tokenization, hybrid 3-surface layout, sidebar auto-scroll via `body.scrollTop` + 5 s user-interaction pause, layered peek with halo + animated opacity, corner-square pseudo-element mixins). Always ground claims against the working tree (constants in `context-screen.vue`, deps in `package.json`, plugin in `vite.config.js`) — the plan node text drifted during refinement. 79/79 tests in 826 ms, lint 0 errors / 33 warnings, build 1.37 s. Reference §1.14, §1.16, §1.17, §1.18 inline.
 
-If the user asks to **review another HUD feature's performance**: walk it against §1.14.8 checklist: broad filter/shadow? animates non-transform/opacity? new OBS-WS subscription outside a singleton? per-frame allocation? per-tick `$emit`? missing `contain: layout paint`? un-debounced burst listener? Any "yes" → refactor before merging.
+If the user asks to **add a new context `.org`**: drop file at `@kyonax_on_tech/data/contexts/<slug>.org`. Required: `#+TITLE` + `#+DESCRIPTION`. Optional: `#+SUBTITLE`, `#+TAGS: :tag1:tag2:`, `#+begin_marquee … #+end_marquee` block (one item per line). Body: any uniorg-supported construct (headlines, lists, checklists, tables, `#+BEGIN_SRC` + `#+RESULTS:`, quotes, links). Vite picks up via `import.meta.glob`; `<ContextControlModal>` lists it; HMR refreshes both pages on save.
+
+If the user asks to **change the Shiki theme**: edit `SHIKI_THEME` constant in `src/shared/utils/highlight.js`. Available bundled themes include `tokyo-night` (current), `vitesse-dark`, `monokai`, `one-dark-pro`, `dracula`, `github-dark`, `nord`, `synthwave-84`, `catppuccin-mocha`, `rose-pine`, `aurora-x`, `night-owl`. The cache key is `lang::code` (theme not included), so Vite HMR reload auto-rerenders all blocks with the new theme.
+
+If the user asks to **modify the sidebar auto-scroll behavior**: constants in `context-screen.vue` — `OPEN_DELAY_MS = 3000`, `BOTTOM_HOLD_MS = 3000`, `SCROLL_SPEED_PX_PER_SEC = 16`, `USER_INTERACTION_PAUSE_MS = 5000`, `MS_PER_SEC = 1000`. The rAF tick reads paused state via `last_user_interaction_at` and skips increments while paused; `wheel`/`touchstart` listeners on the body bump this timestamp.
+
+If the user asks to **add a new corner-decorated surface**: use `corner-dots($color, $size, $corners)` for interior surfaces (background-image, sits flush). Use `corner-square-tl($color, $size)` + `corner-square-tr($color, $size)` for surfaces where the square should overflow (pseudo-element with negative offsets). Consumer must be a positioned element; consumer must NOT use `contain: paint`. Corners at canvas edge → no square. White squares (`--clr-neutral-50`) on full-black surfaces; matching-hue squares for tinted surfaces (gold for OUTPUT, neutral-300 for src-block, etc.).
+
+If the user asks to **build a new RECKIT plan node**: invoke the `reckit-roam-node` skill. Provide the slug. Skill walks the planning conversation (REQUIREMENTS as GIVEN/WHEN/THEN, OPEN QUESTIONS with Recommendations, DECISIONS as `*D<n>* (date)` blocks, IMPLEMENTATION DISCIPLINE checklist, phased TODO PLAN TASKs). Plan node lives at `~/.brain.d/roam-nodes/reckit/YYYY-MM-DD-HHMMSS-reckit_<slug>.org`. Update Index Reckit BACKLOG + PLAN BOARD on every operation (8-step flow from `index-management.md`). Plan UUIDs are stable references — see §1.19.
+
+If the user asks to **review another HUD feature's performance**: trigger the `code-review` skill — auto-loads `brand/kyonax/` (21 atomic rules) on Kyonax repos. Walk the change against §1.14.8 checklist (broad filter/shadow? non-transform/opacity animation? new OBS-WS subscription? per-frame allocation? per-tick `$emit`? missing `contain: layout paint`? un-debounced burst listener?).
+
+If the user asks to **build a new component** (any kind): follow §1.12 for placement + naming; §1.14 for performance; §1.18 for chrome (corner squares + 1px border) when it's a HUD container. Kebab short filename; kind folder; `@<kind>` alias; PascalCase binding per §1.12.5. Don't extract unless Rule E is met.
 
 If the user asks to **add a new OBS-WS-driven composable**: follow the singleton pattern (§1.14.5): module-level `shared_state`, early-return on repeat calls, `watch(connected, fn, { immediate: true })` for initial fetch, no `onUnmounted`. Add a test to `composables.test.js` asserting initial state + `expect(a).toBe(b)` identity.
 
-If the user asks to **add a new HUD widget or primitive**: default to `contain: layout paint` on the root. Use `transform`/`opacity` for any animation. Reference halo/glow via `var(--hud-halo)` / `var(--hud-halo-text)` / `var(--hud-glow)` — never reintroduce the deleted `cyberpunk-glow` mixin or any `filter`-chain utility.
+If the user asks to **add a new cross-process control plane** (any feature spanning landing page + OBS browser source): follow §1.16. Vite middleware on a path (`/__<feature>_state`); composable polls via `fetch` + pushes via POST; echo-suppress with `last_pushed_hash`. Keep `BroadcastChannel` as same-process accelerator. Confirm with `curl` before testing in OBS.
 
-If the user asks to **change the cam-log session-date format**: modify the `dayjs().utc().format(...)` token string in `@kyonax_on_tech/sources/hud/cam-log.vue`. Escape literal segments with `[...]`. Keep `.toUpperCase()`. `brand.region` drives the prefix — changing the region value on `brand.js` is the lowest-cost way to re-label the source. Update §1.1 HUD vocabulary line + §3.8 label spec when the format changes.
+If the user asks to **add a new cross-brand color shade**: declare at `:root` in `src/app/scss/abstracts/_theme.scss` following the `--clr-<family>-<shade>-<alpha>` naming. Use `color-mix(in srgb, var(--clr-<family>-<shade>) X%, transparent)`. For one-offs, the SCSS helpers `alpha-tint` / `darken` / `lighten` in `_mixins.scss` (§1.17).
 
-If the user asks for **another HUD animation** (scanline, glitch, boot sequence): animate `transform`/`opacity` only; apply halo via `var(--hud-halo)` on a static layer; no `box-shadow` or `filter` inside `@keyframes`. If broadly reusable, create a new `@shared/utils/animations.scss` partial or `@ui/` primitive; if brand-specific, keep inside the brand source `.vue`. Add `prefers-reduced-motion: reduce` media-query gate for any continuous pulsation (not yet applied on `breathe` — open TODO).
+If the user asks to **complete the v0.4 release triad**: see §2.4 and the `feat-brand_kot` branch's `COMMIT.org` PERMANENT runbook. Three CRITICAL commands on `dev`, then `gh pr edit 4` and merge. Session 9+10 PR rebases on top of `dev` after that merge; context-screen rebases in turn.
 
-If the user asks to **tune status-dot timing**: edit `src/shared/components/ui/status-dot.vue` — the `2s ease-in-out` duration + `0.35` low-opacity point are the two tuning knobs on `.glow`'s `breathe` keyframe. The dark halo layer on the outer span stays static — do not move it into the keyframe.
-
-If the user asks to **build `item-explain`**: create `@kyonax_on_tech/sources/animation/item-explain.vue` + flip `sources.js` to `'ready'`. Route auto-discovers. Kind-alias imports; PascalCase tags. Conform to §1.14 from day 1.
-
-If the user asks to **build a new component** (any kind): follow §1.12 for placement + naming; follow §1.14 for performance. Kebab short filename; kind folder; `@<kind>` alias; binding per §1.12.5. Don't extract unless Rule E is met.
-
-If the user asks to **add a new brand**: create `@<brand>/` with `brand.js` (`handle`, `name`, `description`, **`host`**, **`region`**, `identity`, `links`) + `sources.js` + `assets/` + `styles/_theme.scss` + `sources/{hud,animation,scene}/`. Zero app code changes needed.
-
-If the user asks to **add a web source to an existing brand**: add entry to `@<brand>/sources.js`, create `.vue` in the matching `sources/<type>/` folder. Route auto-discovers.
-
-If the user asks to **add a brand-private SVG**: drop at `@<brand>/assets/svg/<name>.svg`, reference `<UiIcon name="<name>" />`. Multi-pool glob auto-discovers.
-
-If the user asks to **customize a brand's palette / tokens**: edit `@<brand>/styles/_theme.scss` only — inside `.brand-<handle>` class. NEVER add `colors` to `brand.js` (forbidden by test).
-
-If the user asks to **add a section / element / modal**: follow §1.12.5 kind registry.
-
-If the user asks to **add a new kind folder**: Rule F (2+ files first) + add Vite alias (Rule H) + register suffix/prefix in §1.12.5.
-
-If the user asks to **add a helper / util function**: find the matching topic file (Rule J). Never one-function-per-file.
-
-If the user asks to **add a new root config file**: follow §1.10 (Tier 1 figlet header + cyberpunk place name).
-
-If the user asks to **cut a future release**: follow §1.13.5 workflow.
-
-If the user asks for a **new task**: check §2.4 and `CHANGELOG.org` TODO block.
+If the user asks for a **new task**: check §2.4 (Pending Work) and `CHANGELOG.org` TODO block.
 
 <!-- DESCRIPTION AND USER CONTEXT END -->
 
 
 
+<!-- INIT OF THE USER PROMPT END -->
