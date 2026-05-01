@@ -92,6 +92,7 @@ Every architecture memory file is organized into **6 mandatory sections**. Each 
 |---|---|---|
 | `id` | Yes | Unique, stable identifier for reference syntax (kebab-case) |
 | `date` | Yes | When the decision was made (YYYY-MM-DD) |
+| `datetime` | If known | Decision time-of-day in `YYYY-MM-DD HH:MM`. Source: matching Activity Log row in the originating session file. Omit if not known — never fabricate. |
 | `title` | Yes | Concise decision statement |
 | `context` | Yes | What problem or situation prompted this decision |
 | `decision` | Yes | What was chosen |
@@ -99,7 +100,7 @@ Every architecture memory file is organized into **6 mandatory sections**. Each 
 | `consequences` | Yes | What this decision constrains or enables for future work |
 | `status` | Yes | `active`, `superseded`, `deprecated`, or `partial` |
 | `superseded-by` | If status=superseded | Reference to the replacing decision |
-| `source-session` | Yes | Session file where this originated |
+| `source-session` | Yes | Session file where this originated. When the session has an Activity Log, append the matching row datetime: `file.md — Activity Log 2026-04-29 14:00`. |
 
 **Format:**
 

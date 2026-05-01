@@ -4,7 +4,7 @@ description: >-
   Architecture memory and context optimization system for AI sessions. Extracts reusable architectural decisions, design patterns, data flow insights, constraints, and abstractions from session context blocks into persistent, referenceable memory files. Use when performing a session reset with architecture extraction, creating or updating architecture memory files, referencing specific architectural knowledge from past sessions, resolving conflicting decisions across sessions, optimizing context loading for minimal token usage, or integrating architecture memory into the session-reset workflow. Also trigger when the user mentions 'extract architecture', 'session memory', 'architecture memory', 'reference a decision', 'cross-session reference', or 'persistent patterns'.
 metadata:
   author: @kyonax_on_tech
-  version: "1.0.0"
+  version: "1.1.0"
 ---
 
 # Session Memory
@@ -14,6 +14,16 @@ Extracts reusable architectural knowledge from AI session context blocks into pe
 ## Core Principle: Reference Over Copy
 
 Every piece of architectural knowledge should have exactly one authoritative location. All other uses should be references — not copies. This prevents context bloat, eliminates divergence, and ensures updates propagate automatically.
+
+## Datetime Provenance
+
+As of v1.1, every architecture memory entry tracks not just the date but the **datetime** of the source decision (when known). This integrates with the Activity Log system added to `session-reset` v4.1: when extracting an entry from a session, the source-session reference includes the Activity Log row datetime so consumers know exactly *when* the decision was made.
+
+```markdown
+**Source:** `site-revolution-redesign.md` — Activity Log 2026-04-29 14:00
+```
+
+When a source session has no Activity Log entry for the decision, fall back to the date alone (`Source: file.md (2026-04-29)`). Never fabricate a datetime.
 
 ## When to Apply
 

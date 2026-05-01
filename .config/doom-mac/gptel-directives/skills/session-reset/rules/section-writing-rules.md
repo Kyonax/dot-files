@@ -173,6 +173,44 @@ If the user asks for a **new task**: check Section 2.4 (Pending Work).
 
 ---
 
+## Section 6: Activity Log
+
+**Purpose:** Datetime-stamped, append-only chronological table of every meaningful event in the session — session resets, PR actions, commits, refinements, implementation, documentation, bug fixes. Authoritative input to time-tracking automation (e.g., `jira-tempo-hours`).
+
+**Structure:** A single org-table-compatible markdown table with **5 fixed columns**:
+
+```markdown
+## SECTION 6: ACTIVITY LOG
+
+| Datetime         | Duration | Type           | Reference        | Description |
+|------------------+----------+----------------+------------------+-------------|
+| YYYY-MM-DD HH:MM | Nh       | <type>         | <ref>            | One-line text |
+```
+
+**Mandatory elements:**
+- **Datetime** in `YYYY-MM-DD HH:MM` (24-hour, host-local). No seconds, no timezone.
+- **Duration** as `Nh`, `N.5h`, `Nm`, or `—` for instant events. Halves allowed.
+- **Type** from the controlled vocabulary (`session-reset`, `pr-open`, `pr-update`, `pr-feedback`, `pr-review`, `pr-merge`, `commit`, `refinement`, `implementation`, `documentation`, `testing`, `qa`, `bug-fix`, `debugging`, `research`, `planning`, `meeting`, `configuration`, `migration`, `architecture-extract`, `other`). See `rules/activity-log.md` for the full vocabulary.
+- **Reference** as a concrete value: ticket key (`DOTCOMPB-####`), PR (`PR #####`), commit (`commit <sha>`), `this` (current session file), or `n/a` only when truly nothing applies.
+- **Description** as a past-tense, ≤ 100-char one-liner describing what was *done*.
+
+**Sort order:** Newest first. New entries are *prepended*; existing rows are never modified.
+
+**Rules:**
+- Every session reset MUST add at least one row of type `session-reset` referencing `this`.
+- Append-only — never edit or delete past rows. To correct an error, add a new row with `type: other` describing the correction.
+- Not compressed under the standard compression protocol — monotonically grows but each row is small.
+- Sessions pre-dating this rule get a single bootstrap row when Section 6 is first introduced; full entries are required from that reset forward.
+
+**Cross-section consistency:**
+- Section 2.3 decisions should reference back to the corresponding Activity Log row when relevant: `(2026-04-29) — see Activity Log row at 14:00`.
+- Section 3 per-item `Last updated:` should match the most recent Activity Log row touching that item.
+- Section 5 "What was done last" should mirror the top 3-5 Activity Log rows in abbreviated form.
+
+See `rules/activity-log.md` for the complete schema, controlled vocabulary, when-to-add criteria, examples, and the validation checklist.
+
+---
+
 ## Correct vs. Incorrect Examples
 
 ### Example 1: Global Guidelines vs Implementation Details

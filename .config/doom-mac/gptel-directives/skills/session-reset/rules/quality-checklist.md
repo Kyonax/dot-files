@@ -60,6 +60,19 @@ Run this checklist **after Step 4 (Write the Context Block)** and **before Step 
 - [ ] Includes a fallback "new task" path pointing to Section 2.4
 - [ ] Pending items are comprehensive (session-scope + item-specific)
 
+## Section 6: Activity Log
+
+- [ ] Section exists and is named exactly `## SECTION 6: ACTIVITY LOG`
+- [ ] Table header matches the schema exactly (`Datetime | Duration | Type | Reference | Description`)
+- [ ] Every datetime is in `YYYY-MM-DD HH:MM` format (no seconds, no timezone)
+- [ ] Every duration uses `Nh`, `N.5h`, `Nm`, or `—` (em-dash for instant events)
+- [ ] Every type is from the controlled vocabulary in `rules/activity-log.md` (no invented types)
+- [ ] Every reference is concrete (`DOTCOMPB-####` / `PR #####` / `commit <sha>` / `this`); no "various" or vague labels
+- [ ] Descriptions are past-tense, ≤ 100 chars, and concrete (what was *done*, not what is *planned*)
+- [ ] Newest row is at the top of the table
+- [ ] **At least one new `session-reset` row was added by this reset itself**
+- [ ] No prior rows were modified or deleted (Activity Log is append-only)
+
 ## Architecture Memory (When Step 2.5 Was Performed)
 
 - [ ] Architecture memory file exists and is structurally valid (6 sections present)
@@ -86,7 +99,7 @@ Run this checklist **after Step 4 (Write the Context Block)** and **before Step 
 - [ ] Compressed/tombstoned entries retain their impact label as metadata
 - [ ] Compression log entry added with impact distribution (if compression was applied)
 - [ ] Context block is enclosed in proper delimiter comments
-- [ ] 5-section structure is intact (no merged, missing, or reordered sections)
+- [ ] 6-section structure is intact (no merged, missing, or reordered sections — Section 6 is the Activity Log)
 
 ---
 

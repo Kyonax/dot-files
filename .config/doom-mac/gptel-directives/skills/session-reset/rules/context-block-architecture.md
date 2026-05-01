@@ -51,9 +51,9 @@ Session files live in a designated sessions directory. Names follow these rules:
 | Use subdirectory + `SESSION.md` for multi-file sessions | `my-project-session/SESSION.md`                           |
 | Use descriptive topic name for cross-cutting sessions   | `frontend-redesign-master.md` (e.g., GPTel session files) |
 
-## The 5-Section Architecture
+## The 6-Section Architecture
 
-Every context block is organized into **5 mandatory sections**, each serving a distinct purpose. Data may appear in multiple sections with different framing — this is intentional.
+Every context block is organized into **6 mandatory sections**, each serving a distinct purpose. Data may appear in multiple sections with different framing — this is intentional.
 
 | Section                              | Purpose                                                                                     | When to Reference                                                                       |
 |--------------------------------------|---------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
@@ -62,6 +62,9 @@ Every context block is organized into **5 mandatory sections**, each serving a d
 | **3. Feature/Skill Implementations** | Per-item detail: what was built, where files live, key decisions, and current state.        | When resuming work on a specific item, or when a new task relates to an existing one.   |
 | **4. File Index**                    | Quick-reference table of all file paths relevant to this session.                           | When you need to read, edit, or reference a specific file without searching.            |
 | **5. Last Interaction**              | Short-term memory: what was done last, what's pending, where to resume.                     | At the very start of a new conversation — this is your entry point for continuing work. |
+| **6. Activity Log**                  | Datetime-stamped, append-only table of every meaningful event in the session.               | When you need precise "what was done when" — including for time-tracking automation.    |
+
+> Section 6 (Activity Log) is mandatory as of v4.1. See `rules/activity-log.md` for the full schema, controlled vocabulary (`session-reset`, `pr-open`, `pr-feedback`, `commit`, `refinement`, `implementation`, `documentation`, `bug-fix`, etc.), and validation rules. Sessions that pre-date this rule must add a bootstrap row on their next reset.
 
 **Framing principle:** Section 1 frames knowledge as a rule to follow. Section 2 frames it as context to understand. Section 3 frames it as an implementation to reference. Each section answers a different question about the same knowledge.
 
@@ -90,6 +93,7 @@ This file is the **single source of truth** for the [PROJECT/SESSION NAME] sessi
 | **3. Implementations** | Per-item detail: what was built, decisions, state. | When resuming or referencing existing work. |
 | **4. File Index** | Quick-reference file path table. | When reading, editing, or locating files. |
 | **5. Last Interaction** | Short-term memory: last work, pending, resume points. | At conversation start — entry point. |
+| **6. Activity Log** | Datetime-stamped table of every meaningful event. | When you need exact "what was done when". |
 
 **Operational Rule:** [Session-specific instructions, e.g., how to identify latest request]
 
@@ -160,6 +164,17 @@ This file is the **single source of truth** for the [PROJECT/SESSION NAME] sessi
 ### Where to resume
 If the user asks to continue **X**: [instructions].
 If the user asks for a **new task**: check Section 2.4.
+
+---
+
+## SECTION 6: ACTIVITY LOG
+
+> Append-only chronological table of every meaningful event in this session.
+> See `rules/activity-log.md` for the full spec. Newest row first.
+
+| Datetime         | Duration | Type           | Reference | Description |
+|------------------+----------+----------------+-----------+-------------|
+| YYYY-MM-DD HH:MM | Nh       | session-reset  | this      | First reset that established this section |
 
 <!-- DESCRIPTION AND USER CONTEXT END -->
 

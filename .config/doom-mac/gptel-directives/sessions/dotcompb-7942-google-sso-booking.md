@@ -144,6 +144,20 @@ This file is the **single source of truth** for the DOTCOMPB-7942 (Google SSO Bo
 - **Decision:** Added `aria-hidden="true"` to `mr-icon`.
 - **Rule:** Any `mr-icon` inside a button/link that already has `aria-label` or visible text is decorative and must have `aria-hidden="true"`.
 
+**CR-LESSON-11: Guard Vuex callbacks against overwrite by downstream components**
+- **Finding:** Sentry flagged `LoginWithPassword.mounted()` overwriting `onSuccessCallback` with `showAppDownloadModal` for first-time users (no `afterLoginModalViewed` cookie). Pre-existing bug, but impact increased with no-reload approach.
+- **Decision:** Added `!this.onSuccessCallback` guard in `LoginWithPassword.mounted()` so it only sets the app download callback when no other callback is already registered.
+- **Rule:** When a Vuex store holds a callback set by a parent/caller, downstream components that mount later must not overwrite it unconditionally. Always check if a callback is already set before assigning a default.
+**CR-LESSON-12: `USER_ALREADY_EXISTS` must be surfaced to the user**
+- **Finding:** QA reported Google SSO shows generic "Something went wrong" when the Google email matches an existing MR account with a password. Backend returns `USER_ALREADY_EXISTS` (403) but frontend didn't check for that code.
+- **Decision:** Added `err.response.data.code === 'USER_ALREADY_EXISTS'` check in `useGoogleSignIn.js` error handler. Shows: "An account with this email already exists. Please use the Sign In link below to log in with your email and password."
+- **Rule:** Always check for specific backend error codes before falling through to generic error messages. Map each known code to a user-friendly message.
+
+**CR-LESSON-13: Duplicate appointment error ("already booked") must be surfaced**
+- **Finding:** When a user books a slot they already have, backend returns plain `Error("Customer X already has booked an appointment...")` with HTTP 500, no error code. Frontend shows generic "Something went wrong."
+- **Decision:** Added `errorMessage.includes('already has booked an appointment')` check in `InfoPage.vue bookAppointment()`. Shows: "It looks like you already have an appointment booked at this time. Please choose a different time or manage your existing booking."
+- **Rule:** When backend returns plain `Error` (no MRError code), check the message string for known patterns as a fallback.
+
 ---
 
 ## SECTION 2: SESSION OVERVIEW
@@ -168,13 +182,22 @@ Google Sign-On (SSO) into the booking flow "Your Details" step. Custom Google bu
 13. **(2026-04-25)** PR review: 9 findings implemented, 6 skipped with documented answers. See Section 1.8 for lessons.
 14. **(2026-04-25)** PilkoLint: JSDoc block descriptions mandatory (not just tags). Created `.tasks/lint-changed.sh` for local pre-commit lint.
 15. **(2026-04-25)** `customer.js` modified: `refreshCustomerCdata` concurrent guard returns `state.cdata` instead of `undefined`.
+16. **(2026-04-27)** SENTRY-4: `LoginWithPassword.mounted()` callback overwrite guard added.
+17. **(2026-04-27)** SENTRY-5/6: Two new Sentry findings — both skipped as pre-existing/intentional (logout redirect, cdata fetch degradation).
+18. **(2026-04-28)** Edge case: Duplicate appointment error surfaced to user (was hidden behind "Something went wrong"). Added message check in `InfoPage.vue`.
+19. **(2026-04-28)** `USER_ALREADY_EXISTS` error: Added specific frontend error message in `useGoogleSignIn.js` for Google email matching existing MR account with password.
+20. **(2026-04-28)** E2E Playwright test suite expanded: 59 tests, full booking flow edge cases with `select-time-retry` pattern, SPA-safe navigation waits, `scrollIntoViewIfNeeded` for all clicks.
+21. **(2026-04-27)** E2E test report document created as roam node with screenshot evidence.
+22. **(2026-04-27)** JIRA test case content prepared for DOTCOMPB-7942 test issue.
 
 ### 2.4 Pending Work
 
-*   [ ] Commit review fixes + push
+*   [ ] Commit all fixes + push (7 files: useGoogleSignIn.js, SignInOptions.vue, InfoPage.vue, customer.js, LoginWithPassword.vue + existing)
 *   [ ] Wait for PilkoLint CI to pass
 *   [ ] Get reviewer approval (andris310 requested)
 *   [ ] Manual QA: real Google OAuth, VoiceOver, Figma comparison, Segment tracking
+*   [ ] Verify `USER_ALREADY_EXISTS` handling with backend team (keep blocking or allow auto-link?)
+*   [ ] Run full E2E edge case suite on QA environment
 
 ---
 
@@ -182,8 +205,8 @@ Google Sign-On (SSO) into the booking flow "Your Details" step. Custom Google bu
 
 ### 3.1 DOTCOMPB-7942
 
-**Created:** 2026-04-23 | **Last updated:** 2026-04-25
-**Status:** **PR #20652 OPEN** — review fixes applied, awaiting re-review.
+**Created:** 2026-04-23 | **Last updated:** 2026-04-29
+**Status:** **PR #20652 OPEN** — review fixes + QA edge case fixes applied, on QA environment.
 **Branch:** `DOTCOMPB-7942`
 
 #### Component Tree
@@ -229,6 +252,7 @@ InfoPage.vue (<script setup>)
 | ADA-S1 | MR Minion | Hardcoded ID | ✅ Skip — single use | — |
 | ADA-S2 | MR Minion | Icon exposed to AT | 🔧 aria-hidden | CR-LESSON-10 |
 | ADA-S3 | MR Minion | Live region mount | 🔧 Interaction flag | CR-LESSON-9 |
+| SENTRY-4 | Sentry | onSuccessCallback overwritten by LoginWithPassword | 🔧 Guard added | CR-LESSON-11 |
 | Codecov | Codecov | 88.89% patch | ✅ Skip — strong coverage | — |
 
 #### Test Summary
@@ -266,13 +290,24 @@ Playwright: 52 test blocks. Local lint: `bash .tasks/lint-changed.sh` passes.
 | `website/src/vuescripts/components/HairColorBarBookingV2/InfoPage/InfoPage.vue` | SignInOptions integration + review fixes |
 | `website/src/vuescripts/components/HairColorBarBookingV2/InfoPage/InfoPage.test.js` | Updated tests |
 | `website/src/vuescripts/store/modules/customer.js` | Concurrent refresh guard (SENTRY-2) |
+| `website/src/vuescripts/components/MrSignInV2/LoginWithPassword/LoginWithPassword.vue` | Guard onSuccessCallback overwrite (SENTRY-4) |
 
 ### Tooling (gitignored)
 
 | File | Purpose |
 |---|---|
 | `.tasks/lint-changed.sh` | Local lint script matching PilkoLint CI |
-| `.tasks/qa-automation/` | Playwright config, parser, specs |
+| `.tasks/qa-automation/playwright.config.ts` | Playwright config (env var overrides, retries, video on) |
+| `.tasks/qa-automation/parse-acs.mjs` | AC-to-Playwright parser (select-time-retry, SPA nav, scrollIntoView) |
+| `.tasks/qa-automation/DOTCOMPB-7942/specs/` | 59 generated test specs |
+| `.tasks/qa-automation/DOTCOMPB-7942/screenshots/` | E2E screenshot evidence |
+
+### Documentation (external)
+
+| File | Purpose |
+|---|---|
+| `~/.brain.d/roam-nodes/madison_reed/2026-04-27-150000-dotcompb_7942_e2e_test_report.org` | E2E test report with screenshots (PDF-exportable) |
+| `~/.brain.d/roam-nodes/madison_reed/2026-04-23-150000-dotcompb_7942.org` | Roam node: ticket, ACs, test blocks, edge cases |
 
 ---
 
@@ -282,26 +317,29 @@ Playwright: 52 test blocks. Local lint: `bash .tasks/lint-changed.sh` passes.
 
 ### What was done last
 
-*   **(2026-04-25)** PR #20652 review: 17 findings analyzed, 9 implemented, 6 skipped with answers, all replied on GitHub.
-*   **(2026-04-25)** PilkoLint fix: JSDoc block descriptions added (not just tags).
-*   **(2026-04-25)** Created `.tasks/lint-changed.sh` for pre-commit local lint.
-*   **(2026-04-25)** Flow verification: traced all 7 change flows through runtime paths, no issues.
-*   **(2026-04-25)** 455 tests verified (55 ours + 400 customer store regression).
+*   **(2026-04-29)** QA testing on QA environment. `USER_ALREADY_EXISTS` error surfaced — added specific frontend message in `useGoogleSignIn.js`. Discussed with Addison + Carley whether backend should allow auto-linking Google to existing password accounts.
+*   **(2026-04-28)** Duplicate appointment edge case: added `errorMessage.includes('already has booked')` check in `InfoPage.vue bookAppointment()` to show user-friendly message instead of generic "Something went wrong."
+*   **(2026-04-28)** E2E Playwright: 59 tests. Rebuilt parser with SPA-safe navigation (`waitForFunction` instead of `waitForURL`), `scrollIntoViewIfNeeded` on all clicks, `select-time-retry` command (5 attempts, skips fully booked dates, screenshots errors). Location changed to `hillsboro`.
+*   **(2026-04-27)** Sentry comments: replied to SENTRY-4 (implemented), SENTRY-5/6 (skipped). E2E test report roam node created. JIRA test case content prepared.
 
 ### Pending
 
-*   [ ] Commit review fixes + push (4 files: useGoogleSignIn.js, SignInOptions.vue, InfoPage.vue, customer.js)
+*   [ ] Confirm with Carley: keep `USER_ALREADY_EXISTS` blocking or allow Google auto-link to password accounts?
+*   [ ] Commit all fixes + push
 *   [ ] Wait for PilkoLint CI pass
 *   [ ] Reviewer approval (andris310)
-*   [ ] Manual QA
+*   [ ] Run full E2E edge case suite on QA: `npx playwright test --config=.tasks/qa-automation/playwright.config.ts DOTCOMPB-7942/ -g "EDGECASE" --headed`
+*   [ ] Manual QA: real Google OAuth, VoiceOver, Figma comparison, Segment tracking
 
 ### Where to resume
 
-If the user asks to **commit**: Draft message from 4 changed files. Never run git commands.
+If the user asks to **commit**: Draft message from changed files (useGoogleSignIn.js, InfoPage.vue, LoginWithPassword.vue, customer.js, SignInOptions.vue).
 If the user asks to **check CI**: `gh run list --repo MadisonReed/mr --branch DOTCOMPB-7942 --limit 5`
-If the user asks to **run lint locally**: `bash .tasks/lint-changed.sh`
-If the user asks to **run tests**: `cd website && npm run test:vue -- useGoogleSignIn SignInOptions InfoPage`
-If the user asks to **run Playwright**: `npx playwright test --config=.tasks/qa-automation/playwright.config.ts DOTCOMPB-7942/ --ui`
+If the user asks to **run lint**: `bash .tasks/lint-changed.sh`
+If the user asks to **run unit tests**: `cd website && npm run test:vue -- useGoogleSignIn SignInOptions InfoPage`
+If the user asks to **run E2E**: `npx playwright test --config=.tasks/qa-automation/playwright.config.ts DOTCOMPB-7942/ -g "EDGECASE" --project=desktop-chromium --headed --workers=1`
+If the user asks about **USER_ALREADY_EXISTS**: Backend returns 403 when Google email matches existing MR account with password. Frontend now shows specific message. Backend change to allow auto-link would be in `mr_modules/controllers/lib/customer.js` — `createCustomer` call at line 1908 needs `modifyExistingCustomer: true`. Shared module — needs backend team review.
+If the user asks about **duplicate appointment**: Backend `calendar.js:546-567` throws plain `Error` (no code). Frontend now checks message string. Proper fix would be `MRError('ALREADY_BOOKED')` in backend — separate ticket.
 
 <!-- DESCRIPTION AND USER CONTEXT END -->
 

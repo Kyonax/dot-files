@@ -22,13 +22,14 @@ The output is always a `.md` file containing a context block between delimiter c
 ```
 Step 1: Determine Session File
     ↓ produces: file path + existing context block (if any)
-Step 2: Gather Knowledge
+Step 2: Gather Knowledge (including Activity Log entries — see Section 6)
     ↓ produces: categorized knowledge from current conversation
 Step 2.5: Extract Architecture Memory (OPTIONAL — see criteria below)
     ↓ produces: new/updated entries in architecture memory file(s) + reference list
 Step 3: Merge with Existing Context Block
     ↓ produces: unified, non-redundant context block content
-Step 4: Write the Context Block
+Step 4: Write the Context Block (including Section 6 with at least one new
+        `session-reset` row prepended to the Activity Log)
     ↓ produces: formatted markdown (with architecture references if Step 2.5 ran)
 Step 5: Write to File
     ↓ produces: final session file on disk
@@ -88,7 +89,16 @@ Collect ALL knowledge from the current conversation, organized by which section 
 - What is pending or not yet started
 - Conditional resume instructions
 
+### For Section 6 (Activity Log):
+- Every meaningful event in this session that has not yet been logged
+- Each new entry: datetime (`YYYY-MM-DD HH:MM`, host-local — *not* a relative time), duration (`Nh` / `N.5h` / `Nm` / `—`), type (controlled vocabulary in `rules/activity-log.md`), reference (`DOTCOMPB-####` / `PR #####` / `commit <sha>` / `this`), one-line description
+- At minimum, **this reset must add one `session-reset` row** referencing `this`
+- New entries are *prepended* (newest first); existing rows are not modified
+- See `rules/activity-log.md` for the full schema, vocabulary, and validation checklist
+
 **Date tracking rule:** Every feature, decision, implementation entry, and status change must include a date. Use absolute dates (YYYY-MM-DD), never relative ("last week", "yesterday"). Dates are critical for the compression protocol — older entries are compressed first.
+
+**Datetime tracking rule (Activity Log):** Section 6 entries require *both* date and time-of-day in `YYYY-MM-DD HH:MM` format. The time-of-day is what makes the session file a reliable input to time-tracking automation (e.g., `jira-tempo-hours`). If you genuinely don't know the time, omit the entry rather than fabricate one.
 
 ---
 
