@@ -313,33 +313,94 @@ Playwright: 52 test blocks. Local lint: `bash .tasks/lint-changed.sh` passes.
 
 ## SECTION 5: LAST INTERACTION (SHORT-TERM MEMORY)
 
-> **Start here when resuming.**
+> **Start here when resuming.** DOTCOMPB-7942 itself shipped via PR #20652 (merged Apr 28, 2026). A production hotfix branch (`hotfix-google`, ticket DOTCOMPB-8174) was opened May 1 to fix a regression introduced by the original feature; that work is documented inline below.
 
-### What was done last
+### Hotfix follow-up — DOTCOMPB-8174 / `hotfix-google` (2026-05-01 → 2026-05-04)
+
+**Why a hotfix was needed.** The original implementation rendered a custom `MrBtn` and called `gai.prompt()` from a synthetic click handler. On Chrome 125+ desktop, Chrome 128+ Android, Safari (desktop + iOS), and Firefox, FedCM mediation rejects the flow because synthetic clicks have `event.isTrusted: false`. Production users saw `AbortError` / `Not signed in with the identity provider` / `NetworkError` and could not complete sign-in.
+
+**Five approaches attempted before settling.** Plan v1 (FedCM lifecycle wiring), Plan v2 (OAuth Code popup), Plan v3 (OAuth Code redirect), Plan H (click-proxy on hidden Google button), Plan O (invisible overlay). Each implemented + tested before moving on. Failure modes:
+
+| Approach | Blocker |
+|---|---|
+| FedCM `prompt()` lifecycle | Notification methods deprecated; `prompt()` itself requires the user-trusted activation a custom button can't deliver |
+| OAuth Code popup | `window.open()` happens after FedCM async callback — outside user-gesture chain; mobile silently drops the popup |
+| OAuth Code redirect | Required GCP `Authorized redirect URIs` + AWS SSM `googleClientSecret` we don't control |
+| Click-proxy on hidden button | Synthetic `.click()` carries `isTrusted: false`; FedCM rejects + GSI detects and refuses mediation |
+| Invisible overlay | Works mechanically but misrepresents the click target — accessibility ambiguity + dark-pattern smell |
+
+**Final approach.** Drop the custom `MrBtn` for the Google sign-in path. Use `gai.renderButton()` directly into a centered container — same pattern as `SignInMixin` / `LoginSignUp` / `SignIn` / `SignUp`. Google's button is the click target itself, so every click is a real user-trusted activation. Trade-off: the Figma design for this button is not implementable through GSI's API (only theme/size/shape/text/locale presets). Recommend re-negotiating the AC.
+
+**Sentry AI race-condition response.** Reviewer flagged that `window.googleInitialized` is a singleton guard shared between `useGoogleSignIn` and `SignInMixin` — `useGoogleSignIn` set `use_fedcm_for_button: true` while `SignInMixin` did not, creating a mount-order race. Resolved by adding `use_fedcm_for_button: true` to `SignInMixin.js`'s `gai.initialize()` config too. One-line change. PR #20716 thread answered (reply id 3175416600).
+
+**Final unstaged set on `hotfix-google` branch:**
+- `M useGoogleSignIn.js` — `use_fedcm_for_prompt: false` → `use_fedcm_for_button: true`; cap `renderButton` width at 400px (`Math.min(offsetWidth, 400)`); drop `useCustomButton` option + `triggerGoogleSignIn` function.
+- `M useGoogleSignIn.test.js` — pruned mocks for the simplified composable; reorganized imports above local `ERROR_MESSAGES`; 20 tests passing.
+- `M SignInOptions.vue` — `mr-btn` + `mr-icon name="google-g"` slot replaced with `.google-btn-container` (always-rendered `gai.renderButton()` target); responsive `max-width 320px (mobile) / 400px (mq-tablet-plus)`; `text-align: center`.
+- `M SignInOptions.test.js` — render assertion updated to `.google-btn-container`; `triggerGoogleSignIn` removed from mock return shape; 14 tests passing.
+- `M SignInMixin.js` — added `use_fedcm_for_button: true` for FedCM-mediation consistency.
+- `D google-g.svg` — orphan asset (was only used inside removed MrBtn slot).
+
+**Verification:** Lint 0 errors, tests 60/60 passing (`useGoogleSignIn` 20 + `SignInOptions` 14 + `InfoPage` 26 regression).
+
+**Where the hotfix narrative lives.** Roam node `~/.brain.d/roam-nodes/madison_reed/2026-05-01-132350-hotfix_google.org` (UUID `0a4fa07b-15ab-4287-b448-3cb63e9498f9`) with sections WHY CUSTOM BUTTONs CANNOT WORK, APPROACHEs TRIED (5 subsections), FINAL APPROACH, COMMIT MSG, PR DESCRIPTION (full MR brand-formatted PR body). Plan archive: `/Volumes/dev-partition/github-madison-reed/the-code/.tasks/hotfix-google/plan.md`. JIRA: https://madison-reed.atlassian.net/browse/DOTCOMPB-8174 (description rewritten issue-only). PR: https://github.com/MadisonReed/mr/pull/20716.
+
+### Hotfix pending work (DOTCOMPB-8174)
+
+*   [ ] **Human-driven git ops** — stage + commit (commit msg in roam node `* COMMIT MSG`), push, address CI feedback, request review, merge to Release. *AI runs no git commands.*
+*   [ ] **Pre-merge verification** — confirm GCP OAuth client *Authorized JavaScript origins* includes `www.madison-reed.com`, `dotcom.mdsnrd.com`, all QA hosts, `localhost:3000`. **No** `Authorized redirect URIs` needed for this approach.
+*   [ ] **Manual QA per the QA INSTRUCTIONs** in the roam node — 9 scenarios across desktop Chrome / iPhone Safari / Android Chrome / Firefox / responsive widths / ADA / Segment events.
+
+### Hotfix — Where to resume
+
+**If the user says "ship the hotfix" / "open the PR" / "commit it":** the work is already done. Direct them to the roam node `* COMMIT MSG` + `* PR DESCRIPTION` sections — copy verbatim into `git commit` and the PR body. AI runs no git commands.
+
+**If the user says "respond to reviewer X":** read the latest comments via `gh pr view 20716 --comments` or `gh api /repos/MadisonReed/mr/pulls/20716/comments`. Sentry AI thread is answered.
+
+**If the user says "the hotfix broke something":** verify the unstaged changes are still present (5 modified + 1 deleted). The fix relies on `gai.renderButton()` being the click target. If the custom MrBtn is restored, the FedCM bug returns.
+
+**If the user says "the Figma design needs to land":** the Figma styling is **not implementable** through GSI's API. Re-open the design conversation with Product/Design — pick from `theme` (`outline` / `filled_blue` / `filled_black`), `shape` (`rectangular` / `pill` / `circle` / `square`), `text` presets only. No color, font, padding, or border-color overrides are reachable.
+
+---
+
+### What was done last (original DOTCOMPB-7942 — historical, PR #20652 merged 2026-04-28)
 
 *   **(2026-04-29)** QA testing on QA environment. `USER_ALREADY_EXISTS` error surfaced — added specific frontend message in `useGoogleSignIn.js`. Discussed with Addison + Carley whether backend should allow auto-linking Google to existing password accounts.
 *   **(2026-04-28)** Duplicate appointment edge case: added `errorMessage.includes('already has booked')` check in `InfoPage.vue bookAppointment()` to show user-friendly message instead of generic "Something went wrong."
 *   **(2026-04-28)** E2E Playwright: 59 tests. Rebuilt parser with SPA-safe navigation (`waitForFunction` instead of `waitForURL`), `scrollIntoViewIfNeeded` on all clicks, `select-time-retry` command (5 attempts, skips fully booked dates, screenshots errors). Location changed to `hillsboro`.
 *   **(2026-04-27)** Sentry comments: replied to SENTRY-4 (implemented), SENTRY-5/6 (skipped). E2E test report roam node created. JIRA test case content prepared.
 
-### Pending
+### Original-feature pending (DOTCOMPB-7942 PR #20652 — merged)
 
-*   [ ] Confirm with Carley: keep `USER_ALREADY_EXISTS` blocking or allow Google auto-link to password accounts?
-*   [ ] Commit all fixes + push
-*   [ ] Wait for PilkoLint CI pass
-*   [ ] Reviewer approval (andris310)
-*   [ ] Run full E2E edge case suite on QA: `npx playwright test --config=.tasks/qa-automation/playwright.config.ts DOTCOMPB-7942/ -g "EDGECASE" --headed`
-*   [ ] Manual QA: real Google OAuth, VoiceOver, Figma comparison, Segment tracking
+*   [ ] Confirm with Carley: keep `USER_ALREADY_EXISTS` blocking or allow Google auto-link to password accounts? *(carries over to DOTCOMPB-8174 — same component still surfaces this message)*
 
-### Where to resume
+### Original-feature where to resume
 
-If the user asks to **commit**: Draft message from changed files (useGoogleSignIn.js, InfoPage.vue, LoginWithPassword.vue, customer.js, SignInOptions.vue).
-If the user asks to **check CI**: `gh run list --repo MadisonReed/mr --branch DOTCOMPB-7942 --limit 5`
+If the user asks to **check CI on the hotfix**: `gh run list --repo MadisonReed/mr --branch hotfix-google --limit 5`
 If the user asks to **run lint**: `bash .tasks/lint-changed.sh`
-If the user asks to **run unit tests**: `cd website && npm run test:vue -- useGoogleSignIn SignInOptions InfoPage`
+If the user asks to **run unit tests**: `cd website && npm run test:vue useGoogleSignIn SignInOptions InfoPage`
 If the user asks to **run E2E**: `npx playwright test --config=.tasks/qa-automation/playwright.config.ts DOTCOMPB-7942/ -g "EDGECASE" --project=desktop-chromium --headed --workers=1`
-If the user asks about **USER_ALREADY_EXISTS**: Backend returns 403 when Google email matches existing MR account with password. Frontend now shows specific message. Backend change to allow auto-link would be in `mr_modules/controllers/lib/customer.js` — `createCustomer` call at line 1908 needs `modifyExistingCustomer: true`. Shared module — needs backend team review.
-If the user asks about **duplicate appointment**: Backend `calendar.js:546-567` throws plain `Error` (no code). Frontend now checks message string. Proper fix would be `MRError('ALREADY_BOOKED')` in backend — separate ticket.
+If the user asks about **USER_ALREADY_EXISTS**: Backend returns 403 when Google email matches existing MR account with password. Frontend shows specific message. Backend change to allow auto-link would be in `mr_modules/controllers/lib/customer.js` — `createCustomer` call at line 1908 needs `modifyExistingCustomer: true`. Shared module — needs backend team review.
+If the user asks about **duplicate appointment**: Backend `calendar.js:546-567` throws plain `Error` (no code). Frontend checks message string. Proper fix would be `MRError('ALREADY_BOOKED')` in backend — separate ticket.
+
+---
+
+## SECTION 6: ACTIVITY LOG
+
+> Append-only chronological table of every meaningful event in this session.
+> See `~/.claude/skills/session-reset/rules/activity-log.md`. Newest row first.
+
+| Datetime         | Duration | Type            | Reference        | Description |
+|------------------|----------|-----------------|------------------|-------------|
+| 2026-05-04 17:45 | 0.3h     | session-reset   | this             | Bootstrap Section 6 (Activity Log) added per v4.1 rule. Also captured the DOTCOMPB-8174 hotfix branch follow-up that ran 2026-05-01 → 2026-05-04: 5 plan iterations, final approach (drop custom MrBtn for `gai.renderButton()`), Sentry AI race-condition fix on `SignInMixin`, PR #20716 open. |
+| 2026-05-04 17:15 | 0.5h     | bug-fix         | DOTCOMPB-8174    | Sentry AI race-condition response: added `use_fedcm_for_button: true` to `SignInMixin.js`'s `gai.initialize()` for FedCM-mediation consistency across all Google sign-in surfaces (booking flow, sign-in modal, sign-up, login/signup combined). Reply at PR #20716#discussion_r3175405177 (reply id 3175416600). |
+| 2026-05-04 16:45 | 0.5h     | code-review     | DOTCOMPB-8174    | /code-review pass on the 4 modified + 1 deleted hotfix files: 2 findings (MEDIUM imports placement + LOW stale "overlay" wording in test). Both implemented. Lint 0 errors, tests 60/60 passing. |
+| 2026-05-04 16:00 | 1h       | documentation   | DOTCOMPB-8174    | Hotfix roam node refined to final state. Sections: WHY CUSTOM BUTTONs CANNOT WORK, APPROACHEs TRIED (5 subsections), FINAL APPROACH, COMMIT MSG, PR DESCRIPTION. JIRA description rewritten issue-only. |
+| 2026-05-04 13:00 | 1h       | implementation  | DOTCOMPB-8174    | FINAL APPROACH lands: drop custom MrBtn → `.google-btn-container` with `gai.renderButton()`. Composable simplified, orphan `google-g.svg` deleted, tests reduced 67 → 60, lint 0 errors. |
+| 2026-05-02 (multi-hour) | ~6h | refinement+implementation | DOTCOMPB-8174 | Iteration log: Plan v1 (FedCM lifecycle) → v2 (OAuth Code popup) → v3 (OAuth Code redirect) → Plan H (click-proxy hidden button) → Plan O (invisible overlay) → FINAL (default rendered button). Each tested before pivoting. v3 backend code added then fully reverted on `redirect_uri_mismatch` 400. |
+| 2026-05-01 evening | 0.3h | documentation   | DOTCOMPB-8174    | JIRA ticket DOTCOMPB-8174 created (sprint D465 Home Alone 04/29, En curso, child of DOTCOMPB-7942). Hotfix roam node created (UUID `0a4fa07b-15ab-4287-b448-3cb63e9498f9`). |
+| 2026-04-28        | —       | pr-merge        | DOTCOMPB-7942    | PR #20652 merged into Production after CI green + reviewer approval. Original Google SSO Booking Flow shipped. *(Hotfix DOTCOMPB-8174 surfaced shortly after.)* |
+| 2026-04-29 → 04-27 | (multi-day) | implementation+pr-feedback | DOTCOMPB-7942 | QA on QA env (`USER_ALREADY_EXISTS` message added); duplicate-appointment edge case fix; E2E Playwright suite (59 tests) rebuilt with SPA-safe navigation; Sentry SENTRY-4 implemented + SENTRY-5/6 skipped with reasoning; Codecov skipped; MR Minion ADA blockers + suggestions resolved (heading hierarchy h3→h2, focus return on sign-in, mr-icon aria-hidden, signedInDuringSession interaction flag); JSDoc PilkoLint round 1+2 fixed. (Detailed in PR #20652 review section below.) |
 
 <!-- DESCRIPTION AND USER CONTEXT END -->
 
