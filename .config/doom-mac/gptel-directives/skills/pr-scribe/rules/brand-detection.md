@@ -69,6 +69,8 @@ When the repo does not match any known brand catalog, fall back to **generic def
 
 This fallback is deliberately conservative: it uses the least opinionated option in every slot so the output works for any repo until a proper `brand-<name>.md` is written.
 
+**Universal floor still applies under the fallback.** `rules/universal-conventions.md` is inherited even when no brand matches — the generic-fallback output still carries the tag legend when tags are used, the `**Test runner:**` + `**Command:**` metadata header lines, named column headers ending with `Status`, italic Documentation context blurbs, `> **Prereqs:**` blockquotes under every QA group, the ASCII flow tree at 4+ groups, observable Expected outcomes, tag ordering, bold inline group labels at 3+ entries sharing a folder, and the fixed QA execution order. Fallback only relaxes variant choices, not the floor.
+
 ## How to adopt a new brand
 
 When a repo / organization's PR conventions differ enough from the existing brand rules that fallback defaults aren't a good fit:

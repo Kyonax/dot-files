@@ -1,9 +1,21 @@
 ---
 name: seo-web-quality
-description: Best practices for Search Engine Optimization (SEO) and web quality. Use when asked to "improve SEO", "audit site for search", "fix meta tags", "add structured data", "check crawlability", or "optimize for Google ranking".
+description: >-
+  Best practices for Search Engine Optimization (SEO) and web quality. Covers
+  technical SEO (robots.txt, sitemaps, canonical, hreflang, HSTS), on-page SEO
+  (title shape, meta description length, heading hierarchy, keyword coverage),
+  structured data (JSON-LD: FAQPage, BreadcrumbList, Product, HairSalon),
+  mobile SEO (Core Web Vitals, viewport, safe-area), international SEO, and
+  audit checklists. Trigger: 'improve SEO', 'audit site for search',
+  'fix meta tags', 'add structured data', 'check crawlability',
+  'optimize for Google ranking', 'check JSON-LD', 'fix canonical'.
+user-invocable: true
 metadata:
-  author: Kyo
-  version: "1.0.0"
+  openclaw:
+    emoji: 🔎
+    os: [darwin, linux]
+    requires:
+      bins: [node]
 ---
 
 # SEO & Web Quality Skill Guide

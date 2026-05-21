@@ -1,9 +1,17 @@
 ---
 name: emacs-expert
-description: Best practices guide for Emacs, Emacs Lisp, and Doom Emacs configuration. Use when writing or modifying Elisp code for the user's setup to ensure stability, maintainability, and consistency. Triggers on tasks involving Doom Emacs, config.org, or custom Emacs Lisp functions.
+description: >-
+  Best practices guide for Emacs, Emacs Lisp, and Doom Emacs configuration.
+  Use when writing or modifying Elisp code to ensure stability, maintainability,
+  and consistency. Triggers on tasks involving Doom Emacs, config.org, custom
+  Emacs Lisp functions, package configuration, keybindings, or module setup.
+user-invocable: true
 metadata:
-  author: Kyonax
-  version: "1.0.0"
+  openclaw:
+    emoji: ⚡
+    os: [darwin, linux]
+    requires:
+      bins: [emacs]
 ---
 
 # Emacs Expert Skill Guide

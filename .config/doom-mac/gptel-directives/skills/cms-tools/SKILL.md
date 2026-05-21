@@ -1,9 +1,25 @@
 ---
-name: tophat-tools
-description: Madison Reed Tophat / CMS operations toolkit. Scripts and reference docs for inspecting, auditing, and (with safety rails) mutating the Mongo-backed CMS that powers the consumer site. Use when working with Tophat content, contentVersion, template, templateVersion, experiment, production_content, additionalScripts, mixin_key, JSON-LD, A/B variations, weight changes, content migration, or any task that requires translating between CMS metadata and the actual Vue/Express codebase. Wraps `docker exec mr-mongo mongosh cms` queries into structured, JSON-emitting Node scripts so investigations don't burn tokens on raw mongosh output.
+name: cms-tools
+description: >-
+  Operational toolkit for Madison Reed's Tophat CMS (MongoDB-backed). Inspect
+  content, templates, experiments, partials, JSON-LD, and mixin_key bindings
+  via structured Node scripts. Mutate with dry-run + backup safety rails.
+  Covers: inspect-content, inspect-content-by-uri, inspect-experiment,
+  inspect-partial, find-template-usage, inspect-jsonld (per A/B variation),
+  experiment status/weight management, JSON-LD authoring (R1/R2/R3 paths),
+  content migration (rebind content_id between experiments), partial scaffolding
+  (create-partial-template + create-partial-content). MCP-aware: tophat-cms
+  channel provides CRUD against local CMS API without UI clicks.
+  Trigger: tophat, cms, contentVersion, mixin_key, experiment, additionalScripts,
+  JSON-LD, content_id, templateVersion, production_content, 'what does this URL
+  render', 'migrate content', 'rebind experiment', 'scaffold partial'.
+user-invocable: true
 metadata:
-  author: Kyo
-  version: "1.0.0"
+  openclaw:
+    emoji: 🗄️
+    os: [darwin]
+    requires:
+      bins: [docker, node]
 ---
 
 # Tophat Tools Skill Guide
@@ -33,12 +49,13 @@ Reference this skill when:
 |------------------------------|------------------------------------------------------------------------------------------------------------------------------------------|
 | `cms-data-model`             | Mongo collections (`content`, `contentVersion`, `template`, `templateVersion`, `experiment`, `production_content`, `stage_content`, `counters`); the runtime-experimentId vs doc-id trap; denormalisation paths; URI resolution rules; dev-server cache caveats. |
 | `template-field-schema`      | All 23 field types in `templateVersion.config[]` (text, html, textarea, boolean, number, link, image, croppedImage, staticImage, staticCroppedImage, component, object, partial, sectionHeader, dateTime, icon, product, productPrice, productType, promotion, featuredReview, specificReview, select); per-type `options` keys (required, xsClass/smClass/mdClass/lgClass, allowMultiples, template, templates, aspectRatio, crops, rows, min/max, helpText); nested `fieldConfig` for object fields; selectOptions modern vs legacy shape; authoring workflow. |
-| `inspection-scripts`         | Read-only scripts (`inspect-content`, `inspect-content-by-uri`, `inspect-template`, `inspect-experiment`, `get-component-list`, `get-template-jade`, `get-template-fields`, `find-template-usage`, `find-template-template-usage`, `get-cms-additional-scripts`, `inspect-jsonld`, `find-cms-component-code`, `find-route`) and the diagnostic flows that combine them. |
+| `inspection-scripts`         | Read-only scripts (`inspect-content`, `inspect-content-by-uri`, `inspect-template`, `inspect-partial`, `inspect-experiment`, `get-component-list`, `get-template-jade`, `get-template-fields`, `find-template-usage`, `find-template-template-usage`, `get-cms-additional-scripts`, `inspect-jsonld`, `find-cms-component-code`, `find-route`) and the diagnostic flows that combine them. `inspect-partial` is the one-shot read for a CMS partial — dumps the content + active contentVersion + paired template + active templateVersion in a single JSON blob with a `diagnostics` block flagging missing pieces. |
 | `experiment-management`      | A/B test scripts (`set-experiment-status`, `set-variant-weight`); the two-place weight rule (experiment.variations + contentVersion); variation NAME vs KEY; locked variations; audience targeting; runtime-id vs doc-id distinction. |
 | `json-ld-management`         | JSON-LD storage on `additionalScripts[]`; the three render paths (R1 Tophat auto-gen, R2 hand-authored Pug with `forceInterpolation`, R3 route-handler push); per-variation reality (each A/B/C is a separate doc); raw-HTML verification rule; `add-jsonld-script.mjs` and `inspect-jsonld.mjs`; schema-by-schema recipes (FAQPage, HairSalon, BreadcrumbList, Product). |
 | `content-migration`          | Re-binding a content_id between experiments via `migrate-content-experiment.mjs`; JSON config schema; idempotent re-runs; companion steps (sub-template creation, old-experiment pause, production replication via Tophat). |
 | `code-locator-scripts`       | Kebab-case-to-PascalCase contract; `find-cms-component-code.mjs` (mixin_key → Vue file + global registration line); `find-route.mjs` (URI → Express handler); `find-template-template-usage.mjs` (mixin_key → other templates that reference it via config-field option or jade embed); `set-template-fields.mjs` (programmatic config schema edits); workflows for renaming a mixin_key. |
 | `safety-and-conventions`     | Five mandatory rules for every mutation: dry-run by default with `--confirm`, backup to `./cms-backups/`, idempotency, "DB writes are NOT a shipping mechanism", explicit container/db flags. Audit-field discipline. Verification = raw HTML, never Mongo. |
+| `partials`                   | CMS partials (`mixin_key`-addressable HTML+CSS blocks loaded at runtime via `<cms-partial mixin-key="…">`). The three moving parts (partial **template** + paired **content** + Vue **mount point**); template `type` semantics (`partial` / `component` / `container` / `layout` — at runtime they all render the same via the partial pipeline); render flow end-to-end (page jade → `CMSPartial.vue` → `cms/loadPartial` → `vueCmsSvc.getPartial` → `mr_modules/webservices/cmsSvc.js` → `htmlRenderer.renderPartialContent` → `loader.loadPageAsync` → `renderContainerAsync` + `compileStylusAsync`); the `partial-loader` (template 1319) and `partial-preview` (1293) meta-templates and when to use each; the **global-component resolution requirement** for any Vue tag inside a partial's jade — must be registered in BOTH `mrVueApp.js` AND `registerGlobalsSsr.js` (or use `CmsPartialSsr.vue`'s curated local components: `EmailCaptureBlock`, `StoreValue`, `MrBtn`, `MrIcon`); 7-step scaffolding recipe for building a partial from zero (Vue component → global registration on client AND SSR → partial template insertion via `create-partial-template.mjs` → partial content + contentVersion insertion via `create-partial-content.mjs` → mount in parent template's jade → `inspect-partial.mjs` + REST/page test → Tophat production replication hand-off); three dedicated scripts shipped in `tophat-tools v1.1.0` (`inspect-partial.mjs` for one-shot four-document read with `diagnostics` block flagging missing pieces; `create-partial-template.mjs` and `create-partial-content.mjs` for idempotent, dry-run-by-default, backup-before-write inserts with the standard `--confirm` discipline); SSR considerations (`serverPrefetch` runs on the server, `mounted` only on the client, partial CSS injected as inline `<style>` works on both); experiment + audience tracking inside partials (`content.experimentId` → `Experiment Viewed` event on mount); rename hazards across `content.mixin_key` and `template.mixin_key`; diagnostic recipes ("partial doesn't appear" → 404 vs empty html; "raw `<offer-callout>` text visible" → global registration missing; "settings.foo undefined" → templateData/config mismatch; "experiment fires twice" → `hasTrackedExperiment` gate); reference partials in this codebase (`thick-banner-v4` reusable 1:many, `sugg-limitless-pro-template` dedicated 1:1 — only `type=partial` template, `partial-urm-perks` jade-embedded from `hcb-founder-membership`, `partial-take-quiz-blog` via `cms-partial-ssr` in blog layout 1170, `partial-loader` 1319 for CMS-configurable mixin keys, `ColorKitPdpV2.vue:35` for Vue-bound mixin key). |
 
 ## Architecture (`AGENTS.md`)
 
@@ -81,6 +98,16 @@ node scripts/migrate-content-experiment.mjs <contentId> --from-config ./cfg.json
 node scripts/migrate-content-experiment.mjs <contentId> --from-config ./cfg.json --confirm
 # If something goes wrong:
 node scripts/restore-content.mjs ./cms-backups/<contentId>/<stamp>/snapshot.json --confirm
+
+# Scaffold a CMS partial from zero (template + content + verification).
+# Authoring order matters: template first (content's templateKey check refuses
+# if the template hasn't landed). Both scripts are idempotent on re-run.
+node scripts/inspect-partial.mjs <content_mixin_key>                                    # one-shot read of all four docs
+node scripts/create-partial-template.mjs --src .tasks/<TICKET>/<name>-template.json     # dry-run
+node scripts/create-partial-template.mjs --src .tasks/<TICKET>/<name>-template.json --confirm
+node scripts/create-partial-content.mjs  --src .tasks/<TICKET>/<name>-content.json      # dry-run (template-existence check)
+node scripts/create-partial-content.mjs  --src .tasks/<TICKET>/<name>-content.json --confirm
+curl -s 'http://localhost:3000/api/cmsSvc/getPartial?mixinKey=<content_mixin_key>' | jq '.data | {html, css}'
 ```
 
 ## Cross-Skill References

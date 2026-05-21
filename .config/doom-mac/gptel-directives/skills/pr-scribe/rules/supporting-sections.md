@@ -7,6 +7,8 @@ tags: pr, technical-details, testing-coverage, qa, how-to-test, deployment, docu
 
 This rule catalogues the variants of five supporting PR sections. Every brand rule picks one variant per section from this catalog — it never invents a new one. Load this file alongside the brand rule whenever drafting any of these five sections.
 
+**Universal floor applies inside every variant.** `rules/universal-conventions.md` defines the floor that every supporting section inherits regardless of variant selection: `**Test runner:**` + `**Command:**` metadata header lines above any test table (Pillar 1.2, both `TEST-SINGLE` and `TEST-TWO-TABLE`), named column headers ending with `Status` (Pillar 1.5), 3-7-word `Covers` phrases or 5-8-phrase `Key Coverage` cells (Pillar 2.2), qualified status glyphs preferred (Pillar 2.3), `> **Prereqs:**` blockquote under every `### Feature group` (Pillar 1.3, both `QA-INSTRUCTIONS` and `QA-HOW-TO-TEST`), ASCII flow tree at 4+ feature groups (Pillar 1.4), observable `***Expected:***` outcomes naming concrete artifacts (Pillar 2.4), italic context blurb under every Documentation media-type heading (Pillar 1.6, both `DOC-OPEN` and `DOC-MEDIA-VOCAB`), noun-phrase decision titles in Technical Details (Pillar 1.7). Load `universal-conventions.md` together with this file.
+
 ## `### Technical Details`
 
 ### Variant TD-FREEFORM

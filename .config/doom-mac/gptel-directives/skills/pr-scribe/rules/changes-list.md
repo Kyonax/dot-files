@@ -7,6 +7,8 @@ tags: pr, changes, changelist, patterns, flat, themed, subsections, tickets, tag
 
 This rule catalogues the two Changes-block formats this skill supports. Every brand rule selects one. The brand rule (e.g. `brand-<company>.md`) must declare which pattern applies before any Changes block is drafted. If no brand matches, fall back to Pattern A (flat-with-optional-ticket-refs) — it imposes the least structure and is safe for any repo.
 
+**Universal floor applies inside both patterns.** `rules/universal-conventions.md` defines the floor that every Changes block inherits regardless of pattern selection: the tag legend blockquote (Pillar 1.1), tag ordering `[NEW] → [MOD] → [DEL] → [MOV]` alphabetical within tag (Pillar 3.2, **both** Pattern A and B — previous editions of this file scoped tag ordering to Pattern B only; it now applies universally), bold inline group labels at 3+ entries sharing a folder (Pillar 3.3, **both** patterns — previous editions scoped this to Pattern B; it now applies universally), multi-file entry merging via comma list (Pillar 3.4), one-physical-line Changes entries (Pillar 2.1). Load `universal-conventions.md` together with this file.
+
 ## Pattern A — Flat `**Changes:**` list with optional ticket references
 
 The "one bold heading, then nested bullets" format. Used by teams that track work in an external ticketing system and prefer scanning by component rather than by subsystem category.

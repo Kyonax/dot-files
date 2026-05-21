@@ -1,10 +1,22 @@
 ---
 name: session-reset
 description: >-
-  Session reset, context compaction, architecture memory extraction, and session management for long-running AI development sessions. Compacts all accumulated knowledge (guidelines, rules, implementations, bug fixes, code review findings, architectural decisions, validated patterns) from the current conversation into a structured context block inside a session .md file. Optionally extracts reusable architectural knowledge (decisions, patterns, constraints, data flows) into persistent architecture memory files with cross-session reference syntax. Handles creating new session files, updating existing ones, compressing context blocks that exceed the 3693-line threshold, and writing architecture references into context blocks. Trigger when: user says 'reset session', 'compact session', 'session reset', 'save session', 'context block', 'update context block', 'compress context', 'extract architecture', 'architecture memory', or any variation of resetting/compacting/saving session context. Also trigger when the user mentions running out of context, needing to preserve knowledge, wanting to start fresh while keeping learnings, or extracting reusable patterns from sessions.
+  Session reset, context compaction, architecture memory extraction, and session
+  management for long-running AI development sessions. Compacts all accumulated
+  knowledge (guidelines, rules, implementations, bug fixes, code review findings,
+  architectural decisions, validated patterns) into a structured 6-section context
+  block with mandatory Activity Log (Section 6, datetime-stamped). Optionally
+  extracts reusable architectural knowledge into persistent memory files with
+  cross-session reference syntax. Handles creating new session files, updating
+  existing ones, and compressing context blocks that exceed the 3693-line threshold.
+  Trigger: 'reset session', 'compact session', 'session reset', 'save session',
+  'context block', 'update context block', 'compress context', 'extract architecture',
+  'running out of context', 'start fresh while keeping learnings'.
+user-invocable: true
 metadata:
-  author: Kyonax
-  version: "4.1.0"
+  openclaw:
+    emoji: 🔄
+    os: [darwin, linux]
 ---
 
 # Session Reset Skill

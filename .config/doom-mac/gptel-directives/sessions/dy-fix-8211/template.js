@@ -1,40 +1,3 @@
-(function() {
-var ENGAGEMENT_FLAG_KEY = 'mr-email-capture-engaged';
-var ENGAGEMENT_TTL_DAYS = 30;
-
-function isUserEngaged() {
-  try {
-    var raw = localStorage.getItem(ENGAGEMENT_FLAG_KEY);
-    if (!raw) { return false; }
-    var data = JSON.parse(raw);
-    if (!data || !data.timestamp) { return false; }
-    var ttlMs = ENGAGEMENT_TTL_DAYS * 24 * 60 * 60 * 1000;
-    return (Date.now() - data.timestamp) < ttlMs;
-  } catch (e) {
-    return false;
-  }
-}
-
-function markUserEngaged(optInType) {
-  try {
-    localStorage.setItem(ENGAGEMENT_FLAG_KEY, JSON.stringify({
-      timestamp: Date.now(),
-      opt_in_type: optInType
-    }));
-  } catch (e) {}
-}
-
-if (isUserEngaged()) {
-  var existingTemplate = document.querySelector('.mr-email-sms-modal');
-  var overlay = existingTemplate && existingTemplate.closest('.dy-modal-container');
-  if (overlay) {
-    overlay.style.display = 'none';
-  } else if (existingTemplate) {
-    existingTemplate.style.display = 'none';
-  }
-  return;
-}
-
 let emailForm = document.getElementById('dy-email-capture');
 let emailCtaBtn = emailForm.querySelector('.form-cta');
 let emailBtnText = emailCtaBtn.querySelector('.btn-text');
@@ -56,6 +19,29 @@ let smsError = document.getElementById('dy-sms-capture-error');
 let quizButtons = document.querySelectorAll('.quiz-btn');
 let formSubmitted = false;
 let selectedQuizOption = '';
+
+let popupCaptureEmailFired = false;
+let popupCaptureSmsFired = false;
+const VARIANT_INFO = '${Variant Info}'.trim();
+
+function firePopupCaptureSubmitted(optInType, rewardGranted) {
+  if (optInType === 'email_only' && popupCaptureEmailFired) { return; }
+  if (optInType === 'email_sms' && popupCaptureSmsFired) { return; }
+  if (optInType === 'email_only') { popupCaptureEmailFired = true; }
+  if (optInType === 'email_sms') { popupCaptureSmsFired = true; }
+  let props = {
+    opt_in_type: optInType,
+    reward_granted: rewardGranted,
+    timestamp: new Date().toISOString()
+  };
+  if (VARIANT_INFO && VARIANT_INFO.indexOf('${') !== 0) {
+    props.variant_info = VARIANT_INFO;
+  }
+  DY.API('event', {
+    name: 'Popup Capture Submitted',
+    properties: props
+  });
+}
 
 function toggleLoader(button, text, loader, show) {
   button.disabled = show;
@@ -181,17 +167,7 @@ emailForm.addEventListener('submit', (event) => {
       }
     });
 
-    DY.API('event', {
-      name: 'Popup Capture Submitted',
-      properties: {
-        event_category: 'Email Capture Quiz',
-        opt_in_type: 'email_only',
-        reward_granted: 'free_shipping',
-        timestamp: new Date().toISOString()
-      }
-    });
-
-    markUserEngaged('email_only');
+    firePopupCaptureSubmitted('email_only', 'free_shipping');
 
     if (response?.data?.customer?.cuid) {
       DY.API('event', {
@@ -265,24 +241,13 @@ smsForm.addEventListener('submit', (event) => {
     if (response.data.offerApplied) {
       smsThankYou.classList.remove("hide");
     }
-
-    DY.API('event', {
-      name: 'Popup Capture Submitted',
-      properties: {
-        event_category: 'Email Capture Quiz',
-        opt_in_type: 'email_sms',
-        reward_granted: 'free_shipping_and_discount',
-        timestamp: new Date().toISOString()
-      }
-    });
-
-    markUserEngaged('email_sms');
+    firePopupCaptureSubmitted('email_sms', 'free_shipping_and_discount');
   }).catch((err) => {
     console.log('err: ', err);
     formSubmitted = false;
     let errCode = err?.response?.data?.code;
     if (['USER_ALREADY_EXISTS', 'PHONE_ALREADY_SUBSCRIBED'].includes(errCode)) {
-      smsError.textContent = err?.response?.data?.message;
+      smsError.innerHTML = err?.response?.data?.message;
     }
     smsError.classList.remove("hide");
     setTimeout(() => { smsError.classList.add("hide"); }, 2000);
@@ -290,4 +255,3 @@ smsForm.addEventListener('submit', (event) => {
       toggleLoader(smsCtaBtn, smsBtnText, smsBtnLoader, false);
     });
 });
-})();

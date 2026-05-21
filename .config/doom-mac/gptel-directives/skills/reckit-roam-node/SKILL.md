@@ -1,9 +1,24 @@
 ---
 name: reckit-roam-node
-description: "Generate and manage org-roam .org files for the RECKIT project (Kyonax/reckit) in ~/.brain.d/roam-nodes/reckit/. Creates consistent, structured org-mode plan, bug, and release nodes that document development plans, decisions, progress, and findings — without JIRA. State comes from git (branch, commits) and gh (PRs, tags) instead. Three template variants: Standard Plan (Feature), Bug Plan (debugging diary), Release Plan (triad + scope). Includes PROPERTIES block with UUID, metadata headers (TITLE, SUBTITLE, AUTHOR, EMAIL, DATE, FILETAGS, SOURCE_URL, LAST_UPDATE, EFFORT, TARGET_RELEASE, BRANCH, STATUS), TABLE OF CONTENTS, scoped REQUIREMENTS as GIVEN/WHEN/THEN, DESIGN AND ARCHITECTURE with DECISIONS log, phased TODO PLAN TASKs, DOCUMENTATION (STRUCTURE/DEPLOYMENT/TESTS/QA/FINDINGS), DELIVERABLEs, COMMENTs. Manages the two-layer index (BACKLOG with org-roam links + PLAN BOARD with 6 lanes: IN PLANNING / IN DEVELOPMENT / IN REVIEW / IN TEST / ALL RELEASED / SHELVED). Trigger when: user says 'create plan', 'create plan node', 'create reckit plan', 'roam plan', 'plan node', 'create plan for <slug>', 'update plan', 'reckit plan', 'log decision in plan', 'lock decision', 'plan board', 'reckit index', 'update reckit index', 'sync reckit index', 'create bug node for reckit', 'create release node for reckit', 'plan retrospective', 'fill findings'."
+description: >-
+  Generate and manage org-roam .org files for the Reckit project in
+  ~/.brain.d/roam-nodes/reckit/. Three template variants: Standard Plan
+  (Feature), Bug Plan (debugging diary), Release Plan (triad + scope).
+  Git/gh-driven — no JIRA. Includes UUID, metadata headers (TITLE, SUBTITLE,
+  DATE, FILETAGS, SOURCE_URL, EFFORT, TARGET_RELEASE, BRANCH, STATUS), TOC,
+  REQUIREMENTS as GIVEN/WHEN/THEN, DESIGN AND ARCHITECTURE with DECISIONS log,
+  phased TODO PLAN TASKs, DOCUMENTATION (Structure/Deployment/Tests/QA/Findings),
+  DELIVERABLEs. Manages two-layer index (BACKLOG + PLAN BOARD with 6 lanes).
+  Trigger: 'create plan', 'create plan node', 'reckit plan', 'plan node',
+  'log decision', 'lock decision', 'plan board', 'reckit index',
+  'create bug node for reckit', 'create release node', 'fill findings'.
+user-invocable: true
 metadata:
-  author: Kyonax
-  version: "1.0.0"
+  openclaw:
+    emoji: 🗂️
+    os: [darwin, linux]
+    requires:
+      bins: [emacs, git, gh]
 ---
 
 # Reckit Roam Node Skill

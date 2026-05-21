@@ -106,6 +106,13 @@ export function findContentVersions(contentId, version = null, projection = null
   );
 }
 
+export function findContentByMixinKey(mixinKey, projection = null) {
+  const proj = projection ? `, ${JSON.stringify(projection)}` : '';
+  return mongoJson(
+    `return db.content.findOne({mixin_key: ${JSON.stringify(mixinKey)}}${proj});`
+  );
+}
+
 export function findTemplateByMixinKey(mixinKey, projection = null) {
   const proj = projection ? `, ${JSON.stringify(projection)}` : '';
   return mongoJson(

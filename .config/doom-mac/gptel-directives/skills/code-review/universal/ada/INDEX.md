@@ -1,6 +1,6 @@
 # ada/ — Accessibility Rules
 
-20 rules. Always loaded. Any web project.
+25 rules. Always loaded. Any web project.
 
 | ID | File | Summary | Severity |
 |---|---|---|---|
@@ -24,5 +24,10 @@
 | rule-u-ada-018 | icon-aria-hidden-button.md | Icons Inside Labeled Controls Are Decorative | MEDIUM |
 | rule-u-ada-019 | sticky-subheader-offset.md | Sticky Subheader Dynamic Offset | HIGH |
 | rule-u-ada-020 | deep-override-comment.md | Comment on :deep() Overrides | LOW |
+| rule-u-ada-021 | stretched-link-structured-cards.md | Stretched-Link Pattern for Structured-Content Cards | HIGH |
+| rule-u-ada-022 | innertext-newline-mismatch.md | innerText vs textContent — Scanners Use innerText | HIGH |
+| rule-u-ada-023 | css-mask-icons-in-links.md | CSS Mask for Decorative Icons Inside Interactive Elements | MEDIUM |
+| rule-u-ada-024 | dialog-heading-starts-h1.md | Dialog Heading Hierarchy Starts at h1 | HIGH |
+| rule-u-ada-025 | div-aria-label-needs-role.md | div + aria-label Requires Explicit Role | HIGH |
 
-**Worker instructions:** Review all changed files against these 20 rules. Report findings as YAML. Return `NO VIOLATIONS` if clean.
+**Worker instructions:** Review all changed files against these 25 rules. Report findings as YAML. Return `NO VIOLATIONS` if clean.

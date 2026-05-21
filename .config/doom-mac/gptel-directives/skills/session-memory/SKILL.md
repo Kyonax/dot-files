@@ -1,10 +1,21 @@
 ---
 name: session-memory
 description: >-
-  Architecture memory and context optimization system for AI sessions. Extracts reusable architectural decisions, design patterns, data flow insights, constraints, and abstractions from session context blocks into persistent, referenceable memory files. Use when performing a session reset with architecture extraction, creating or updating architecture memory files, referencing specific architectural knowledge from past sessions, resolving conflicting decisions across sessions, optimizing context loading for minimal token usage, or integrating architecture memory into the session-reset workflow. Also trigger when the user mentions 'extract architecture', 'session memory', 'architecture memory', 'reference a decision', 'cross-session reference', or 'persistent patterns'.
+  Architecture memory and context optimization system for AI sessions. Extracts
+  reusable architectural decisions, design patterns, data flow insights,
+  constraints, and abstractions from session context blocks into persistent,
+  referenceable memory files. Use when performing a session reset with
+  architecture extraction, creating or updating architecture memory files,
+  referencing architectural knowledge from past sessions, resolving conflicting
+  decisions across sessions, or integrating architecture memory into the
+  session-reset workflow. Trigger: 'extract architecture', 'session memory',
+  'architecture memory', 'reference a decision', 'cross-session reference',
+  'persistent patterns'.
+user-invocable: true
 metadata:
-  author: @kyonax_on_tech
-  version: "1.1.0"
+  openclaw:
+    emoji: 🧠
+    os: [darwin, linux]
 ---
 
 # Session Memory

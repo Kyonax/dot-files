@@ -7,14 +7,17 @@ tags: pr, content, richness, quality, tags, NEW, MOD, DEL, MOV, test-rows, expec
 
 This rule defines **content enrichment standards** that are independent of brand layout. Brand rules pick a **structure variant** (Pattern A vs B, TEST-SINGLE vs TEST-TWO-TABLE, etc.) from `changes-list.md` and `supporting-sections.md`. This file defines the **content quality** that fills those structures.
 
-The two axes are orthogonal:
+Three orthogonal axes shape every PR body. This file owns the middle one:
 
 | Axis | Defined by | Examples |
 |---|---|---|
 | **Structure / Layout** | Brand rule + `changes-list.md` + `supporting-sections.md` | Pattern A vs B, `TEST-SINGLE` vs `TEST-TWO-TABLE`, QA heading wording |
-| **Content Richness** | This file (`content-richness.md`) | Status tags on entries, individual test rows vs summaries, expected label detail |
+| **Content Richness** | This file (`content-richness.md`) | Detail level inside each entry: long vs short Expected lines, individual test rows vs grouped summaries, tag legend on/off in Pattern A |
+| **Universal Floor** | `rules/universal-conventions.md` | Info-comment captions, conciseness discipline, organization rules that apply regardless of variant or richness level |
 
-A brand rule declares both: which structure variant AND which content richness level. Content richness defaults to **RICH** unless the brand rule explicitly selects MINIMAL.
+A brand rule declares the first two: which structure variant AND which content richness level. The universal floor applies unconditionally — RICH and MINIMAL both inherit the legend, metadata header lines, prereqs blockquotes, named columns, observable Expected outcomes, tag ordering, group labels, and execution-order QA grouping. MINIMAL only shortens content within these structures; it never removes the structural captions.
+
+Content richness defaults to **RICH** unless the brand rule explicitly selects MINIMAL.
 
 ## Content Richness Levels
 

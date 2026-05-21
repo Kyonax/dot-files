@@ -6,22 +6,23 @@
 
 **Project:** Madison Reed dotcom monorepo (`/Volumes/dev-partition/github-madison-reed/the-code`)
 
-**Last updated:** 2026-04-30 evening (v3 — added dp-004 idempotent push, dp-005 server-side CMS-data port, cl-003 slugged-child gap, rr-005 BROKEN-IN-CMS detection methodology). v2 (2026-04-30 morning — live DB audit invalidated ad-001; added ad-005, ad-006, dp-002, dp-003, cl-002, rr-003, rr-004).
+**Last updated:** 2026-05-18 17:30 (v5 — added cl-005 tophat-editor-mode-parity-bug, rr-007 editor-mode-script-descriptor-pattern). v4 (2026-05-18 16:00 — added dp-006 partial-template-level JSON-LD pattern, ad-007 prefer-template-level-for-reusable-partials, cl-004 addFaqMetadata-regenerates-on-save, rr-006 tophat-tools-jsonld-helpers). v3 (2026-04-30 evening — added dp-004 idempotent push, dp-005 server-side CMS-data port, cl-003 slugged-child gap, rr-005 BROKEN-IN-CMS detection methodology). v2 (2026-04-30 morning — live DB audit invalidated ad-001; added ad-005, ad-006, dp-002, dp-003, cl-002, rr-003, rr-004).
 
 **Source sessions:**
 - `dotcompb-7929-json-ld-non-pdp.md` (2026-04-29) — Phase 0 validation findings, refined ACs, mechanism decision, builder utility design
 - `dotcompb-7929-json-ld-non-pdp.md` (2026-04-30 morning) — live MongoDB audit; superseded ad-001; documented Tophat auto-gen + Pug-interpolated additionalScripts + helper-based route-handler push patterns
 - `dotcompb-7929-json-ld-non-pdp.md` (2026-04-30 evening, v8-v13 plan refinements) — slugged-child gap (cl-003); idempotent push helper (dp-004); server-side port of CMS auto-gen logic (dp-005); BROKEN-IN-CMS auto-detection methodology (rr-005); audit-first execution discipline; harness with CMS state inspection
+- `dotcompb-7929-json-ld-non-pdp.md` (2026-05-18) — partial-template pattern proven in dev (cid 2536 + 2903 + bonus 2568 + 3176 + 2936 + 2992 all flipped MISSING → PASS via two template-level Pug scripts on template_id 1211 and 1375). New tophat-tools helpers shipped (add-jsonld-to-template.mjs, remove-jsonld-script.mjs). add-jsonld-script.mjs `body → text` bug patched. Audit harness refined with 3 ACTION LIST sections at top + progressive per-leader TUI showing Tophat URL.
 
 **Referenced by:**
-- `dotcompb-7929-json-ld-non-pdp.md` (2026-04-29 through 2026-04-30 evening)
+- `dotcompb-7929-json-ld-non-pdp.md` (2026-04-29 through 2026-05-18)
 
 **Knowledge categories:**
-- Architecture Decisions: 6 entries (1 superseded)
-- Design Patterns: 5 entries (dp-001 through dp-005)
+- Architecture Decisions: 7 entries (1 superseded — ad-001)
+- Design Patterns: 6 entries (dp-001 through dp-006)
 - Shared State & Data Flow: 0 entries
-- Constraints & Limitations: 3 entries (cl-001, cl-002, cl-003)
-- Reusable References: 5 entries (rr-001 through rr-005)
+- Constraints & Limitations: 5 entries (cl-001 through cl-005)
+- Reusable References: 7 entries (rr-001 through rr-007)
 
 ---
 
@@ -786,4 +787,303 @@ curl -sS http://localhost:3000/colorbar/locations/towson | grep -c FAQPage  # ba
 - Requires `docker exec mr-mongo mongosh cms` to be available (local dev or admin access).
 - URI parent-fallback assumes the standard MR convention (parameterized parent has trailing slash + `takesUrlParameters: true`). Won't resolve URIs that map to PDPs (Magento product router) or non-CMS routes.
 - Doesn't follow `templateRefs` cross-references — assumes content's own `additionalScripts` is the full set.
+
+---
+
+## (NEW v4 ENTRIES — added 2026-05-18 from DOTCOMPB-7929 partial-template-pattern proof)
+
+### ad-007: prefer-template-level-jsonld-for-reusable-partials
+**Date:** 2026-05-18 | **Status:** active (validated in dev — 6 content docs covered by 2 template-level scripts)
+**Source:** `dotcompb-7929-json-ld-non-pdp.md` (2026-05-18 session)
+
+**Context:** When a CMS partial / component is mounted across multiple content docs (e.g., `faqs-with-icons-pro` mounted on 3 content docs; `video-chat-faqs` mounted on 3 content docs), configuring JSON-LD per content doc duplicates work and risks drift between mounts. The session's investigation found that the existing scripts pipeline already supports template-level emission — `htmlRenderer.js:208` calls `addScriptsDefsInto({originalObject: template, ...})` AFTER processing the content's renderOptions, so any script at `templateVersion.additionalScripts[]` runs alongside content-level scripts.
+
+**Decision:** For reusable FAQ-bearing partials/components, configure JSON-LD ONCE on the partial's `templateVersion.additionalScripts[]`. The Pug script reads `settings.faqs[]` directly (no `componentList.find()`) because at partial render time, `settings` is scoped to the component's own settings — the FAQ data passed in by the parent content's `componentList[N].settings`. One configuration covers every content doc that mounts the partial.
+
+**Validation (2026-05-18):**
+- `template 1211` (`video-chat-faqs`) — one Pug script configured, covers cid 2536 (A+B), cid 2568 (A), cid 3176 (A). 4 URLs flipped MISSING → PASS.
+- `template 1375` (`faqs-with-icons-pro`) — one Pug script configured, covers cid 2903 (A), cid 2936 (A), cid 2992 (A). 3 URLs flipped MISSING → PASS. Var B of cid 2903 correctly emits nothing because var B's componentList has no FAQ component — accurate per-variation behavior.
+
+**Alternatives considered:**
+- Per-content R2 Pug (the v14 plan) — works but requires N edits and N maintenance points. Replaced by template-level for reusable partials.
+- R1 auto-gen via `addFaqMetadata: true` flag (dp-002) — produces static JSON that drifts from CMS data. Template-level Pug is dynamic, always matches the data passed in.
+
+**When to apply:**
+- The partial is mounted in 2+ content docs with similar FAQ shape.
+- The FAQ data is passed through `settings.faqs[]` (the canonical shape).
+- You want zero-touch coverage of future content docs that mount this partial.
+
+**When NOT to apply:**
+- The partial's settings don't carry the FAQ data — it lives elsewhere (Vue component hardcoding, separate content doc, route-handler-computed). Use ad-006 (route-handler push) instead.
+- Different content docs need different schema shapes despite using the same partial — handle at content level.
+
+**Consequences:**
+- New content docs that mount a configured partial get FAQPage emission **automatically** — no Tophat edits needed.
+- The dotcom production Tophat must replay the same configuration on the same templateVersion ID (1211, 1375). DB writes in dev are diagnostic only (per `safety-and-conventions` rule in tophat-tools).
+- Reduces the per-page CMS surface area: 6 separate Tophat content configs → 2 template configs.
+
+---
+
+### dp-006: partial-template-level-jsonld
+**Date:** 2026-05-18 | **Status:** active (2 production uses planned: template 1211, 1375)
+**Source:** `dotcompb-7929-json-ld-non-pdp.md` (2026-05-18 session)
+
+**Name:** Partial-template-level FAQPage JSON-LD via templateVersion.additionalScripts
+
+**When to use:** A FAQ-bearing partial template is mounted across multiple content docs and you want one configuration to cover all of them. See ad-007 for the decision rationale.
+
+**Storage path:** `cms.templateVersion {template_id, version}.additionalScripts[]` (direct on templateVersion, NOT under `renderOptions` — different from content scripts at `contentVersion.renderOptions.additionalScripts[]`).
+
+**Pug source (canonical):**
+
+```pug
+if settings && settings.faqs && settings.faqs.length > 0
+  | {
+  |  "@context": "https://schema.org",
+  |  "@type": "FAQPage",
+  |  "mainEntity": [
+  each faq, idx in settings.faqs
+    if idx > 0
+      | ,
+    | {
+    |  "@type": "Question",
+    |  "name": !{JSON.stringify(faq.question && faq.question.mainQuestion ? faq.question.mainQuestion : faq.question)},
+    |  "acceptedAnswer": {
+    |    "@type": "Answer",
+    |    "text": !{JSON.stringify(faq.answer)}
+    |  }
+    | }
+  | ]
+  | }
+```
+
+Note the difference from content-level Pug (cid 2350's R2): no `componentList.find()` — at partial render time `settings` IS the FAQ component's settings.
+
+**Tophat editor configuration:**
+- `type: ld+json`
+- `inHeader: true` (script goes in `<head>`)
+- `forceInterpolation: true` (Pug source, not literal)
+- `isUrl: false`
+- `addBodyLoadScript: false`
+
+**How it works in the pipeline:**
+
+```
+content render starts
+   ↓
+htmlRenderer.js:198-206  → addScriptsDefsInto({originalObject: content.renderOptions, ...})
+                            → processes content-level additionalScripts
+   ↓
+htmlRenderer.js:208-214  → addScriptsDefsInto({originalObject: template, ...})
+                            → processes template-level additionalScripts
+                            → these are the partial-template's scripts
+   ↓
+Both populate locals.header.scripts[]
+   ↓
+vue-layout-ssr.pug:24-26  → each scriptDefinition in header.scripts
+                            → emits raw HTML <script type="application/ld+json">
+```
+
+**Tophat-tools helper:** `add-jsonld-to-template.mjs <template_id|mixin_key> --src <pug-file> --header --force-interpolation --confirm` — see rr-006.
+
+**Anti-patterns:**
+- Don't configure the same FAQPage shape on BOTH the partial template AND a parent content's componentList — both will emit, producing AC5 duplicates.
+- Don't use this pattern for non-reusable partials (mounted in only 1 content doc) — content-level Pug is simpler.
+- Don't use `componentList.find()` in a partial-template script — `settings` is already scoped.
+
+**Validation (2026-05-18 audit):**
+- Before: cid 2536, 2568, 3176, 2903, 2936, 2992 all MISSING FAQPage.
+- After: all 6 PASS (cid 2903 var B correctly PARTIAL — var B has no FAQ component in its componentList, so the Pug correctly emits nothing).
+
+---
+
+### cl-004: addfaqmetadata-regenerates-on-save
+**Date:** 2026-05-18 | **Status:** active
+**Source:** `dotcompb-7929-json-ld-non-pdp.md` (2026-05-18 session — cid 2350 var A cleanup)
+
+**Constraint:** When `componentList[N].settings.addFaqMetadata === true` is set on a content variation, Tophat regenerates the R1 auto-gen FAQPage entry (`generatedAutomatically: true`, `metadata.type: 'faq'`) at every save — even if the entry was previously removed. DB-level removal of R1 is **reversed** on the next Tophat editor save unless the upstream flag is unchecked.
+
+**Mechanism:** `tophat/src/ngscripts/cms/ContentEditCtl.js:1377-1582` runs at SAVE, ALWAYS:
+1. Dedup pass (line 861): removes all entries with `generatedAutomatically: true`.
+2. Detection pass: iterates componentList, finds `addFaqMetadata: true` components.
+3. Generation pass: pushes new R1 entries.
+
+**Impact:**
+- Direct DB writes that remove R1 (e.g., via tophat-tools `remove-jsonld-script.mjs --auto-gen`) **only persist until the next Tophat save** of the same variation.
+- To make removal permanent, the `addFaqMetadata: true` flag itself must be unchecked in the Tophat editor on the componentList component.
+- AC5 duplicate (R1 auto-gen + R2 hand-authored Pug both emitting FAQPage) can resurface unexpectedly when an editor opens a variation, makes any change, and saves.
+
+**Detection:**
+- After a Tophat save: re-run the audit harness; if duplicates reappear despite an earlier DB cleanup, the addFaqMetadata flag is still set.
+- Pre-emptive: `get-component-list.mjs <contentId> --variation <key>` + grep for `addFaqMetadata` in the JSON output.
+
+**Workaround:** When migrating from R1 auto-gen to template-level Pug (per ad-007) or content-level R2 Pug (per dp-003), include the addFaqMetadata uncheck as a manual Tophat UI step in the QA/replay documentation. Cannot be done programmatically via tophat-tools without writing to deep nested settings paths.
+
+**Affected in DOTCOMPB-7929:**
+- cid 2350 var A — R1 removed via DB write, but addFaqMetadata still set. Manual UI follow-up required in dotcom production. Documented in `.tasks/DOTCOMPB-7929/template-faq-mutations.org`.
+
+---
+
+### rr-006: tophat-tools-jsonld-helpers
+**Date:** 2026-05-18
+**Source:** `dotcompb-7929-json-ld-non-pdp.md` (2026-05-18 session)
+
+**Name:** Canonical tophat-tools scripts for JSON-LD CRUD
+
+**Location:** `~/.claude/skills/tophat-tools/scripts/` (symlinked from `/Volumes/dev-partition/github-kyonax/dot-files/.config/doom-mac/gptel-directives/skills/tophat-tools/scripts/`)
+
+**Three scripts cover the JSON-LD lifecycle:**
+
+| Script | Target | Operation | Required flags |
+|---|---|---|---|
+| `add-jsonld-script.mjs` | `contentVersion.renderOptions.additionalScripts[]` | Append | `<content_id> --variation X --src <pug-file>` |
+| `add-jsonld-to-template.mjs` | `templateVersion.additionalScripts[]` | Append | `<template_id\|mixin_key> --src <pug-file>` |
+| `remove-jsonld-script.mjs` | `contentVersion.renderOptions.additionalScripts[]` + mirrored to `production_content.variations.<platform>[].renderOptions.additionalScripts[]` + `stage_content` | Remove by filter | `<content_id> --variation X` AND ONE OF `--auto-gen` / `--index N` / `--where field=value` |
+
+**Shared conventions:**
+- Dry-run by default; `--confirm` to apply.
+- Backups to `./cms-backups/jsonld/<scope>/<timestamp>.json` before write.
+- `--container <name>` + `--db <name>` flags inherited from `lib/mongo.mjs`.
+- `--version N` overrides default published_version.
+
+**Schema written (all three):**
+
+```js
+{
+  type: 'ld+json',
+  isUrl: false,
+  inHeader: <true|false>,
+  forceInterpolation: <true|false>,
+  addBodyLoadScript: false,
+  text: <pug source or raw JSON>   // NOT `body` — see bug history below
+}
+```
+
+**Bug history:** `add-jsonld-script.mjs` originally wrote `body` instead of `text`. `scriptsUtils.js:53` reads `scriptObject.text`, so entries with `body` silently never rendered. Patched 2026-05-18 to write `text`. Existing entries in the DB use `text` (Tophat editor also uses `text`).
+
+**Removal semantics:**
+- `--auto-gen` filter pulls all entries where `generatedAutomatically === true`. Best for cleaning up R1 auto-gen scripts after migrating to dp-003 or dp-006. **Caveat:** see cl-004 — next Tophat save may regenerate.
+- `--index N` removes the entry at array index N (use after listing via `get-cms-additional-scripts.mjs`).
+- `--where field=value` removes entries where a field matches (dotted paths supported, e.g., `metadata.type=faq`).
+- `--no-mirror` skips production_content + stage_content updates (use only when you specifically don't want to bust the dev cache).
+
+**When to use each:**
+- New JSON-LD on a single content: `add-jsonld-script.mjs`.
+- New JSON-LD on a reusable partial: `add-jsonld-to-template.mjs`. See ad-007.
+- Remove R1 auto-gen to deduplicate: `remove-jsonld-script.mjs --auto-gen` + manual UI uncheck of `addFaqMetadata`.
+
+**Validated workflow (2026-05-18):**
+1. `node scripts/get-cms-additional-scripts.mjs 2350` → confirm 3 scripts on var A.
+2. `node scripts/remove-jsonld-script.mjs 2350 --variation A --auto-gen` (dry-run) → preview entry [1] to remove.
+3. Re-run with `--confirm` → backup created, R1 removed, mirrored to production_content + stage_content.
+4. `node scripts/add-jsonld-to-template.mjs 1375 --src .tasks/DOTCOMPB-7929/faqpage-partial.pug --header --force-interpolation --confirm` → template-level Pug added.
+5. Restart dev SSR; re-run audit harness; verify status flip MISSING → PASS.
+
+---
+
+## (NEW v5 ENTRIES — added 2026-05-18 17:30 from DOTCOMPB-7929 Tophat editor-mode debug)
+
+### cl-005: tophat-editor-mode-parity-bug
+**Date:** 2026-05-18 | **Status:** active (fix staged in MR repo, not yet merged to dotcom Tophat)
+**Source:** `dotcompb-7929-json-ld-non-pdp.md` (2026-05-18 v8 session)
+
+**Scope:** The Tophat admin UI's embedded Ace code editor on the Template-edit page (`/cms/templates/edit/<id>` Advanced Config → Scripts panel) — specifically for entries where `type === 'ld+json'` AND `forceInterpolation === true` (i.e. Pug-source JSON-LD).
+
+**Constraint:** Tophat has two parallel script-editor controllers — `ContentVersionCtl.js` (content edits) and `TemplateEditCtl.js` (template edits) — that diverge on this case:
+- `ContentVersionCtl.js:203-210` special-cases the combo and switches to `$scope.editorOpts.pug` (Pug syntax-highlighting + no JSON validation). Works correctly.
+- `TemplateEditCtl.js`'s pre-patch `setEditorOnScriptDescriptor` had no such override. The type-mapped default (`$scope.editorOpts['ld+json']` → JSON mode) was applied unconditionally. Result: the leading `if` in any Pug source flagged as `Unexpected 'i'` by Ace's JSON validator → `_editorHasErrors = true` → `disableTheForm()` returned `true` → **Save button disabled**.
+
+**Impact:**
+- Template-level Pug-JSON-LD scripts (`templateVersion.additionalScripts[]` with `forceInterpolation: true`) cannot be saved through the Tophat UI on dotcom production while this bug stands.
+- Content-level Pug-JSON-LD scripts (`contentVersion.renderOptions.additionalScripts[]`) are unaffected — `ContentVersionCtl.js` handles them correctly.
+- Direct DB writes via `tophat-tools` (`add-jsonld-to-template.mjs`) bypass the UI controller entirely, so local-dev writes work — but the dotcom production deployment for DOTCOMPB-7929's template-level FAQPage replays (templates 1211, 1375) cannot proceed via UI until the patch ships.
+
+**Workaround:** The fix is a 3-line guard inside `setEditorOnScriptDescriptor` in `TemplateEditCtl.js`, mirroring the existing `ContentVersionCtl.js:203-210` override:
+
+```javascript
+function setEditorOnScriptDescriptor(scriptDescriptor) {
+  let originalEditor = $scope.editorOpts[scriptDescriptor.type];
+  if (scriptDescriptor.type === 'ld+json' && scriptDescriptor.forceInterpolation) {
+    originalEditor = $scope.editorOpts.pug;
+  }
+  scriptDescriptor._editorOptions = angular.copy(originalEditor);
+  // ...
+  scriptDescriptor._editorOptions.onLoad = function (editor) {
+    // ... uses `originalEditor.onLoad(editor)` (not `$scope.editorOpts[type].onLoad`)
+  };
+}
+```
+
+Patch staged in `tophat/src/ngscripts/cms/TemplateEditCtl.js` under DOTCOMPB-7929. COMMIT MSG + PR DESCRIPTION drafted in the ticket's roam node per MR brand. PR ships through normal Release flow.
+
+**Detection:** Open any template containing an `ld+json + forceInterpolation: true` script in Tophat UI — the editor will show a red `Unexpected 'i'` annotation on the leading `if`, and the page's Save button will be disabled. Or grep the controller: `setEditorOnScriptDescriptor` should reference `$scope.editorOpts.pug` for the `ld+json + forceInterpolation` case.
+
+**Cross-references:**
+- Companion pattern: `[session: mr-seo-structured-data-architecture > reusable-references > rr-007]` (editor-mode-script-descriptor — the on-disk shape that the controller reads/preserves).
+- Companion design pattern: `[session: mr-seo-structured-data-architecture > design-patterns > dp-006]` (partial-template-level JSON-LD — the pattern that triggers this constraint when written through Tophat UI).
+- Existing parallel fix to mirror: `tophat/src/ngscripts/cms/ContentVersionCtl.js:203-210`.
+
+---
+
+### rr-007: editor-mode-script-descriptor-pattern
+**Date:** 2026-05-18
+**Source:** `dotcompb-7929-json-ld-non-pdp.md` (2026-05-18 v8 session)
+
+**Name:** Tophat additionalScripts editor-mode persistence — `_editorOptions.mode`
+
+**Where stored:** Embedded inside every `additionalScripts[]` entry on `contentVersion`, `templateVersion`, `production_content.variations.<platform>[].renderOptions.additionalScripts[]`, and `stage_content` denormalizations.
+
+**Shape:**
+```js
+{
+  type: 'ld+json',
+  forceInterpolation: true,
+  text: '<Pug source>',
+  _editorOptions: {
+    mode: 'pug',           // OR 'json' / 'javascript' / 'stylus' depending on content
+    theme: 'monokai',
+    maxLines: 300,
+  },
+  _editorHasErrors: false,  // UI state — false on clean save
+  // ... other descriptor fields (inHeader, isUrl, addBodyLoadScript, etc.)
+}
+```
+
+**Behavior — load path:**
+
+The Tophat controllers (`ContentVersionCtl.js`, `ngTophat.js`, and post-patch `TemplateEditCtl.js`) load existing scripts and filter:
+
+```js
+.filter(scriptDescriptor => !scriptDescriptor.isUrl && !scriptDescriptor._editorOptions)
+.forEach(scriptDescriptor => setEditorOnScriptDescriptor(scriptDescriptor));
+```
+
+Entries WITH `_editorOptions` already stored are **preserved as-is** — the editor opens in whatever mode was saved. Entries WITHOUT `_editorOptions` get the controller-computed default via `setEditorOnScriptDescriptor`.
+
+**Behavior — sync path:**
+
+`syncScriptDescriptor` (fired on any type/loadingMode/isUrl/addBodyLoadScript checkbox change) unconditionally re-applies `setEditorOnScriptDescriptor`. The mode recomputes from `type` + (post-patch) `forceInterpolation` — overrides whatever was previously stored.
+
+**Implications:**
+
+1. **Direct DB writes must set `_editorOptions.mode`** to the correct value for the content type. Tophat-tools helpers (`add-jsonld-script.mjs`, `add-jsonld-to-template.mjs`) write `{ mode: forceInterpolation ? 'pug' : 'json', theme: 'monokai', maxLines: 300 }` to match what the Tophat UI persists.
+
+2. **Pre-patch entries can be retrofitted in-place** via `$set` on `_editorOptions` (no full document rewrite needed). Mirror to `production_content` + `stage_content` for content-level scripts so the dev server's denormalized read path stays consistent.
+
+3. **The persisted `mode` is fragile** until the parity bug (cl-005) is fixed — opening the script in Tophat UI and clicking any checkbox in the row triggers `syncScriptDescriptor`, which re-applies the controller default. For `ld+json + forceInterpolation: true` template entries on dotcom production, that means the persisted `mode: 'pug'` gets clobbered back to `mode: 'json'` on every save. Patching `TemplateEditCtl.js` (per cl-005) makes the default match Pug for that case, so the persisted value and the controller default agree.
+
+**Mode → content-type mapping (canonical):**
+
+| `type` field | `forceInterpolation` | Correct `_editorOptions.mode` |
+|---|---|---|
+| `ld+json` | `false` (static JSON) | `json` |
+| `ld+json` | `true` (Pug source) | `pug` |
+| `javascript` | n/a | `javascript` |
+| `css` | n/a | `stylus` (per Tophat's editorOpts alias) |
+
+**Consumers:**
+- Tophat-tools helpers (rr-006) — write `_editorOptions` per the table above on every new entry.
+- Tophat UI controllers (`ContentVersionCtl.js`, `TemplateEditCtl.js` post-patch, `ngTophat.js`) — read on load, recompute on sync.
+- Future schema work — any new `additionalScripts` writer must set `_editorOptions.mode` matching the content's actual language, or saves via Tophat UI will fail validation.
+
 

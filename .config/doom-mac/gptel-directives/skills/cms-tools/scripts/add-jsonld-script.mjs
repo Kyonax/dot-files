@@ -86,13 +86,24 @@ if (!cv) {
 }
 
 const existing = cv.renderOptions?.additionalScripts || [];
+// IMPORTANT: scriptsUtils.js:53 reads `scriptObject.text` — NOT `.body`. The Tophat
+// editor also stores script content under `text`. Anything written under `body`
+// silently never renders. (Bug fix: 2026-05-18)
+//
+// IMPORTANT 2: Tophat's embedded code editor (Ace) checks `_editorOptions.mode`
+// to decide which language to highlight + validate. Without it the editor
+// defaults to JSON mode and flags Pug source with "Unexpected 'i'" errors on
+// the leading `if`. For `forceInterpolation: true` scripts we set Pug mode;
+// for static JSON we set JSON mode. Matches what the Tophat UI writes itself.
 const newScript = {
   type,
   inHeader,
   forceInterpolation,
   isUrl,
   addBodyLoadScript,
-  body,
+  text: body,
+  _editorOptions: { mode: forceInterpolation ? 'pug' : 'json', theme: 'monokai', maxLines: 300 },
+  _editorHasErrors: false,
   generatedAutomatically: false,
   source: 'tophat-tools/add-jsonld-script.mjs',
 };

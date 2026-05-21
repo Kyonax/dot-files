@@ -100,11 +100,6 @@
   .mr-email-sms-modal {
     width: 100%
   }
-
-  .dy-modal-contents {
-    max-width: 95vw;
-    margin: 0 auto;
-  }
 }
 
 @media only screen and (max-width: 759px) {
@@ -113,12 +108,7 @@
     height: 95vh;
     justify-content: start;
     padding-top: 3em;
-    width: 100%;
-  }
-
-  .dy-modal-contents {
-    max-width: 95vw;
-    margin: 0 auto;
+    width: 99%;
   }
 
   .mr-email-sms-modal .right-wrap {

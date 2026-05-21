@@ -1,10 +1,22 @@
 ---
 name: skill-architect
 description: >-
-  Create, refine, update, and split AI skills following the Two-Agent Model and Agent Skills Specification. Use when creating a new skill from scratch, adding rules to an existing skill, splitting a monolithic skill into atomic rules, writing SKILL.md routing tables, writing rule file YAML frontmatter, reviewing skill structure for token efficiency, or refining skill descriptions for better triggering. Covers the full skill lifecycle from ground truth mining through testing and iteration.
+  Create, refine, update, and split AI skills following the Two-Agent Model.
+  Use when creating a new skill from scratch, adding rules to an existing skill,
+  splitting a monolithic skill into atomic rules, writing SKILL.md frontmatter
+  (name, description, user-invocable, openclaw metadata), writing AGENTS.md
+  architectural rationale, writing rule file YAML frontmatter (title, impact,
+  impactDescription, tags), adding references/ directories with real-world
+  examples, reviewing skill structure for token efficiency, or refining
+  descriptions for better Analyzer triggering. Covers the full skill lifecycle
+  from ground truth mining through rule authoring, references, config, and
+  testing. Trigger: 'create skill', 'new skill', 'refine skill', 'split skill',
+  'skill structure', 'update skill', 'add rules', 'skill frontmatter'.
+user-invocable: true
 metadata:
-  author: @kyonax_on_tech
-  version: "1.1.0"
+  openclaw:
+    emoji: 🏗️
+    os: [darwin, linux]
 ---
 
 # Skill Architect Guide

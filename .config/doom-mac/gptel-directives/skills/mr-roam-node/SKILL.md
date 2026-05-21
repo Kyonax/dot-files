@@ -1,9 +1,24 @@
 ---
 name: mr-roam-node
-description: "Generate and manage org-roam .org files for JIRA tickets in ~/.brain.d/roam-nodes/madison_reed/. Creates consistent, structured org-mode documentation nodes from JIRA ticket data. Handles two ticket types: feature/story (ACCEPTANCE CRITERIA with TICKET CONTEXT + DEVELOPMENT AC, DOCUMENTATION with Structure/Deployment/Tests/QA) and bug (STEPs TO REPRODUCE, EXPECTED/ACTUAL RESULT). Includes PROPERTIES block with UUID, metadata headers (TITLE, SUBTITLE, AUTHOR, EMAIL, DATE, FILETAGS, SOURCE_URL, LAST_UPDATE, STORY_POINTS), TABLE OF CONTENTS, TODO TICKET TASKS with org-mode checkboxes, RELEVANT LINKS, and COMMENTS. Supports creating new nodes, updating existing nodes, validating development against ticket acceptance criteria, and managing the two-layer index file (BACKLOG + Sprint Board). Trigger when: user says 'create node', 'create roam', 'roam node', 'ticket node', 'org node', 'create node for DOTCOMPB', 'update node', 'validate development', 'check ticket', 'update index', 'sync index', or any variation involving creating/updating org-roam documentation from JIRA tickets."
+description: >-
+  Generate and manage org-roam .org files for JIRA tickets in
+  ~/.brain.d/roam-nodes/madison_reed/. Two ticket types: feature/story
+  (ACCEPTANCE CRITERIA with TICKET CONTEXT + DEVELOPMENT AC, DOCUMENTATION
+  with Structure/Deployment/Tests/QA) and bug (STEPs TO REPRODUCE,
+  EXPECTED/ACTUAL RESULT). Includes PROPERTIES block with UUID, metadata
+  headers (TITLE, SUBTITLE, AUTHOR, DATE, FILETAGS, SOURCE_URL, LAST_UPDATE,
+  STORY_POINTS), TABLE OF CONTENTS, TODO TICKET TASKS with org-mode checkboxes,
+  RELEVANT LINKS, COMMENTS, COMMIT MSG, PR DESCRIPTION. Manages two-layer
+  index (BACKLOG + Sprint Board). Trigger: 'create node', 'create roam',
+  'roam node', 'ticket node', 'org node', 'create node for DOTCOMPB',
+  'update node', 'validate development', 'check ticket', 'update index'.
+user-invocable: true
 metadata:
-  author: Kyonax
-  version: "3.1.0"
+  openclaw:
+    emoji: 📝
+    os: [darwin, linux]
+    requires:
+      bins: [emacs]
 ---
 
 # Roam Node Skill

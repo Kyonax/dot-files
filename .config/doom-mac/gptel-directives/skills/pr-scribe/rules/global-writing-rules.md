@@ -7,6 +7,8 @@ tags: pr, template, global, cross-cutting, no-emojis, no-arrows, no-private-file
 
 This rule catalogues the seven cross-cutting writing disciplines that apply to **every** PR body and PR template this skill produces — regardless of which brand rule is active. Breaking any of them is a hard failure, not a style preference. Load this file alongside the brand rule and whichever section-specific rule is being used so the Worker sweeps for these violations before returning output.
 
+**Companion universal rule:** `rules/universal-conventions.md` defines the structural floor (info-comment captions, conciseness, organization). The two files together describe everything that holds across every brand. This file owns *what must not appear* (emojis, arrows, private paths, relative links, redundant facts, label-class confusion, stray checkboxes); `universal-conventions.md` owns *what must appear and how it's organized* (legend, metadata lines, prereqs, group labels, tag order). Load both on every PR task.
+
 ## 1. No emojis anywhere
 
 Zero emojis in generated content. Emojis are decoration — reviewers and `git log` readers have not asked for decoration, and adding it inflates diff noise and breaks terminal rendering on narrow viewports.

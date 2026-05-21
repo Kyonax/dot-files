@@ -1,8 +1,21 @@
 ---
 name: code-review
-description: "Code review and quality analysis for any web/JS project. Three-tier detection (brand → project → tech-stack) with 135 atomic rules (one per file). Parallel worker dispatch. Covers: ADA accessibility, code style, script patterns, mobile viewport, third-party SDK, Vue 3, Express, plus brand/project-specific rules. Trigger: 'review this code', 'code review', 'review PR #N', 'audit PR #N', 'check ADA', 'check styles', 'quality check'."
+description: >-
+  Code review and quality analysis for any web/JS project. Three-tier rule
+  selection (brand → project → tech-stack) with 153 atomic rules (one per
+  file). Parallel worker dispatch. Covers: ADA accessibility, code style,
+  script patterns, mobile viewport, third-party SDK, SEO (title, description,
+  canonical, hreflang, JSON-LD, mailto, HSTS, sitemap, image-dimensions),
+  Vue 3, Express, plus brand/project-specific rules. Trigger: 'review this
+  code', 'code review', 'review PR #N', 'audit PR #N', 'check ADA', 'check
+  SEO', 'check styles', 'quality check'.
+user-invocable: true
 metadata:
-  author: Kyonax
+  openclaw:
+    emoji: 🔍
+    os: [darwin, linux]
+    requires:
+      bins: [git, node, gh]
 ---
 
 # Code Review Skill
@@ -13,13 +26,13 @@ Structural code quality analysis with three-tier detection (brand → project �
 
 - Reviewing Vue, React, Express, or any JS/TS web project
 - Running pre-PR quality gates or post-implementation reviews
-- Auditing ADA accessibility, mobile viewport, or third-party SDK integration
+- Auditing ADA accessibility, mobile viewport, third-party SDK integration, or SEO (head meta, structured data, canonical/hreflang, robots/sitemap, image dimensions, mailto exposure, HSTS)
 - Checking code style, naming, or architectural consistency
 
 ## How to Trigger
 
 - "review this code" / "code review" / "review PR #123"
-- "check ADA" / "check accessibility" / "check styles"
+- "check ADA" / "check accessibility" / "check styles" / "check SEO"
 - "audit PR #123" (report mode — no code changes)
 
 ## Detection Flow (3 tiers)
@@ -45,17 +58,18 @@ See `detection/brand.md`, `detection/project.md`, `detection/tech-stack.md` for 
 
 ## Rule Catalog
 
-135 rules across 4 tiers, 15 directories.
+153 rules across 4 tiers, 16 directories.
 
-### Universal (always loaded) — 45 rules
+### Universal (always loaded) — 63 rules
 
 | Directory | Rules | Coverage |
 |---|---|---|
-| `universal/ada/` | 20 | Landmarks, headings, focus, ARIA, live regions, keyboard |
+| `universal/ada/` | 25 | Landmarks, headings, focus, ARIA, live regions, keyboard, dialog hierarchy, stretched-link, innerText, CSS-mask icons, div+aria-label |
 | `universal/code-style/` | 6 | Comments, spacing, JSDoc, minimal-touch |
 | `universal/script/` | 9 | Unused vars, optional chaining, error domains, singletons |
 | `universal/mobile/` | 5 | 100dvh, safe-area, scroll, overscroll |
 | `universal/third-party-sdk/` | 5 | DOM scope, polling, cleanup, :deep(), ARIA conditional |
+| `universal/seo/` | 13 | Title/description shape, canonical, hreflang, OG/Twitter cards, JSON-LD, mailto obfuscation, HSTS, robots+sitemap, image dimensions, keyword coverage |
 
 ### Framework (loaded when detected) — 17 rules
 

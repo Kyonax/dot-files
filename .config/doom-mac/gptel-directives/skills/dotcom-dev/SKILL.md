@@ -1,10 +1,30 @@
 ---
-name: mr-dotcom-dev
-description: "Madison Reed Dotcom team frontend and fullstack development standards for the website/ directory. Vue 3 Options API components (props, emits, computed, methods, watch, lifecycle), Pug templates (lang=pug, extends, block, kebab-case tags, slots, v-if, v-for), Vuex 4 namespaced store modules (mapState, mapGetters, mapActions, mutations, cross-module dispatch), modal system (showModal/hideModal dispatch, AppModal, persistent, theme), API services (vue*Svc.js, mrApi, axios wrapper), scoped Stylus styles (design system variables, breakpoint mixins, rem/em units), utility-first CSS classes (spacing .mt-100m .px-50m, typography .f-secondary .xs-f-large .color-mr-purple, flexbox .flex .flex-col .space-between .gap-md, layout .full-width .xs-hide, positioning .hv-center .clickable .border-radius-6, accessibility .ada-tooltip .hiddenButPresent), SSR architecture (Vite, vueSsr.js, entry-server, entry-client, hydration, __INITIAL_STATE__), Express routing (before.js, endpoints.js, views.js, /api/:module/:method), Dynamic Yield personalization (Experience API /v2/serve/user/choose, campaigns, templates, A/B testing, DYID/CUID), testing (Vitest, Vue Test Utils, shallowMount, createWrapper, mocking, no snapshots, matchMedia mock, stubGlobal), global components (MrBtn, MrIcon, ImgBox, AppModal), global mixins (trackMREvent, trackMREventAndRedirect, scrollTo, goToPath), directives (v-ripple, v-click-outside, v-mask), composables over mixins, path aliases (@components, @services, @store, @utilities), ADA accessibility (native button focus, no nested interactives, aria-hidden, keyboard navigability), performance (window.matchMedia over resize, module-level constants, no magic numbers, no inline event logic), CMS data validation (parent filtering, v-if guards, skeleton loading). Trigger when: creating/editing/reviewing Vue components, writing Pug templates, styling with utility classes, working with Vuex stores, writing or fixing tests, adding Express routes or API endpoints, debugging SSR/hydration, refactoring frontend code, reviewing Dotcom PRs, working in website/src/, or any file under website/src/vuescripts/."
+name: dotcom-dev
+description: >-
+  Madison Reed frontend and fullstack development standards for website/.
+  Vue 3 Options API (props, emits, computed, methods, lifecycle), Pug templates
+  (lang=pug, extends, block, kebab-case, v-if/v-for/v-model), Vuex 4 namespaced
+  modules (mapState, mapGetters, mapActions, cross-module dispatch), modal system
+  (showModal/hideModal, AppModal, persistent, theme), API services (vue*Svc.js,
+  mrApi), scoped Stylus styles (design system variables, breakpoint mixins,
+  rem/em units), utility-first classes (spacing .mt-100m .px-50m, typography
+  .f-secondary .upper .xs-f-large .color-mr-purple, flexbox .flex .space-between
+  .gap-md, layout .full-width .xs-hide, .hv-center .clickable .border-radius-6,
+  .ada-tooltip .hiddenButPresent), SSR (Vite, entry-server, entry-client,
+  hydration, __INITIAL_STATE__), Express routing (before.js, endpoints.js,
+  views.js, /api/:module/:method), DynamicYield (Experience API, DYID/CUID),
+  Vitest + Vue Test Utils (shallowMount, createWrapper, no snapshots),
+  global components (MrBtn, MrIcon, ImgBox, AppModal), directives (v-ripple,
+  v-click-outside, v-mask), trackMREvent, trackMREventAndRedirect.
+  Trigger: Vue component, Pug template, utility class, Vuex store, Vitest,
+  website/src/vuescripts/, SSR, DynamicYield, before.js, endpoints.js.
+user-invocable: true
 metadata:
-  author: Kyonax
-  version: "3.0.0"
-  team: Dotcom
+  openclaw:
+    emoji: 🖥️
+    os: [darwin, linux]
+    requires:
+      bins: [node, npm]
 ---
 
 # MR Dotcom Development Skill

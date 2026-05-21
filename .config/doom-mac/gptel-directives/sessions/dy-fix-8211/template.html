@@ -1,0 +1,61 @@
+<div class="mr-email-sms-modal flex border-radius-12 overflow-hidden py-100m px-100m">
+    <div class="left-wrap flex-1 xs-hide sm-hide md-block">
+        <img src="${Desktop Image}" alt="${Image Alt Text}" class="full-width full-height border-radius-12">
+    </div>
+
+    <div class="right-wrap flex flex-col space-between flex-1 py-200m px-100m pl-200m text-center overflow-auto">
+        <div id="dy-email-capture-wrap" class="flex flex-col full-height space-between">
+            <div>
+                <h1 id="dy-email-capture-email-title" data-text="${Email Capture Title}" class="optional f-domaine-display-condensed upper color-mr-purple xs-f-xlarge lg-f-xxxlarge max-at-tweak mb-50m">${Email Capture Title}</h1>
+                <div class="quiz-buttons-wrap flex flex-col gap-sm mb-150m xs-f-xsmall max-at-tweak">
+                    <button class="quiz-btn">${Quiz Button 1 Text}</button>
+                    <button class="quiz-btn">${Quiz Button 2 Text}</button>
+                    <button class="quiz-btn">${Quiz Button 3 Text}</button>
+                    <button class="quiz-btn">${Quiz Button 4 Text}</button>
+                    <button class="quiz-btn">${Quiz Button 5 Text}</button>
+                </div>
+
+                <p data-text="${Email Capture Discount Text}" class="optional f-primary bold upper xs-f-small lg-f-medium max-at-tweak color-mr-purple mb-50m">${Email Capture Discount Text}</p>
+                <p data-text="${Email Capture Text}" class="optional f-primary xs-f-xxxsmall upper lg-f-xxsmall max-at-tweak color-mr-purple mb-100m">${Email Capture Text}</p>
+            </div>
+
+            <div>
+                <div id="dy-email-capture-form-wrap">
+                    <form id="dy-email-capture" class="flex flex-col gap-sm">
+                        <input id="dy-sms-capture-email-input" name="email" type="email" placeholder="Type your email">
+                        <p id="dy-email-capture-error" class="color-font-error xs-f-xxsmall max-at-tweak hide">We're sorry, something went wrong.</p>
+                        <button type="submit" class="form-cta mr-btn btn-block xs-f-xsmall max-at-tweak mt-50m">
+                            <span class="btn-text">${Email Capture CTA}</span>
+                            <span class="btn-loader hide animate-spin"></span>
+                        </button>
+                    </form>
+                </div>
+                <p id="dy-email-capture-bottom-text" data-text="${Email Capture Bottom Text}" class="optional text-left f-primary xs-f-xxsmall max-at-tweak color-mr-purple mt-100m">${Email Capture Bottom Text}</p>
+                <div id="dy-email-capture-thank-you" class="hide">
+                    <p class="xs-f-large max-at-tweak">Your Offer has been applied. Thank you!</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="dy-sms-capture-wrap" class="hide full-height flex flex-col">
+            <div class="top-wrap">
+                <p data-text="${SMS Capture Title}" class="optional f-domaine-display-condensed upper color-mr-purple xs-f-xxxlarge lg-f-xxgrande max-at-tweak">${SMS Capture Title}</p>
+                <p data-text="${SMS Capture Text}" class="optional xs-f-xxsmall lg-f-small max-at-tweak color-mr-black py-150m">${SMS Capture Text}</p>
+            </div>
+            <div class="form-wrap">
+                <form id="dy-sms-capture" class="flex flex-col gap-sm">
+                    <input id="dy-sms-capture-phone-input" name="phone" type="tel" placeholder="Type your phone number">
+                    <p id="dy-sms-capture-error" class="color-font-error xs-f-xxsmall max-at-tweak hide">We're sorry, something went wrong.</p>
+                    <button type="submit" class="form-cta mr-btn btn-block xs-f-xsmall mt-50m max-at-tweak">
+                        <span class="btn-text">${SMS Capture CTA}</span>
+                        <span class="btn-loader hide animate-spin"></span>
+                    </button>
+                </form>
+            </div>
+            <div id="dy-sms-capture-thank-you" class="hide">
+                <p class="xs-f-large max-at-tweak">Your Offer has been applied. Thank you!</p>
+            </div>
+            <p id="dy-sms-capture-bottom-text" data-text="${SMS Capture Bottom Text}" class="optional text-left xs-f-xxsmall max-at-tweak color-mr-black mt-100m">${SMS Capture Bottom Text}</p>
+        </div>
+    </div>
+</div>

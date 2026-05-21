@@ -1,6 +1,6 @@
 # code-style/ — Code Style Rules
 
-6 rules. Always loaded. Any web project.
+7 rules. Always loaded. Any web project.
 
 | ID | File | Summary | Severity |
 |---|---|---|---|
@@ -10,5 +10,6 @@
 | rule-u-cs-004 | simple-expressions.md | Simple Expressions | LOW |
 | rule-u-cs-005 | clean-strings.md | Clean Strings | LOW |
 | rule-u-cs-006 | jsdoc-block-description.md | JSDoc Block Description | MEDIUM |
+| rule-u-cs-008 | jsdoc-require-param.md | JSDoc @param — Declare Every Parameter | HIGH |
 
-**Worker instructions:** Review all changed files against these 6 rules. Report findings as YAML. Return `NO VIOLATIONS` if clean.
+**Worker instructions:** Review all changed files against these 7 rules. Report findings as YAML. Return `NO VIOLATIONS` if clean.
