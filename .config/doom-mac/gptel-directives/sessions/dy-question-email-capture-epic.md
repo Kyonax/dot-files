@@ -26,6 +26,7 @@ This file is the **single source of truth** for the entire **DY: Question Email 
 - 7166: `~/.brain.d/roam-nodes/madison_reed/2026-05-13-115604-dotcompb_7166.org` (ID `cf9946a3-27e1-44e0-bb49-62a3c6c58dc9`)
 - 7167: `~/.brain.d/roam-nodes/madison_reed/2026-05-13-115604-dotcompb_7167.org` (ID `4dd472c8-a7a6-4614-b63e-6c7a1d095908`)
 - 8211 (bug): `~/.brain.d/roam-nodes/madison_reed/2026-05-13-111704-dotcompb_8211.org` (ID `6f2c6e99-6cd6-407c-b98a-04d790f5e044`)
+- XXXX (fast-follow — draft, ticket TBD): `~/.brain.d/roam-nodes/madison_reed/2026-05-21-120000-dotcompb_xxxx-dy-quiz-buttons-dynamic.org` (no UUID yet)
 
 ---
 
@@ -143,10 +144,11 @@ Multi-screen Dynamic Yield popup that engages new visitors with a question promp
 
 ### 2.5 — Pending Work (Cumulative)
 
-- [ ] **8211** — Wire `Popup Dismissed` on close-X (resolve DEC-001 first).
-- [ ] **8211** — Wire `Popup Capture Submitted` on SMS submit success, payload `{ opt_in_type, reward_granted, variant_info }`.
-- [ ] **7166 / 7167** — Move from Pruebas / In Test to Done once 8211 closes (all four working events + the two missing events all green).
-- [ ] **Long-term** — Decide whether `Email Submitted Successfully` should be renamed once Marketing's email-step dashboard catches up to a unified `Popup Capture Submitted` schema (currently OUT OF SCOPE per DEC-002).
+- [X] **8211** — `Popup Dismissed` — **NOT ACHIEVABLE** from template JS. DY owns popup open/close lifecycle; template unmounts before any handler can fire. Escalated out of scope. See 8211 roam node NOTEs → "Final scope: Popup Dismissed is not achievable".
+- [ ] **8211** — Paste final JS into DY admin → Variation 2 → JS tab (`Popup Capture Submitted` wired for email + SMS submit). Blocked on Marketing confirmation: `opt_in_type` / `reward_granted` string values + `Variant Info` template variable (value `V2`). Paste-ready JS: `sessions/dy-fix-8211/template.js`.
+- [ ] **DOTCOMPB-XXXX (fast-follow — ticket TBD)** — Quiz buttons: add `class="quiz-btn optional"` + `data-text="${Quiz Button N Text}"` to all 5 `<button>` elements in the HTML tab. Leverages existing `.optional[data-text=""]` CSS rule — no JS or CSS changes needed. Roam node draft: `~/.brain.d/roam-nodes/madison_reed/2026-05-21-120000-dotcompb_xxxx-dy-quiz-buttons-dynamic.org`. Mirror updated: `sessions/dynamic-yield.html`. Requested by Kaila Rudolph 2026-05-21.
+- [ ] **7166 / 7167** — Move from Pruebas / In Test to Done once 8211 deploys (all working events green).
+- [ ] **Long-term** — Decide whether `Email Submitted Successfully` should be renamed once Marketing's dashboard catches up to `Popup Capture Submitted` schema (OUT OF SCOPE per DEC-002).
 
 ---
 
@@ -332,12 +334,15 @@ When opening a new session for any DY: Question Email Capture work, the inherita
 
 ## SECTION 8: ACTIVITY LOG
 
-| Datetime | Event |
-|---|---|
-| 2026-02-10 07:44 | Roam node created for DOTCOMPB-7052 (UUID `ae7c3125-…`). Original DY template refactor session opens. |
-| 2026-05-13 11:17 | Roam node created for DOTCOMPB-8211 (UUID `6f2c6e99-…`). Bug session `dotcompb-8211-dy-tracking-events-bug.md` scaffolded. |
-| 2026-05-13 11:56 | Roam nodes created for DOTCOMPB-7051 (epic, UUID `923885f6-…`), DOTCOMPB-7166 (UUID `cf9946a3-…`), DOTCOMPB-7167 (UUID `4dd472c8-…`). 8211 node + 7052 node cross-linked to the new UUIDs. Index file updated (IN TODO [0/1], IN TEST [0/7], BACKLOG [52%] [23/44]). |
-| 2026-05-13 11:56 | This umbrella session file created — root for all DY: Question Email Capture work going forward. Architecture, event taxonomy, MR bridges, campaign IDs, and decision log compacted from `dotcompb-7052-dynamic-yield-email-sms.md` + `dynamic-yield.html`/`dynamic.css`/`dynamic.js`. |
+| Datetime         | Duration | Type            | Reference        | Description |
+|------------------+----------+-----------------+------------------+-------------|
+| 2026-05-21 12:00 | —        | session-reset   | this             | Session reset: quiz button fast-follow documented; pending work + roam nodes updated |
+| 2026-05-21 12:00 | 1h       | documentation   | DOTCOMPB-XXXX    | Analyzed quiz button dynamic count request (Kaila); identified optional+data-text fix; updated dynamic-yield.html mirror; created roam node draft |
+| 2026-05-13 11:56 | —        | other           | this             | Activity Log bootstrapped on 2026-05-21 reset; prior rows back-filled as best-effort below |
+| 2026-05-13 11:56 | —        | session-reset   | this             | Umbrella session created; architecture/event taxonomy/bridges/campaign IDs compacted from 7052 session + template snapshots |
+| 2026-05-13 11:56 | —        | documentation   | DOTCOMPB-7051    | Roam nodes created for 7051 (UUID 923885f6-…), 7166 (UUID cf9946a3-…), 7167 (UUID 4dd472c8-…); 8211+7052 nodes cross-linked |
+| 2026-05-13 11:17 | —        | documentation   | DOTCOMPB-8211    | Roam node created (UUID 6f2c6e99-…); bug session dotcompb-8211-dy-tracking-events-bug.md scaffolded |
+| 2026-02-10 07:44 | —        | documentation   | DOTCOMPB-7052    | Roam node created (UUID ae7c3125-…); original DY template refactor session opened |
 
 <!-- DESCRIPTION AND USER CONTEXT END -->
 <!-- INIT OF THE USER PROMPT END -->

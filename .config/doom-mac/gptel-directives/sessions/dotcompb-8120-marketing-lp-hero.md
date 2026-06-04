@@ -759,6 +759,95 @@ Dual write (Vuex + cookie): Vuex for within-session SPA navigation; cookie for c
 
 Decision #112.
 
+### 1.51 Browser aria-label tooltip — simplify CTA accessible names (2026-05-21)
+
+Chrome 115+ and Safari show `aria-label` on `<a>` and `<button>` elements as a browser-native tooltip on hover. When the aria-label includes discount value detail (e.g., `"CLAIM NOW, 20% off your first service"`), sighted users see both the badge "20% OFF" AND the tooltip "20% off" — visually duplicating the discount number.
+
+**Rule:** On components whose visible context already communicates the discount (surrounding badge with `aria-label="20% off"` on `.promo-discount` + `.promo-description` text), the CTA button's `resolvedCtaAriaLabel` should return only `ctaText`. WCAG 2.4.4 is satisfied via surrounding context; WCAG 2.4.9 (AAA) is not required. Applied in `PromoBadge.vue`.
+
+**Note:** Safari exhibits the same tooltip behavior but may have additional cases where aria-label appears visually (still under investigation — see §2.5 Safari open issue).
+
+Decision #118.
+
+### 1.52 ESLint flat config — stale `vue/` disable comment in `.js` files (2026-05-21)
+
+In projects using ESLint flat config (v9+, `eslint.config.js`), referencing a Vue plugin rule in a `/* eslint-disable ... */` comment inside a `.js` file — where that rule is NOT registered for `.js` files in the flat config — produces a `Definition for rule '...' was not found` error at lint time, even though the rule is installed. The inline disable comment itself is what triggers the error.
+
+**Fix:** Remove `vue/component-definition-name-casing` and `vue/order-in-components` from the disable comment. These Vue rules are not in scope for `.js` files; the comment was a legacy artifact from before the flat-config migration.
+
+Applied in `mrVueApp.js` line 1 (commit `dc8e48c246a`).
+
+### 1.53 `role="status"` implicit ARIA attributes — never duplicate
+
+`role="status"` carries both `aria-live="polite"` AND `aria-atomic="true"` as implicit defaults per the WAI-ARIA 1.1/1.2 spec. Never add either attribute explicitly to an element already carrying `role="status"` — redundant explicit attributes create a maintenance foothold where a future editor changes one without the other.
+
+* **Right:** `.notifications(role="status")`
+* **Wrong:** `.notifications(role="status" aria-atomic="true")` — the explicit attribute is invisible noise.
+* **Evidence:** WAI-ARIA spec `status` role: Inherited states: `aria-live: polite`, `aria-atomic: true`.
+* **Applied:** `CustomNotifications.vue` line 3 (2026-05-21 — erroneous addition reverted same session).
+
+### 1.54 Pre-existing ADA issues — defer, never include in PR scope
+
+When a code review flags an ADA issue on a file touched by the PR, check whether the issue existed **before** the PR's changes. Pre-existing issues not introduced by the PR must be deferred to a dedicated ADA ticket — do not include them in the PR to avoid the PR becoming a dumping ground for unrelated technical debt.
+
+* **Example:** `LocationSearchInput.vue` combobox ARIA pattern (`role="combobox"`, `aria-expanded`, `aria-autocomplete`, `aria-activedescendant`) — pre-existing on the V1 search component; our PR only added `iconName`/`placeholder`/`describedBy` props. Deferred.
+* **Test:** "Did this ADA issue exist on the file's last commit before this PR branch?" If yes → defer.
+
+### 1.55 `applyPromoQueryHandoff` — every locations-page component needs it (2026-05-27)
+
+The promo toast + stash + cookie system (`promoCode.js`, `pendingPromo` state, updated `refreshPromos`) lives exclusively on `feat-location-s`. The `/colorbar/locations` page is **CMS-driven** — Tophat's `componentList` per experiment variant decides which Vue component renders. Each component must call `applyPromoQueryHandoff()` in its own `mounted()` independently.
+
+* **Version B/C → `ColorBarLocationSectionV1.vue`** — already has `applyPromoQueryHandoff()` in `mounted()`. ✅
+* **Version A → `ColorBarMapSection.vue`** — **fixed (2026-05-29)**. Added `applyPromoQueryHandoff()` + `applySearchQueryHandoff()` (see §1.57). ✅
+* **Future locations variants** — any new CMS component variant added to the locations page must also include `applyPromoQueryHandoff()`. The function is pure (validate → stash → cookie → toast → strip URL) and safe to call without a `?promo=` param (early-returns via `parsePromoFromQuery`).
+* **Why the cookie is essential for version A:** `HairColorBarBooking.vue` (V1 old flow) does a full-page reload to navigate from `/colorbar/locations` to `/colorbar/booking/{code}/services` — Vuex state is reset. The `mr_pending_promo` cookie (1hr, sameSite:Strict) is the only mechanism that carries the pending promo across that reload. Without the cookie write, the promo is permanently lost.
+
+### 1.56 `refreshPromos` payload — always include `addOnTreatments` (2026-05-27)
+
+A regression was introduced during DOTCOMPB-8120: `addOnTreatments: addOnTreatmentIds` was accidentally dropped from the `refreshPromos` API payload in `hairColorBarBooking.js` on `feat-location-s`. The field is still computed and used in the cache hash — but not sent to `vueColorbarSvc.applyServicePromo`. On master, the field is present.
+
+* **Correct payload (master shape):** `{ locationId, promoCodes, customerId, serviceId, addOnTreatments: addOnTreatmentIds, appointmentDate, startTime, endTime, reservationId, cart }`
+* **The symptom:** when a user has add-on treatments selected, the server-side promo discount calculation ignores the add-ons → wrong or missing discount amount.
+* **Fix:** one line — re-add `addOnTreatments: addOnTreatmentIds` after `serviceId` in the payload object. See roam node `** FOLLOW-UP PLAN` § Fix A.
+* **Lesson:** when modifying `refreshPromos` (e.g., to add `pendingPromo` logic), always diff the full payload object against master before committing.
+
+### 1.57 URL-sourced location takes priority over IP/customer geo — `locationSource = 'url'` gate (2026-05-29)
+
+When a locations-page component (`ColorBarMapSection`, `ColorBarLocationSectionV1`, any future variant) can receive `?lat`, `?lng`, `?search` URL params from an upstream search (e.g., the Marketing LP Hero), it **must** call `applySearchQueryHandoff()` as the **first statement** in `mounted()`. All subsequent geolocation fallbacks must be gated behind `locationSource !== 'url'`.
+
+**Root cause of the override bug:** `mounted()` called `getLocationFromCustomerData()` (IP/customer geocode → `setCurrentPlace()`) unconditionally, wiping whatever the user searched.
+
+**Correct pattern (both components now follow this):**
+
+```javascript
+data: () => ({
+  locationSource: null,   // 'url' | 'ip' | 'browser' | 'customer' | null
+  ...
+}),
+mounted() {
+  this.applySearchQueryHandoff();   // ← FIRST; sets locationSource = 'url' if URL has lat/lng
+  // ...
+  if (this.locationSource !== 'url') {
+    await this.getLocationFromCustomerData();
+  }
+},
+applySearchQueryHandoff() {
+  const query = this.$route?.query || {};
+  const lat = parseFloat(query.lat);
+  const lng = parseFloat(query.lng);
+  if (isNaN(lat) || isNaN(lng)) { return; }
+  const search = typeof query.search === 'string' ? query.search : '';
+  if (search) { this.autocompleteContent = search; }   // or this.searchQuery in V1
+  this.earlyPosition = { lat, lng };
+  this.setCurrentPlace({ position: { lat, lng }, formatted_address: search }, { trackEvent: false });
+  this.locationSource = 'url';
+},
+```
+
+**Secondary bug in `ColorBarLocationSectionV1` (also fixed 2026-05-29):** `mounted()` unconditionally set `this.locationSource = 'ip'` in the earlyPosition block, overwriting `'url'` set by `applySearchQueryHandoff()`. Fix: `if (this.locationSource !== 'url') { this.locationSource = 'ip'; }`.
+
+**Any future locations-page component** must include both `applySearchQueryHandoff()` AND `applyPromoQueryHandoff()` in `mounted()`, in that order, before any async geolocation work.
+
 ---
 
 ## SECTION 2: SESSION OVERVIEW
@@ -894,74 +983,51 @@ All seven of the original open questions were answered by inspecting the live CM
 113. **(2026-05-19)** **Second full /code-review (all agents) + all findings implemented.** Findings: BLOCKER `font-size 105px !important` in Stylus removed; `emits: []` added to `LocationSpecificColorbarV2.vue`; unified `aria-label` on PromoBadge discount wrapper + child spans `aria-hidden`; SEARCH `MrBtn` `type="button"` + scoped `:focus-visible`; `role="region"` conditional `:aria-labelledby`/`:aria-label`; close buttons in `CustomNotifications.vue` get unique per-index `:aria-label`; unused `mapState` removed from wrapper; `|| ''` → `?? ''` on CMS defaults; `getObjProperty` → `?.`; `gap 13px` → `gap 0.8125rem`; merged duplicate `.hero-title-wrap` Stylus block; Stylus padding removed where utility classes exist; `<style scoped lang="stylus">` attribute order corrected. 1063 tests / 84 files — all passing.
 114. **(2026-05-19)** **`nearestLocationCtaText` CMS field added to template 1650 (BOOK A SERVICE Tophat-configurable).** Added inside `heroSection.fieldConfig` via mongosh `$push`. Default `"BOOK A SERVICE"`. Seeded on cv 19460 + 19464 (top-level + componentList baked snapshot). `HeroSection.vue` passes `:cta-text="heroSettings.nearestLocationCtaText || 'BOOK A SERVICE'"` to `NearestLocationCard` — both CTA button labels now fully Tophat-configurable.
 115. **(2026-05-19)** **PR body + commit message final update in roam node (cookie architecture reflected).** Commit: 12 lines capturing cookie persistence + ADA fixes + CMS CTA fields + 1063 tests. PR body: promo stash-then-flush section rewritten with cookie architecture paragraph; `hairColorBarBooking.js` Changes entry covers cookie fallback; `ColorBarLocationSectionV1.vue` entry covers cookie write; QA steps 4-5 added for cookie verification in DevTools; test table updated to 84 files / 1063 tests. Both sections in roam node `* COMMIT MSG` and `* PULL REQUEST`.
+116. **(2026-05-21)** **HeroSection standalone migration.** Promoted from `LocationSpecificColorbarV2/components/HeroSection/` to `LocationSpecific/HeroSection/`. Prop `heroSettings` → `cmsSettings` (flat fields). Self-sufficient lifecycle: `mounted()` → `initializeBopis()`; `serverPrefetch()` → `getActiveLocationsListForMapView()`; `watch.closestLocations` → `loadLocation(code)` when distance ≤ 50 mi. Registered globally in `mrVueApp.js` + `registerGlobalsSsr.js`. Old `LocationSpecificColorbarV2.vue` emptied to wrapper shell for backward compat. 45 new tests. Commit `dc8e48c246a`.
+117. **(2026-05-21)** **Tophat `hero-section` CMS template created (_id=1655, tv 5712) + atomic componentList swap.** 7 flat CMS fields (title, image, searchHelperText, nearestLocationLabel, nearestLocationCtaText, nearestLocationSecondaryCtaText, offer.partial). Content 3117 variant B componentList updated on cv 19460 (published v55) AND cv 19464 (edit v56): `location-specific-colorbar-v2` → `hero-section`; heroSection.* data promoted to flat settings. Applied via cms-tools mongosh.
+118. **(2026-05-21)** **PromoBadge `resolvedCtaAriaLabel` simplified to `ctaText` only.** Browser (Chrome + Safari) shows `aria-label` as tooltip on `<a>` elements. "CLAIM NOW, 20% off your first service" tooltip alongside badge "20% OFF" visually duplicated the discount value. Fix: return `ctaText` only. WCAG 2.4.4 satisfied via surrounding badge context. See §1.51.
+119. **(2026-05-21)** **ESLint flat config fix in `mrVueApp.js`.** Removed `vue/component-definition-name-casing` and `vue/order-in-components` from top-of-file `/* eslint-disable */` comment. Vue rules not registered for `.js` files in flat config caused `Definition for rule not found` error on every lint run. See §1.52.
+120. **(2026-05-21)** **PR #20771 body updated + commit pushed.** 1070 tests / 85 files. Changes block fully rewritten reflecting standalone architecture. Technical Details: new "HeroSection standalone architecture" paragraph. Special Deployment updated: Step 1 creates hero-section template, Step 3 is the atomic componentList swap.
+121. **(2026-05-21)** **Deleted 7 dead duplicate component directories** under `LocationSpecificColorbarV2/components/` that were never cleaned up during the standalone migration commit (`dc8e48c246a`): `HeroSection/` (3 files), `ServicesSection/` (2 files), `MembershipCallout/` (2 files). Standalone equivalents live at `LocationSpecific/HeroSection/`, `LocationSpecific/ServicesSection/`, and `LocationSpecific/ServicesSection/components/MembershipCallout/`.
+122. **(2026-05-21)** **Resolved merge conflicts with `origin/feat-location-s`** after Maxi's DOTCOMPB-8122 (EnhancementSection) merged. Maxi had deleted `LocationSpecificColorbarV2` wrapper entirely (commit `23dc3b96a81`). Resolution: delete wrapper `.vue` + `.test.js` + `index.js` (modify/delete conflicts); merge `mrVueApp.js` and `registerGlobalsSsr.js` to drop `LocationSpecificColorbarV2` registration, keep `HeroSection`, add `EnhancementSection`. 1107 tests / lint clean.
+123. **(2026-05-21)** **Code review pass (blockers/highs only)** — ADA, styling, script workers. All clean except one false positive: code review worker incorrectly said `role="status"` lacks implicit `aria-atomic="true"` and recommended adding it. Per WAI-ARIA spec this is wrong — reverted immediately (see §1.53). Script/store workers reported zero findings on `promoCode.js`, `hairColorBarBooking.js`, `ColorBarLocationSectionV1.vue`.
+125. **(2026-05-29)** **Location override bug fixed in both locations-page variants.** `ColorBarMapSection.vue` (Version A) was missing `applySearchQueryHandoff()` entirely — added along with `locationSource` state and `getLocationFromCustomerData()` gated behind `locationSource !== 'url'`. `ColorBarLocationSectionV1.vue` (Versions B/C) had `locationSource = 'ip'` overwriting `'url'` in `mounted()`'s earlyPosition block — fixed with a one-line guard. See §1.57.
+124. **(2026-05-21)** **mrminionbot ADA comment triage.** All 8 open mrminionbot threads assessed: focus ring (already fixed), PromoBadge aria-label comma (already fixed), HeroSection dangling labelledby (handled with conditional binding), MrBtn type="button" (already in code), secondary CTA aria-label context (already in `resolvedSecondaryCtaAriaLabel`), old-file comments (file deleted). `LocationSearchInput` combobox ARIA deferred (pre-existing per §1.54). `CustomNotifications` `aria-atomic` false positive corrected (per §1.53).
 
 ### 2.5 Pending Work
 
-**Foundation (PR #20750) — DONE / not blocking child tickets:**
+**Foundation (PR #20750) — DONE. Hero Section (PR #20771) — SHIPPED (commit `dc8e48c246a`, standalone migration complete).**
 
-*   [x] Feature branch `feat-location-s` created
-*   [x] Parent wrapper `LocationSpecificColorbarV2.vue` scaffolded + globally registered (client + SSR)
-*   [x] Splitter logic + experiment-viewed tracking wired
-*   [x] Vuex `colorbar` data flow wired (serverPrefetch / created / mounted)
-*   [x] CMS migration script + local Docker migration applied (content_id 3117 v54 → v55, experiment 475 → 504)
-*   [x] Carley confirmed Tophat-side ownership for production replication
-*   [x] PR #20750 opened against `master`
+**DOTCOMPB-8120 — All major phases shipped. Branch ready for final commit + re-review.**
 
-**Production rollout (out of repo — Carley):**
+*   [x] Phase 1: HeroSection layout, search, NearestLocationCard, V1 handoff (commits `edda6f7`, `501cbee`, `7077fcd`)
+*   [x] Discount partial (PromoBadge, cookie persistence, toast) — shipped
+*   [x] HeroSection standalone migration — `LocationSpecific/HeroSection/`, globally registered, `cmsSettings` flat prop, lifecycle hooks — commit `dc8e48c246a`
+*   [x] Tophat `hero-section` template (_id=1655) + componentList atomic swap (cv 19460 + 19464) — local dev done
+*   [x] PromoBadge `resolvedCtaAriaLabel` simplified to ctaText (Chrome/Safari tooltip fix)
+*   [x] Playwright E2E suite — 26/30 passing
+*   [x] 7 dead duplicate component files deleted (`LocationSpecificColorbarV2/components/HeroSection|ServicesSection|MembershipCallout`) — decision #121
+*   [x] Merge conflicts resolved with `origin/feat-location-s` (Maxi's DOTCOMPB-8122 — wrapper deleted, EnhancementSection added) — decision #122
+*   [x] Code review pass — no blockers/highs in production code — decision #123
+*   [x] All mrminionbot ADA comments resolved or deferred — decision #124
+*   [x] `CustomNotifications.vue` `role="status"` clean (no redundant aria-atomic) — §1.53
+*   [x] 1107 tests / lint clean
 
-*   [ ] Carley replicates the local CMS migration in Tophat staging then production (sub-template, experiment, content #3117 rebinding — three concrete steps in the PR's *Special Deployment Requirements*)
-*   [ ] Wrapper unit tests (`LocationSpecificColorbarV2.test.js`) — deferred from the foundation PR; lands on a follow-up child branch (any of the DOTCOMPB-8119 children can carry it)
-*   [ ] Tophat schema additions for the V2 hero — `cmsSettings.heroImage`, `cmsSettings.primaryCta.{text,destination}`, `cmsSettings.offer.{copy,promoCode,promoName,ctaText,ctaDestination}`. Coordinate with Carley before the hero ticket starts implementation.
+**Done (2026-05-29):**
+*   [x] Test fix commit `f3239519475` pushed (`feat-location-s` in sync with remote)
+*   [x] Location override bug fixed: `ColorBarMapSection.vue` + `ColorBarLocationSectionV1.vue` (decision #125 / §1.57); 148 tests green
 
-**DOTCOMPB-8120 (Hero Section) — Phase 1 SHIPPED via PR #20771. Discount partial = next commit on this branch.**
+**Pending — merge + deploy:**
+*   [ ] CI `website_tests` green on PR #20750 → merge into `master`
 
-**Phase 1 — SHIPPED on `DOTCOMPB-8120` (3 commits, PR #20771 OPEN against `feat-location-s`):**
+**Carley production replication — still pending:**
+*   [ ] `hero-section` template created in staging + production Tophat (Step 1 from PR Special Deployment)
+*   [ ] `partial-promo-badge` + `partial-marketing-lp-hero-20off` created with production WELCOME20 value (Step 2)
+*   [ ] content 3117 componentList atomic swap + experiment binding (Steps 3–4)
 
-*   [x] Tophat schema applied to template 1650 (4 fields: title, image, searchHelperText, nearestLocationLabel). Backups under `website/cms-backups/templateVersion/1650/<stamp>-v1.json`.
-*   [x] Seeded all 4 fields on contentVersion 19460 (variant B).
-*   [x] commit `edda6f7` — scaffold `LocationSpecificColorbarV2` + experiment splitter (foundation, was on PR #20750 against master).
-*   [x] commit `501cbee` — initial hero build: `HeroSection.vue` + tests, mounts inside wrapper, `LocationSearchInput` extension, `map-marker-v2.svg`, V1 hand-off `applySearchQueryHandoff()` + 4 tests, wrapper `loadLocation` watcher.
-*   [x] commit `7077fcd` — post-review refactor (decisions 33-43): externalize experiment gate to Tophat `componentList`, extract `NearestLocationCard` (23 tests), drop `FALLBACK_NEAREST_LOCATION` force-show, inline path/tracking-event constants as prop defaults, `Promise.allSettled` in `serverPrefetch`, alias imports, `mapState('global', ['MRConfig'])`, `xs-` prefix on bare px/py, `== null` lat/lng regression fix, multi-agent `/code-review` applied subset.
-*   [x] PR #20771 body authored from roam node and pushed via `gh pr edit 20771 --body-file <md>` (decision #43). Body covers the merged state across all three commits.
-*   [x] Tests across the four affected suites: 61/61 (wrapper 7 + hero 27 + NearestLocationCard 23 + V1 hand-off 4). Broader run of 116 affected files: 1246 passing.
-*   [x] V1 receive-side reader (BLOCKER from prior reset) — `applySearchQueryHandoff` written + 4 tests added. The destination map now honors the picked colorbar.
-
-**Discount partial (PromoBadge via CMS partial) — SHIPPED (2026-05-11/12/19):**
-
-*   [x] `PromoBadge.vue` (Options API, 11 CMS props including `promoCode`, `promoName`, `discountValue`, etc.). 27/27 synchronous tests. Cookie-aware: CTA appends `?promo=CODE&promoName=...` → `applyPromoQueryHandoff` in V1 stashes in Vuex + writes `mr_pending_promo` cookie.
-*   [x] `hairColorBarBooking.js` stash mechanism: `pendingPromo { code, name }`, `setPendingPromo`, `clearPendingPromo`, `refreshPromos` prepend + clear on success. **Cookie fallback**: reads `mr_pending_promo` when Vuex null, validates against `PROMO_CODE_PATTERN`, removes cookie on confirmed apply.
-*   [x] `promoCode.js` utility: `appendPromoToUrl`, `parsePromoFromQuery`, `renderPromoToast`, `stripPromoFromUrl`, `PENDING_PROMO_COOKIE_KEY`.
-*   [x] V1 `applyPromoQueryHandoff`: reads `?promo=`, validates, `setPendingPromo` + cookie write + `notifySuccess` toast (12s).
-*   [x] CMS `partial-promo-badge` (template 1652, 11 fields) + `partial-marketing-lp-hero-20off` content (`promoCode: "WELCOME20"`, `promoDescription: "YOUR FIRST SERVICE"`, display fields). Local dev uses promo 4821 (`ULTA2024-`) since WELCOME20 code stripped in sanitized DB.
-*   [x] `nearestLocationCtaText` + `nearestLocationSecondaryCtaText` fields in template 1650 `heroSection.fieldConfig` — both CTA labels Tophat-configurable.
-*   [x] `CustomNotifications.vue`: `role="status"` only; unique per-index close button `:aria-label`.
-*   [ ] **Commit** — user creates it; message in roam node `* COMMIT MSG`.
-*   [ ] **Carley production replication** — template 1650 field additions; `partial-promo-badge` template + `partial-marketing-lp-hero-20off` content with real production WELCOME20 `promoCode`; parent CV 19460/19464 offer.partial binding; `nearestLocationLabel` update.
-*   [ ] Closes JIRA AC6 / AC7 / AC8.
-
-**Phase 2+ — parked (resume only on explicit user instruction):**
-
-*   [ ] **Sticky mobile CTA (AC9 / AC10)** — reuse `FixedCtaBar`, gated by `mapGetters('global', ['isDesktop'])`. Click fires `MREvent (Marketing LP – Sticky CTA clicked)`. Re-add the unused `isDesktop` store helper to the wrapper at this point.
-*   [ ] **Hero primary CTA** — separate from the BOOK A SERVICE button on the nearest-location card. Defer until product defines.
-*   [ ] **Remaining MREvent tracking calls** — Primary CTA, Sticky CTA. Nearby Location and Offer are/will be wired.
-*   [x] **Playwright E2E suite created** — `automation/playwright/specs/local/DOTCOMPB-8120-hero-section.spec.ts`. 26/30 passing (run `--workers=2`). 4 skipped with documented reasons. See §3.6.
-*   [ ] **`card-children` selector rename** in NearestLocationCard / HeroSection (deferred from `/code-review` 2026-05-08). Large mechanical rename across template + scoped Stylus; can land alongside the discount-partial PR.
-*   [x] **`parent-prepares-data` refactor** — DONE. `HeroSection` now accepts `heroSettings: Object` (decision #106). Wrapper passes `cmsSettings.heroSection || {}`.
-
-**REMOVE before PR (currently in working tree):**
-
-*   [ ] **`FORCE_NEAREST_LOCATION_FOR_TESTING` in `HeroSection.vue`** — frozen `ny-huntington` record (real CloudFront URL, distance: 1.2) forces `nearestLocation()` to early-return for QA testing. Remove the constant + early-return branch — `closestLocations?.[0]` is the only return path again. (decision #111 / §1.45)
-
-**Tests still needing updates (before PR review):**
-
-*   [ ] `HeroSection.test.js` — add `showSearchCard` mutual-exclusion test + `heroSettings.nearestLocationSecondaryCtaText` prop forwarding to NLC
-*   [ ] `NearestLocationCard.test.js` — update class assertions for new label classes (`.bold` not `.f-primary-bold`, no mobile pill classes)
-
-**Cross-cutting (separate ticket):**
-
-*   [ ] **Confirm** with PM whether `MREvent (Marketing LP – Nearby location clicked)` is the right event name. AC table fits — likely a no-op confirmation.
-
-**Other epic children (TBD) — additional V2 sections** (the wrapper currently mounts only `HeroSection`; future tickets will add more sections inside `LocationSpecificColorbarV2`).
+**Phase 2+ — parked:**
+*   [ ] **Sticky mobile CTA (AC9/AC10)** — reuse `FixedCtaBar`; fires `MREvent (Marketing LP – Sticky CTA clicked)`
+*   [ ] **Hero primary CTA tracking** — `MREvent (Marketing LP – Primary CTA clicked)`; deferred until product defines the CTA
 
 ---
 
@@ -969,8 +1035,8 @@ All seven of the original open questions were answered by inspecting the live CM
 
 ### 3.1 Epic-level Foundation — `feat-location-s` (PR #20750)
 
-**Created:** 2026-05-06 | **Last updated:** 2026-05-07
-**Status:** **SHIPPED** to `feat-location-s` (commit `edda6f76318`). PR #20750 OPEN against `master`. github-actions APPROVED. Awaiting Carley's Tophat replication on staging/prod for the wrapper to receive customer traffic.
+**Created:** 2026-05-06 | **Last updated:** 2026-05-29
+**Status:** **OPEN** (PR #20750 against `master`). Latest commit `f3239519475` (test fixes) pushed — branch in sync with remote. Merge-ready once CI `website_tests` green. Merge conflicts resolved (2026-05-29). All 14 AI review threads replied. Location override bug fixed (2026-05-29, decision #125). Carley Tophat production replication still pending.
 **Scope:** Sets up the feature branch with the parent wrapper, experiment splitter, Vuex wiring, global registration, and the local CMS migration tooling. **This is NOT DOTCOMPB-8120's implementation** — it is the precondition every child ticket on this branch (including 8120) builds on top of.
 
 **Files shipped (4 files, +71/-0):**
@@ -1914,13 +1980,58 @@ Pattern B was "flat `heroSection.offer.{copy, promoCode, ...}` on template 1650,
 | `.tasks/DOTCOMPB-8120/marketing-lp-hero-20off-content.json` | Campaign-specific **content** spec — `mixin_key: "partial-marketing-lp-hero-20off"`, `templateData: { promoId: 5280, ... }`. Updated 2026-05-19. |
 | `.tasks/DOTCOMPB-8120/heroSection-offer.json` | Parent template 1650 schema spec — `heroSection.offer.partial` (type `partial`). Unchanged. |
 
-### CMS state — local dev (current after 2026-05-19 promoId refactor)
+### CMS state — local dev (current after 2026-05-21 standalone migration)
 
 | Object | _id | Notes |
 |---|---|---|
-| **Template** `partial-promo-badge` | template `_id 1652`, templateVersion `_id 5709`, v1 | `name: "Promo Badge"`. **5-field config** (`promoId`, `ctaText`, `ctaUrl`, `toastMessage`, `backgroundIconName`). Jade: `if settings.promoId → promo-badge(:promo-id=settings.promoId ...)`. **Dev-server jade cache holds old template** — requires `dev-ssr` restart to clear. Backup: `cms-backups/templateVersion/1652/2026-05-19T12-03-52-540Z-v1.json`. |
-| **Content** `partial-marketing-lp-hero-20off` | content `_id 3403`, contentVersion `_id 19462`, v1 | `templateData: { promoId: 5280, ctaText: "CLAIM NOW", ctaUrl: {url: "/colorbar/locations", ...}, toastMessage: "Saved — {promoName}...", backgroundIconName: "" }`. NO `templateKey` on content doc (§1.32). |
-| Template 1650 (`location-specific-colorbar-v2`) | templateVersion `_id 5707` v1 | `heroSection.offer.partial` (type `partial`). Parent CVs 19460 + 19464: `templateData.heroSection.offer.partial.cms_partial = "partial-marketing-lp-hero-20off"` (unchanged). |
+| **Template** `hero-section` | template `_id 1655`, templateVersion `_id 5712`, v1 | `type: component`, jade: `hero-section(:cms-settings=JSON.stringify(settings))`. **7 fields**: title (req), image (staticCroppedImage, req), searchHelperText, nearestLocationLabel, nearestLocationCtaText, nearestLocationSecondaryCtaText, offer.partial (partial type). Backup: `cms-backups/templateVersion/1655/2026-05-21T16-58-47-456Z-v1.json`. |
+| **Content 3117** componentList variant B | cvs 19460 (published v55) + 19464 (edit v56) | `location-specific-colorbar-v2` → `hero-section` at index 1. Settings flat: title, image, searchHelperText, nearestLocationLabel, nearestLocationCtaText, nearestLocationSecondaryCtaText, offer.partial = `partial-marketing-lp-hero-20off`. Backup: `cms-tools/scripts/cms-backups/3117/2026-05-21T16-58-11-900Z/snapshot.json`. |
+| **Template** `partial-promo-badge` | template `_id 1652`, templateVersion `_id 5709`, v1 | `name: "Promo Badge"`. **11-field config** (`discountValue`, `showAsPercentage`, `showOffSuffix`, `currencySymbol`, `promoDescription`, `backgroundIconName`, `ctaText`, `ctaUrl` link, `promoCode`, `promoName`, `toastMessage`). Jade: `if settings.discountValue → promo-badge(...)`. |
+| **Content** `partial-marketing-lp-hero-20off` | content `_id 3403`, contentVersion `_id 19462`, v1 | `templateData: { discountValue: "20", showAsPercentage: true, showOffSuffix: true, promoCode: "WELCOME20", promoName: "20% off your first service", promoDescription: "YOUR FIRST SERVICE", ctaText: "CLAIM NOW", ... }`. NO `templateKey` on content doc (§1.32). |
+| **Template** `location-specific-colorbar-v2` | template 1650, tv 5707 | Now only used as backward-compat shell. heroSection.* fields still present on schema for rollback safety. Variant B componentList no longer references this. |
+
+### Created on DOTCOMPB-8120 — 2026-05-21 (HeroSection standalone migration)
+
+| File | Association |
+|---|---|
+| `website/src/vuescripts/components/LocationSpecific/HeroSection/HeroSection.vue` | DOTCOMPB-8120 — standalone component; `cmsSettings` prop; initializeBopis + serverPrefetch + loadLocation watcher |
+| `website/src/vuescripts/components/LocationSpecific/HeroSection/HeroSection.test.js` | DOTCOMPB-8120 — 45 tests; lifecycle + search + gate + mutual exclusion |
+| `website/src/vuescripts/components/LocationSpecific/HeroSection/index.js` | DOTCOMPB-8120 — barrel export |
+| `.tasks/DOTCOMPB-8120/hero-section-fields.json` | DOTCOMPB-8120 — Tophat field schema spec for set-template-fields.mjs |
+| `.tasks/DOTCOMPB-8120/hero-section-template.json` | DOTCOMPB-8120 — Tophat template spec reference |
+
+### Modified on DOTCOMPB-8120 — 2026-05-21 (standalone migration + PromoBadge fix)
+
+| File | Notes |
+|---|---|
+| `PromoBadge.vue` | `resolvedCtaAriaLabel` returns `ctaText` only — removes browser tooltip with duplicate discount value. |
+| `PromoBadge.test.js` | 26 tests — updated aria-label assertions. |
+| `mrVueApp.js` | HeroSection global registration added. EnhancementSection added (DOTCOMPB-8122 merge). `LocationSpecificColorbarV2` registration removed. Stale `vue/` rule entries removed from `/* eslint-disable */` comment. |
+| `registerGlobalsSsr.js` | HeroSection + EnhancementSection SSR registration added. `LocationSpecificColorbarV2` removed. |
+| `CustomNotifications.vue` | `role="status"` only — no redundant `aria-atomic` (§1.53). |
+
+### Deleted on DOTCOMPB-8120 — 2026-05-21 (cleanup + feat-location-s merge)
+
+| File | Reason |
+|---|---|
+| `LocationSpecificColorbarV2/LocationSpecificColorbarV2.vue` | Deleted by Maxi in DOTCOMPB-8122 (commit `23dc3b96a81`) — wrapper no longer needed |
+| `LocationSpecificColorbarV2/LocationSpecificColorbarV2.test.js` | Same — wrapper deleted |
+| `LocationSpecificColorbarV2/index.js` | Same — wrapper deleted |
+| `LocationSpecificColorbarV2/components/HeroSection/HeroSection.vue` | Dead duplicate of `LocationSpecific/HeroSection/HeroSection.vue` — never cleaned up in standalone migration |
+| `LocationSpecificColorbarV2/components/HeroSection/HeroSection.test.js` | Same |
+| `LocationSpecificColorbarV2/components/HeroSection/index.js` | Same |
+| `LocationSpecificColorbarV2/components/ServicesSection/ServicesSection.vue` | Dead duplicate of `LocationSpecific/ServicesSection/ServicesSection.vue` (DOTCOMPB-8121) |
+| `LocationSpecificColorbarV2/components/ServicesSection/index.js` | Same |
+| `LocationSpecificColorbarV2/components/MembershipCallout/MembershipCallout.vue` | Dead duplicate of `LocationSpecific/ServicesSection/components/MembershipCallout/` |
+| `LocationSpecificColorbarV2/components/MembershipCallout/index.js` | Same |
+
+### Added from feat-location-s merge (DOTCOMPB-8122 — Maxi)
+
+| File | Association |
+|---|---|
+| `LocationSpecificColorbarV2/EnhancementSection/EnhancementSection.vue` | DOTCOMPB-8122 — location-aware enhancements carousel |
+| `LocationSpecificColorbarV2/EnhancementSection/EnhancementSection.test.js` | DOTCOMPB-8122 — unit tests |
+| `LocationSpecificColorbarV2/EnhancementSection/index.js` | DOTCOMPB-8122 — barrel export |
 
 ### Created on DOTCOMPB-8120 — 2026-05-19 (Playwright E2E suite)
 
@@ -2011,157 +2122,34 @@ Pattern B was "flat `heroSection.offer.{copy, promoCode, ...}` on template 1650,
 
 ## SECTION 5: LAST INTERACTION (SHORT-TERM MEMORY)
 
-> **Start here when resuming.**
+> **Start here when resuming.** Last reset: 2026-05-29.
 
-### What was done last (2026-05-19 — cookie promo persistence + second /code-review + all findings fixed + CMS CTA fields + PR body final)
+### What was done last (2026-05-29 — location override bug audited + fixed)
 
-Multi-track session building on the previous reset. Net deliverables: Maxi's cookie architecture implemented, second code review executed with all findings fixed, both CTA labels made Tophat-configurable, PR body + commit message updated with the complete picture.
+**Context from earlier this session (already reflected in §3.1 / §6):**
+- Test fix commit `f3239519475` was already pushed; `feat-location-s` is in sync with remote.
+- PR #20750: merge conflicts resolved, all 14 AI threads replied, CI pending.
 
-**1. Cookie-based promo persistence — decision #112 / §1.50:**
-* Root cause: `/colorbar/locations` → `/colorbar/booking/{code}/services` is a full-page redirect, not SPA navigation. Vuex resets → `pendingPromo` lost.
-* Fix: `applyPromoQueryHandoff` writes a 1-hour `mr_pending_promo` cookie (`sameSite: 'Strict'`) alongside the Vuex stash.
-* `refreshPromos` reads the cookie when `pendingPromo` is null; validates against `PROMO_CODE_PATTERN`; commits `setPendingPromo`; removes cookie on confirmed apply only.
-* Malformed JSON → cookie immediately removed in `catch` (no infinite retry).
-* `PENDING_PROMO_COOKIE_KEY` exported from `promoCode.js` — shared by V1 + store.
-* 1063 tests / 84 files — all passing after cookie test additions.
+**Location override bug — root-cause audit + fix:**
 
-**2. Second /code-review (all workers) + all findings implemented — decision #113:**
-* BLOCKERS fixed: `font-size 105px !important` removed from Stylus; `emits: []` on `LocationSpecificColorbarV2.vue`; unused `mapState` removed.
-* ADA: unified `aria-label` on PromoBadge discount wrapper + child spans `aria-hidden`; SEARCH `MrBtn` `type="button"` + scoped `:focus-visible`; `role="region"` conditional landmark; unique per-index close button `:aria-label` in `CustomNotifications.vue`.
-* Stylus: `gap 13px` → `gap 0.8125rem`; merged duplicate `.hero-title-wrap`; `<style scoped lang="stylus">` attribute order; Stylus padding removed where utility classes cover it.
-* Vue: `|| ''` → `?? ''` on CMS defaults; `getObjProperty` → `?.`; `sameSite: 'Strict'` on cookie.
-* Cookie `Cookies.remove` moved to success confirmation path; `PROMO_CODE_PATTERN` validates cookie read.
+**Bug 1 — `ColorBarMapSection.vue` (Version A):** Had no awareness of `?lat`/`?lng`/`?search` URL params at all. `getLocationFromCustomerData()` called unconditionally in `mounted()` → IP/customer geo always overrode the user's searched location. Fix: added `applySearchQueryHandoff()` (reads URL params, sets `currentPlace` + `earlyPosition` + `locationSource = 'url'`), called first in `mounted()`; gated `getLocationFromCustomerData()` behind `locationSource !== 'url'`; added `locationSource: null` to `data`; added URL check to `created()` to skip IP earlyPosition when URL has lat/lng.
 
-**3. `nearestLocationCtaText` CMS field — decision #114:**
-* Added to `heroSection.fieldConfig` on template 1650 (default `"BOOK A SERVICE"`). Seeded cv 19460 + 19464. HeroSection passes `:cta-text="heroSettings.nearestLocationCtaText || 'BOOK A SERVICE'"` to NearestLocationCard. Both CTA labels now fully Tophat-configurable.
+**Bug 2 — `ColorBarLocationSectionV1.vue` (Versions B/C):** `applySearchQueryHandoff()` correctly set `locationSource = 'url'`, but the earlyPosition block immediately after in `mounted()` unconditionally wrote `locationSource = 'ip'`, overwriting it. All downstream guards (`getCurrentPosition` skip, `getLocationFromCustomerData` skip, browser geo bail-out) then saw `'ip'` not `'url'` → browser geo could still override. Fix: one-line guard `if (this.locationSource !== 'url') { this.locationSource = 'ip'; }`.
 
-**4. PR body + commit message final update — decision #115:**
-* Commit: 12 lines — cookie persistence, ADA fixes, CMS CTA fields, 1063 tests.
-* PR body: cookie architecture in TD, `applyPromoQueryHandoff` and `refreshPromos` entries updated, QA steps 4-5 (DevTools cookie verification, cookie fallback test), test table updated to 84 files.
-* Both in roam node `* COMMIT MSG` + `* PULL REQUEST`.
+**Test results:** 16/16 `ColorBarMapSection` tests + 132/132 `ColorBarLocationSectionV1` tests — all passing.
 
-**5. PR comments answered:**
-* 8 replies posted (3 `type="button"` repeats, dangling aria-labelledby, `resolvedSecondaryCtaAriaLabel`, `CustomNotifications` attrs, `refreshPromosRequestId` rebuttal, FORCE constant resolved).
-* Deferred: `LocationSearchInput.vue` combobox ARIA (pre-existing, not introduced by this PR).
-* `FORCE_NEAREST_LOCATION_FOR_TESTING` currently ABSENT from HeroSection.vue (removed).
+### Pending
 
-### Pending / Not yet started
-
-* **Commit** — user creates it; message ready in roam node `* COMMIT MSG`.
-* **`gh pr edit 20771 --body-file <md>`** — sync final PR body from roam node `* PULL REQUEST`.
-* **Carley Tophat replication** — foundation rollout + `nearestLocationLabel` text + both CTA fields + promo partial + parent CV offer.partial binding.
-* **HeroSection.test.js** — add `nearestLocationCtaText` prop forwarding test.
-* **NearestLocationCard.test.js** — update class assertions (`.bold` not `.f-primary-bold`; no mobile pill classes).
-* **Phase 2+** — Sticky CTA, Primary CTA tracking, full E2E event coverage — parked.
-
-### ⚡ ARCHITECTURE MIGRATION — HeroSection standalone (follow-up to DOTCOMPB-8121)
-
-DOTCOMPB-8121 established the canonical pattern for the Site Revolution epic: every section ships as a **standalone globally-registered Tophat component**, called directly from the page's `componentList` — NOT wrapped inside `LocationSpecificColorbarV2`. `ServicesSection` has completed this migration. **`HeroSection` must follow the same pattern.**
-
-The current state: `HeroSection` still lives inside `LocationSpecificColorbarV2/components/HeroSection/` and is mounted by `LocationSpecificColorbarV2.vue`. It is NOT standalone.
-
-**Important baseline — `HeroSection.vue` currently has ZERO lifecycle hooks.** No `mounted`, no `serverPrefetch`, no `initializeClosestLocation`, no `loadLocation` watcher. It maps only `colorbar/closestLocations` and `global/MRConfig` from the store, receives a `heroSettings` prop, and is 100% dependent on `LocationSpecificColorbarV2` for all location resolution. This is the biggest gap vs `ServicesSection`, which owned all of those from the start.
-
-**What needs to happen:**
-
-**1. Move component files**
-- `LocationSpecificColorbarV2/components/HeroSection/HeroSection.vue` → `LocationSpecific/HeroSection/HeroSection.vue`
-- Same for `HeroSection.test.js` and `index.js`
-- Update internal imports of `NearestLocationCard`, `LocationSearchInput`, and `PromoBadge`/partial logic
-
-**2. Rename prop + flatten settings**
-- `heroSettings` prop → `cmsSettings` (matches `ServicesSection` convention)
-- All `heroSettings.X` refs → `cmsSettings.X` throughout template and script
-- Tests: update all prop usages
-
-**3. Add self-sufficiency — lifecycle hooks (critical, none exist today)**
-- `mounted()`: dispatch `initializeClosestLocation()` via `dispatchClosestLocationsLookup()` (exact same pattern as `ServicesSection.dispatchClosestLocationsLookup` — guard on `closestLocations.length > 0` and `closestLocationInitialized` flag)
-- `watch.closestLocations` (immediate: true): call `loadLocation(closest.code)` when distance ≤ `NEARBY_RADIUS_MILES` — same watcher as `ServicesSection`
-- `async serverPrefetch()`: call `getActiveLocationsListForMapView()` via `Promise.allSettled` (same as wrapper's current `serverPrefetch`)
-- Add `mapActions('colorbar', ['initializeClosestLocation', 'loadLocation', 'getActiveLocationsListForMapView'])`
-
-**4. Register globally**
-- `mrVueApp.js`: `app.component('HeroSection', defineAsyncComponent(() => import(/* webpackChunkName: 'HeroSection' */ "@components/LocationSpecific/HeroSection")))`
-- `registerGlobalsSsr.js`: same pattern
-
-**5. `NearestLocationCard` changes — ship WITH this PR**
-- The secondary CTA (`secondaryCtaText`, `secondaryCtaUrl`, `secondaryCtaAriaLabel`) additions and the ADA focus-ring fix (`outline: cta-color-1` / `box-shadow: color-white`) were authored in the 8121 session but logically belong to HeroSection (the NLC is a child of HeroSection, not ServicesSection). These MUST be included in the HeroSection PR.
-- `NearestLocationCard.test.js` updates also ship here.
-
-**6. Create `hero-section` CMS template (via tophat-tools)**
-- type: `component`, mixin_key: `hero-section`
-- jade: `hero-section(:cms-settings=JSON.stringify(settings))`
-- Field schema (promoted from `heroSection.*` in template 1650 to top-level):
-
-| Field | Type | Default |
-|---|---|---|
-| `title` | text, required | "Salon results without salon cost & time" |
-| `image` | staticCroppedImage, required | — |
-| `searchHelperText` | text | "Find a Madison Reed Hair Color Bar near you." |
-| `nearestLocationLabel` | text | "NEAREST LOCATION TO YOU" |
-| `nearestLocationCtaText` | text | "BOOK A SERVICE" |
-| `nearestLocationSecondaryCtaText` | text | "FIND ANOTHER HAIR COLOR BAR" |
-| `offer` | object | wrapper |
-| `offer.partial` | partial | — |
-
-All fields: `xsClass: "col-xs-12"` mandatory.
-
-**7. CMS data + componentList migration (ATOMIC swap)**
-- Extract `heroSection.*` data from cv 19460 + 19464 lsv2 settings into a new `hero-section` componentList entry
-- **CRITICAL:** The removal of `location-specific-colorbar-v2` and the insertion of `hero-section` must happen in a single `updateOne` operation. Two separate writes would cause a flash of no-hero between commits.
-- `$unset templateData.heroSection` from both cvs (top-level path no longer needed)
-- Both cv 19460 (published) and cv 19464 (edit) must stay in sync
-
-**8. Update template 1650 — strip heroSection**
-- Remove `heroSection.*` field schema from template 1650 config
-- If lsv2 has no remaining field schema after stripping, consider deprecating template 1650 entirely (note: `colorbarTitle`, `title`, `subtitle` top-level fields may still be used — verify before deprecating)
-
-**9. Update `LocationSpecificColorbarV2.vue`**
-- Remove `HeroSection` import + mounting
-- If nothing remains to render, the component should render an empty `div` or be removed entirely (separate decision, possibly a separate cleanup PR)
-- `LocationSpecificColorbarV2.test.js` needs rewriting — all HeroSection-related assertions removed; if no meaningful tests remain, consider removing the test file
-
-**10. HeroSection.test.js — rewrite for standalone pattern**
-- `heroSettings` prop → `cmsSettings`
-- Store mock must include `initializeClosestLocation`, `loadLocation`, `getActiveLocationsListForMapView` actions
-- Add lifecycle tests: `initializeClosestLocation` dispatched in `mounted`; `loadLocation` watcher fires ≤50 mi; `serverPrefetch` calls `getActiveLocationsListForMapView`
-- Remove dependency on `LocationSpecificColorbarV2` wrapper in tests
-
-**Reference:** DOTCOMPB-8121 session §2.4 decisions #22–#23 for the exact ServicesSection migration sequence. Pay close attention to the dual-path CMS data stripping pattern (§1.33) — `templateData.heroSection` AND `templateData.componentList[lsv2].settings.heroSection` both need to be unset.
-
-**Key difference from ServicesSection:** HeroSection owns `NearestLocationCard` and `LocationSearchInput` as internal sub-components — they stay as children. `LocationSearchInput`'s `applySearchQueryHandoff` and the search-to-locations handoff remain inside HeroSection.
-
----
-
-**PR scope — how isolated should it be?**
-
-Follow the exact same scope as ServicesSection PR #20888 (reference: PR #20879 for LocationsSection pattern):
-
-**IN the PR (code changes only):**
-- `LocationSpecific/HeroSection/` — component + test + barrel at new path
-- `mrVueApp.js` + `registerGlobalsSsr.js` — registration lines only
-- `NearestLocationCard.vue` + `NearestLocationCard.test.js` — secondary CTA + ADA fixes (these belong to HeroSection's sub-component, not 8121)
-- Any `colorbar.js` additions needed (likely none — `initializeClosestLocation` already exists)
-
-**NOT in the PR:**
-- `LocationSpecificColorbarV2.vue` modification or removal — this is a separate cleanup PR after the CMS componentList is fully migrated in production
-- `template 1650` schema stripping — CMS work, not version-controlled
-- componentList update — CMS work, documented in PR Special Deployment Requirements
-
-**Why keep `LocationSpecificColorbarV2` alive in the code PR:**
-While the componentList is being migrated to `hero-section` in production, old deployments or cached CMS content may still reference `location-specific-colorbar-v2`. The wrapper must remain registered and functional until the CMS migration is confirmed complete across all environments.
+* **[NEXT: merge PR #20750]** CI `website_tests` must go green → then merge into `master`
+* **Carley Tophat production replication** — Special Deployment steps in PR #20750 body (hero-section + services-section templates, componentList seeding, production images)
+* **Hero layout polish** — columns break at intermediate viewports; visual QA at 375/560/760/960/1080/1280/1440px+ (parked from 2026-05-21)
 
 ### Where to resume
 
-* **"Commit"** → present roam node `* COMMIT MSG` text. Never run any git command.
-* **"Check our files"** → run the verification command from `project_dotcompb8120_file_baseline.md` memory.
-* **Promo flow** → §1.27 (stash-then-flush), §1.36 (code never displayed), §1.37 (toast template), §1.50 (cookie persistence pattern).
-* **Why promoId wasn't used** → §1.48 + roam node `** DECISION: PROMO CODE vs PROMO ID`.
-* **NLC label styling** → §1.49.
-* **CMS investigation** → `tophat-tools` skill (§3.3) + §1.38 canonical shape.
-* **PR review comments** → reply in-thread via `-F in_reply_to=<id>`, concise, lead with verdict (§1.44).
-* **Cookie architecture** → §1.50 — `mr_pending_promo`, deferred removal, `PROMO_CODE_PATTERN` validation.
-* **HeroSection standalone migration** → See "ARCHITECTURE MIGRATION" block above. Reference: DOTCOMPB-8121 session §2.4 decisions #22–#23.
+* **"merge"** → check CircleCI `website_tests` on PR #20750; merge once green; Carley owns Tophat production replication
+* **"Carley"** → Special Deployment in PR #20750 body — hero-section + services-section Tophat templates
+* **"hero columns"** → visual QA + fix `.hero-content`/`.hero-block`/`.hero-media` Stylus
+* **"8121"** → load `dotcompb-8121-marketing-lp-services.md`; two open bugs: Force Addon flow + Swiper left-scroll
 
 ---
 
@@ -2171,6 +2159,34 @@ While the componentList is being migrated to `hero-section` in production, old d
 
 > Append-only chronological table of every meaningful event in this session. Newest row first. See `~/.claude/skills/session-reset/rules/activity-log.md` for the schema.
 
+| 2026-05-29 17:00 | 0.25h    | session-reset    | this          | Reset: location override bug fixed (ColorBarMapSection + ColorBarLocationSectionV1), §1.57 added, decision #125. Next: CI green → merge PR #20750. |
+| 2026-05-29 16:30 | 0.5h     | bug-fix          | DOTCOMPB-8120 | Fixed URL search override in ColorBarMapSection (applySearchQueryHandoff + locationSource guard) + V1 locationSource overwrite; 148 tests green. |
+| 2026-05-29 16:00 | 0.5h     | research         | DOTCOMPB-8120 | Audited location override bug: ColorBarMapSection (no URL handling, unconditional getLocationFromCustomerData) + V1 (locationSource = 'ip' overwrites 'url'). |
+| 2026-05-29 10:45 | 0.25h    | session-reset    | this          | Reset: PR #20750 conflicts resolved, AI comments replied, OutThisLife ADA audited, test fixes staged. Next: push → CI green → merge. |
+| 2026-05-29 10:25 | 0.25h    | testing          | PR #20750     | Fixed ExperienceSection (aria-hidden assertion) + LocationsSection (distance text) test failures; 614/614 green. |
+| 2026-05-29 10:00 | 0.5h     | pr-feedback      | PR #20750     | Replied to 11 inline threads (sentry ×4 + mrminionbot ×7); audited OutThisLife a11y commits 55e772ab948 + b4ec669ce12. |
+| 2026-05-29 09:30 | 0.5h     | bug-fix          | PR #20750     | Resolved mrVueApp.js + colorbar.test.js merge conflicts; fixed 2 lint errors (simpleTasks.js, redux.js); commit d1fff53 pushed — PR #20750 now MERGEABLE. |
+| 2026-05-29 09:00 | 0.5h     | research         | PR #20750     | Loaded 8120/8121 context; identified PR #20750 CONFLICTING; audited all 6 conflict files across both branches. |
+| 2026-05-28 14:21 | 0.25h    | session-reset    | this          | Reset: Fix A + Fix B shipped, E2E audit complete, commit+PR drafted. §5 updated with next steps → DOTCOMPB-8121. |
+| 2026-05-28 13:30 | 0.5h     | documentation    | DOTCOMPB-8120 | Commit message + PR body (/pr-scribe MR format) written to .tasks/DOTCOMPB-8120/commit-and-pr.md. |
+| 2026-05-28 12:00 | 1h       | research         | DOTCOMPB-8120 | E2E promo flow audit: confirmed correct across all variants (A/B/C), forced-A customer types, appointment edit/reschedule/cancel flows. |
+| 2026-05-28 10:30 | 1.5h     | bug-fix          | DOTCOMPB-8120 | Fix B: applyPromoQueryHandoff added to ColorBarMapSection.vue + 9 tests in ColorBarMapSection.test.js. 5911 total tests passing. |
+| 2026-05-28 09:30 | 0.5h     | bug-fix          | DOTCOMPB-8120 | Fix A: addOnTreatments re-added to refreshPromos payload in hairColorBarBooking.js + 2 regression tests. 842 tests passing. |
+| 2026-05-27 16:00 | 0.5h     | session-reset    | this          | Audit session reset: §1.55–1.56 added, §5 replaced, Activity Log prepended. Two promo bugs documented in roam node. |
+| 2026-05-27 15:00 | 1h       | research         | DOTCOMPB-8120 | Cross-version promo application audit: Bug 2 (addOnTreatments dropped from refreshPromos payload on feat-location-s) confirmed; all working paths verified. |
+| 2026-05-27 14:00 | 1.5h     | research         | DOTCOMPB-8120 | Version A promo toast gap root-caused (ColorBarMapSection vs ColorBarLocationSectionV1 CMS gating); implementation plan refined in roam node (Fix A + Fix B, 4 files, 10 tests). |
+| 2026-05-21 20:30 | 0.25h    | session-reset    | this          | Proper session reset. Updated §5 with next-steps item. Prepended Activity Log. §5 now fully reflects session end state including hero layout + 8121 notes. |
+| 2026-05-21 20:15 | 0.25h    | documentation    | this          | Added hero column layout polish to 8120 §2.5 + §5. Added Force Addon + Swiper left-scroll bugs to 8121 §5 Pending + What to watch. |
+| 2026-05-21 19:30 | 1h       | session-reset    | this          | Detailed session reset. Added §1.53 (role=status implicit aria-atomic), §1.54 (pre-existing ADA defer). Decisions #121–#124. Deleted 7 duplicate files, resolved merge conflicts, code review, ADA triage. Updated §2.5, §4, §5. |
+| 2026-05-21 19:00 | 0.25h    | pr-feedback      | PR #20771     | ADA comment triage: all 8 mrminionbot threads resolved/deferred; reverted erroneous aria-atomic addition; LocationSearchInput combobox deferred as pre-existing. |
+| 2026-05-21 18:30 | 0.5h     | bug-fix          | DOTCOMPB-8120 | Resolved merge conflicts with feat-location-s (Maxi's DOTCOMPB-8122); deleted wrapper files; merged globals (HeroSection + EnhancementSection); 1107 tests / lint clean. |
+| 2026-05-21 18:00 | 0.5h     | implementation   | DOTCOMPB-8120 | Deleted 7 duplicate component files under LocationSpecificColorbarV2/components/; ran code review (1 false-positive finding corrected per WAI-ARIA spec). |
+| 2026-05-21 17:00 | 0.5h     | session-reset    | this          | HeroSection standalone migration session reset. Added §1.51 (browser aria-label tooltip), §1.52 (ESLint flat config disable comment). Decisions #116–#120. Updated §2.5, §4 file index, §4 CMS state. Replaced §5 fully; prepended Activity Log rows. |
+| 2026-05-21 16:30 | 0.25h    | documentation    | PR #20771     | PR #20771 body updated via /pr-scribe (1070 tests / 85 files). Standalone architecture in Technical Details + Special Deployment Steps 1–4 rewritten for hero-section template. Decision #120. |
+| 2026-05-21 16:20 | —        | commit           | dc8e48c246a   | refactor(DOTCOMPB-8120): HeroSection standalone — global registration + hero-section CMS template. 9 files, 951 insertions / 139 deletions. Fixed stale vue/ ESLint disable comment in mrVueApp.js. |
+| 2026-05-21 15:30 | 1.5h     | implementation   | DOTCOMPB-8120 | Tophat `hero-section` template created (_id=1655, tv 5712) with 7 fields via `set-template-fields.mjs`. Content 3117 B componentList atomic swap (cv 19460 + 19464): `location-specific-colorbar-v2` → `hero-section`; heroSection.* promoted to flat settings. Backup: `cms-backups/3117/2026-05-21T16-58-11...`. Decision #117. |
+| 2026-05-21 14:30 | 2h       | implementation   | DOTCOMPB-8120 | HeroSection standalone migration: new `LocationSpecific/HeroSection/` path, `cmsSettings` flat prop, lifecycle hooks (initializeBopis + serverPrefetch + loadLocation watcher), 45 tests. LocationSpecificColorbarV2 emptied to shell. Global registrations in mrVueApp.js + registerGlobalsSsr.js. Decision #116. |
+| 2026-05-21 13:30 | 0.5h     | bug-fix          | DOTCOMPB-8120 | PromoBadge `resolvedCtaAriaLabel` simplified to `ctaText` only — Chrome+Safari show aria-label as browser tooltip, visually duplicating the "20" badge value. 26 tests passing. Decision #118. §1.51 added. |
 | 2026-05-19 17:30 | 0.5h     | session-reset    | this          | Compacted full code-review cycle + all fixes + PromoBadge revert + PR body + CMS field + visual polish. Added §1.49 (NLC label styling — .bold, desktop letter-spacing, no mobile pill). Decisions #106-#111. Removed FORCE constant from HeroSection. Replaced §5 fully; prepended Activity Log rows for 2026-05-19 afternoon. |
 | 2026-05-19 17:00 | 0.75h    | refinement       | DOTCOMPB-8120 | NearestLocationCard label final polish: removed `f-secondary` (Kapra Neue) → `.bold` utility (Averta per Figma); `lg-f-medium` → `lg-f-small` (one step up from sm); removed mobile pill (background #7D5D74, centering, negative margins); added desktop `letter-spacing 0.06em` + `line-height 1.5`; buttons `letter-spacing -0.03em`; `lg-px-150m` on content column. Decision #110 / §1.49. |
 | 2026-05-19 16:00 | 0.5h     | implementation   | DOTCOMPB-8120 | `nearestLocationSecondaryCtaText` CMS field added to template 1650 `heroSection.fieldConfig` via mongosh `$push` (set-template-fields only handles top-level). Seeded cv 19460 + 19464 at top-level + componentList baked snapshot via arrayFilters. HeroSection passes it as `:secondary-cta-text` prop — blank = button hidden. Decision #109. |

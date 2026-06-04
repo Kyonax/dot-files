@@ -1,0 +1,28 @@
+{
+  "_id": 5712,
+  "template_id": 1655,
+  "version": 1,
+  "jade": "hero-section(:cms-settings=JSON.stringify(settings))",
+  "config": [],
+  "styl": "",
+  "partialData": {},
+  "previewData": {},
+  "staticTemplatePath": null,
+  "getter": null,
+  "ngBodyCtl": null,
+  "loadControllerFile": false,
+  "modal_list": [],
+  "renderOptions": {
+    "additionalScripts": [],
+    "cdAttributesToInject": []
+  },
+  "cacheOptions": {
+    "queryParams": {
+      "whitelist": []
+    }
+  },
+  "audienceKey": null,
+  "audienceName": null,
+  "variationKey": "A",
+  "siteSearchKeywordBoost": []
+}

@@ -24,7 +24,8 @@ This file is the **single source of truth** for the `jira-tempo-hours` tool — 
 - 2026-04-29 — Phase 1 (scaffold, Tempo client, `whoami`/`history`/`export`/`push`).
 - 2026-04-30 — Phase 2 (calendar integration, scheduler).
 - 2026-04-30 (late) — Phase 3 (theme classifier, render-org.js, MR-4 single-issue resolution, Activity Log infrastructure).
-- 2026-05-15 — Central session file created from local `SESSION.org` v3 (Phase 3 complete; pre-first-real-push).
+- 2026-05-15 — Central session file created from local `SESSION.org` v3 (Phase 3 complete; first real push for May 1–15).
+- 2026-05-29 — Updated after second biweekly push (May 16–31 cycle confirmed done).
 
 ---
 
@@ -157,7 +158,7 @@ Final approval and submission stay manual in the browser. The scripts only popul
 
 ```bash
 cd /Volumes/dev-partition/github-madison-reed/jira-tempo-hours
-npm run plan -- --from 2026-04-16 --to 2026-04-30
+npm run plan -- --from 2026-05-16 --to 2026-05-31
 ```
 
 This single command:
@@ -224,10 +225,16 @@ After `push` succeeds, open Tempo in your browser and click **Submit**.
 18. **(2026-04-30 17:00)** Auto-emit `week.org` alongside `week.json`. Plan writes both; `push` reads only the JSON.
 19. **(2026-04-30 18:00)** Activity Log infrastructure: parser added, theme weight bumped by logged hours, `week.org` shows per-theme evidence. Aligned with `session-reset` skill v4.1 and `session-memory` v1.1.
 
-### 2.6 Pending Work
+### 2.6 Biweekly Push History
 
-*   ~~**First real push**~~ — **Done 2026-05-15.** Biweekly cycle 2026-05-01 → 2026-05-15 pushed end-to-end (`plan` → `push --dry-run` → `push`). 57 worklogs created (IDs 3472938–3472994), 88.00h on `MR-4`/96270, all 11 workdays balanced to exactly 8.0h. User clicks **Submit** in Tempo UI to finalize.
-*   **Backfill Activity Logs in existing sessions** — none of the existing `gptel-directives/sessions/*.md` files have a Section 6 yet (except this one going forward). On their next resets, add bootstrap rows per the v4.1 skill rule.
+| Cycle | Workdays | Hours | Worklogs | Status |
+|---|---|---|---|---|
+| 2026-05-01 → 2026-05-15 | 11 | 88.0h | 57 (IDs 3472938–3472994) | **Done 2026-05-15** — click Submit in Tempo UI |
+| 2026-05-16 → 2026-05-31 | 10 | 80.0h | — | **Done 2026-05-29** — click Submit in Tempo UI |
+
+### 2.7 Pending Work
+
+*   **Backfill Activity Logs in existing sessions** — none of the existing `gptel-directives/sessions/*.md` files have a Section 6 yet (except this one). On their next resets, add bootstrap rows per the v4.1 skill rule.
 *   **Optional:** pull MR ticket activity from JIRA directly so dev descriptions reflect actual ticket activity.
 *   **Optional:** detect PTO/holidays automatically.
 *   **Optional:** per-theme description templates so dev blocks read like the historical pattern.
@@ -343,7 +350,7 @@ Project root: `/Volumes/dev-partition/github-madison-reed/jira-tempo-hours/`
 | `analyze.js` | one-off pattern analyzer |
 | `backup-march.json` | exported worklogs Mar 1–31 (pattern reference) |
 | `backup-april-15days.json` | exported worklogs Apr 1–15 (pattern reference) |
-| `week.json` | latest plan (last: Apr 16–30, 88h, single `MR-4`/id `96270`) |
+| `week.json` | latest plan (last: May 16–31, 80h, single `MR-4`/id `96270`) |
 | `week.org` | human-readable view of `week.json` (auto-generated) |
 
 ---
@@ -352,38 +359,32 @@ Project root: `/Volumes/dev-partition/github-madison-reed/jira-tempo-hours/`
 
 > **Start here when resuming.**
 
-### What Was Done Last (2026-05-15)
+### What Was Done Last (2026-05-29)
 
-**First real biweekly Tempo push — successful.** Ran the tool end-to-end for the first time on the 2026-05-01 → 2026-05-15 cycle:
-*   Generated plan: 11 workdays, 88.00h total (72h dev + 16h meetings), 22 calendar events merged, 10 DOTCOMPB themes. Filters correctly excluded all kyonax/skill/doom/omarchy/brain-d sessions.
-*   Verified all 11 days balance to exactly 8.00h (no over/under-allocation).
-*   Dry-run: 57/57 ok, 0 failed.
-*   Real push: 57 worklogs created on `MR-4`/96270, worklog IDs `3472938`–`3472994`. 57/57 ok, 0 failed.
-*   Theme allocation: DOTCOMPB-8120 (16.5h), 8211 (15.5h), 8174 (10.5h), 7929 (9h), 7052 (4h), 8121 (4h), 7051 (4h), 7942 (3.5h), 7166 (2.5h), 7167 (2.5h).
-*   Validation: tool's `SESSION_EXCLUDE_PATTERNS` worked correctly on first real run — 19 raw sessions in range filtered down to 10 clean DOTCOMPB themes.
-
-Earlier this same day:
-*   Created this central session file (`jira-tempo-hours.md`) in `gptel-directives/sessions/` from the project-local `SESSION.org` so the tool surfaces in cross-session index/search. Added a pointer entry to `MEMORY.md`. Project-local org file remains source of truth.
-
-Prior to that (2026-04-30):
-*   Updated `session-reset` skill to v4.1 — Section 6 Activity Log spec.
-*   Updated `session-memory` skill to v1.1 — `datetime` field on architecture decisions.
-*   Built `src/sources/activity-log.js` parser + integrated into `themes.js` weight-bumping.
-*   Built `src/render-org.js` for human-readable `week.org` auto-generation.
-*   Built smart theme classifier (`src/themes.js`).
-*   Added DST anchor in `src/calendar.js`.
-*   Added `mergeMeetings` rule in `config.calendar`.
-*   Resolved `issueId 96270` → JIRA key `MR-4`.
+**Second biweekly Tempo push — confirmed done.** User ran the full flow for the 2026-05-16 → 2026-05-31 cycle:
+*   Loaded session context to identify the correct command sequence for May 16 → end of month (May 31, Saturday → last workday May 30).
+*   Confirmed the cycle covers **10 workdays** (May 16, 19–23, 26–30), **80.0h total** on `MR-4`/96270.
+*   New roam nodes picked up by `plan` for this cycle: `DOTCOMPB-8206` (`dotcompb-8206-booking-calendar-availability`), `DOTCOMPB-xxxx` (DY quiz buttons dynamic). Roam `eng-onboarding-skills` filtered (no real ticket prefix).
+*   New sessions picked up: `dotcompb-8206-booking-calendar-availability`, `dy-question-email-capture-epic`, `mr-seo-structured-data-architecture`. Filtered: `eng-onboarding-skills`, `kyo-web-online`.
+*   User confirmed: "I already sent everything" — plan generated, push executed, worklogs created. Click **Submit** in Tempo browser UI to finalize.
 
 ### Pending / Not Yet Started
 
-*   **First real push** — end-to-end `plan` → `push --dry-run` → `push` for an upcoming biweekly cycle (calendar + tokens configured).
+*   **Next biweekly cycle** (2026-06-01 → 2026-06-15): run when ready.
 *   **Backfill Activity Logs** — existing `gptel-directives/sessions/*.md` files still lack Section 6.
 *   **Optional:** JIRA ticket activity import, PTO detection, per-theme description templates, architecture-memory extraction.
 
 ### Where to Resume
 
-*   **To plan + push the next biweekly cycle** (e.g., 2026-05-16 → 2026-05-29): `cd /Volumes/dev-partition/github-madison-reed/jira-tempo-hours && npm run plan -- --from <YYYY-MM-DD> --to <YYYY-MM-DD>`, review `week.org`, then `npm run push -- week.json --dry-run` followed by `npm run push -- week.json`. After API confirms, click **Submit** in Tempo's browser UI.
+*   **To plan + push the next biweekly cycle** (Jun 1 → Jun 15):
+    ```bash
+    cd /Volumes/dev-partition/github-madison-reed/jira-tempo-hours
+    npm run plan -- --from 2026-06-01 --to 2026-06-15
+    # review week.org, then:
+    npm run push -- week.json --dry-run
+    npm run push -- week.json
+    ```
+    After API confirms, click **Submit** in Tempo's browser UI.
 *   **To verify daily balance before push:** `node -e "const p=JSON.parse(require('fs').readFileSync('week.json')); const b={}; for(const e of p.entries) b[e.date]=(b[e.date]||0)+e.hours; for(const d of Object.keys(b).sort()) console.log(d, b[d].toFixed(2)+'h');"` — every day must equal `hoursPerDay` (default 8.0).
 *   **If a session file gains a Section 6 Activity Log:** re-run `plan` to pick up the new evidence.
 *   **If a calendar event lands at a wrong wall-clock time:** first check the DST anchor in `src/calendar.js` `expandOccurrences`.
@@ -399,6 +400,8 @@ Prior to that (2026-04-30):
 
 | Datetime | Duration | Type | Reference | Description |
 |---|---|---|---|---|
+| 2026-05-29 11:30 | 0.25h | session-reset | this | Reset — updated Last Interaction with May 16-31 push confirmation, converted pending to history table, next cycle Jun 1 |
+| 2026-05-29 11:00 | — | other | MR-4 | Ran plan + push for 2026-05-16 → 2026-05-31 (10 workdays, 80h, confirmed by user) |
 | 2026-05-15 12:45 | 0.25h | session-reset | this | Session reset after first real push — updated Last Interaction with end-to-end run results, marked first-push pending item Done, added daily-balance verification recipe |
 | 2026-05-15 12:35 | 0.1h | other | MR-4 | Pushed 57 worklogs to Tempo for 2026-05-01 → 2026-05-15 (88.00h on MR-4/96270, worklog IDs 3472938–3472994, 0 failed) |
 | 2026-05-15 12:30 | 0.1h | other | this | Generated plan for 2026-05-01 → 2026-05-15 (11 workdays, 88h, 22 meetings, 10 DOTCOMPB themes); verified all days balance to 8.0h |

@@ -847,89 +847,61 @@ variablePromo: enabled=true, applicableServiceCodes=["cbs_roots_only","cbs_all_o
 
 ## SECTION 5: LAST INTERACTION (SHORT-TERM MEMORY)
 
-**As of 2026-05-20 — session reset.** PR #20888 is OPEN. Pilko blockers fixed. ADA + Sentry comments resolved. Changes staged, awaiting commit. The **standalone Tophat component architecture** is now the established pattern for this entire epic — every section ships as its own globally-registered Vue component + CMS template, called directly from the page's componentList.
+> **Start here when resuming.** Last reset: 2026-05-28.
 
-### Architectural pattern established (canonical for all epic sections)
+### What was done last (2026-05-28 — EnhancementSection Book a Service fixed + AI issue rebutted)
 
-Each section component:
-1. Lives at `LocationSpecific/{SectionName}/{SectionName}.vue` — NOT inside `LocationSpecificColorbarV2/components/`
-2. Is globally registered via `defineAsyncComponent` in both `mrVueApp.js` and `registerGlobalsSsr.js`
-3. Has its own CMS template in Tophat: type `component`, mixin_key `section-name`, jade `section-name(:cms-settings=JSON.stringify(settings))`
-4. Is self-sufficient: owns `initializeClosestLocation` dispatch, `loadLocation` watcher (≤50 mi gate), `loadBookableServices`
-5. Receives `cmsSettings` as a flat prop — NOT nested under a parent key
-6. Is added directly to the page's `componentList` in Tophat (no wrapper intermediary)
+**AI review comment on PR #20981:**
+- AI flagged `selected_service` cookie removal as a regression. Replied in-thread: intentional fix — cookie was bypassing Services page entirely via `navigateToAddons`, not preserving a selection. `setServiceFromCookie` no-ops on null-check = correct behavior. Reply: https://github.com/MadisonReed/mr/pull/20981#discussion_r3320398822
 
-`LocationSpecificColorbarV2.vue` now only mounts `HeroSection`. Once `HeroSection` completes the same standalone migration (DOTCOMPB-8120 follow-up), `LocationSpecificColorbarV2` becomes obsolete.
+**EnhancementSection.vue — "Book a Service" was a no-op:**
+- Root cause: `onBookService` emitted `'book-service'` but no parent component exists to receive it — `EnhancementSection` is globally registered and rendered standalone from Tophat `componentList`, so the emit vanished. Button did nothing.
+- Fix: same pattern as `ServicesSection.onServiceCtaClick` — replaced emit with internal `trackMREventAndRedirect(ENHANCEMENT_CTA_EVENT, handoffPath, {...})`. Handoff path: `/colorbar/booking/{code}/services` if `location.code` set, `/colorbar/locations` fallback.
+- Also applies Carley's direction: lands on Services page, no preselection cookie.
+- Added `BOOKING_HANDOFF_PATH` + `ENHANCEMENT_CTA_EVENT` module-level constants; `emits: ['book-service']` → `emits: []`
+- `EnhancementSection.test.js`: replaced 1 emit test → 4 CTA tests (direct booking URL, fallback URL, payload prices, no emit). 28/28 passing.
 
-### What was done last (full session arc)
+**ServicesSection cookie removal (2026-05-28 earlier):** `selected_service` cookie write removed from `onServiceCtaClick` per Carley's direction. ServicesSection.test.js updated. 5910 tests.
 
-**PR review (decisions #26+):**
-- **Pilko BLOCKING** — duplicate `initializeClosestLocation` action + `setClosestLocationInitialized` mutation from merge conflict removed. Feat-location-s canonical versions are the only implementations.
-- **ADA fixes** — `role="region"` removed from `<section>` (implicit); partial-price label text restructured (labels only render alongside their price); `#746874` replaced with `text-color-3` design-system token.
-- **`colorbar.test.js`** — removed 2 tests that tested our simpler `initializeClosestLocation` (delegated to `initializeBopis`); feat-location-s's version uses a different dispatch chain.
-- **All 5 in-thread replies posted** on GitHub (Pilko × 2, ADA × 3).
-- **General PR comment posted** re: Sentry LOW (intentional design) + race condition (not applicable — `loadLocation` settles last by Vue scheduler timing).
-- **CMS helpText updated** — `membership.content` field now instructs CMS authors to use self-describing link text (WCAG 2.4.4).
+**2026-05-20 staged (PR review fixes, still pending commit):**
+- `ServicesSection.vue` — `role="region"` removed
+- `ServiceCard.vue` — price labels + `#746874` → `text-color-3`
+- `colorbar.js` — duplicate `initializeClosestLocation` + `setClosestLocationInitialized` removed
+- `colorbar.test.js` — 2 stale tests removed
 
 ### Current state
 
 - **Branch:** `DOTCOMPB-8121-clean`
-- **PR #20888:** OPEN — Pilko `Pending Pilko Fixes` label should clear after next commit; `Pre-check Failed` CI label — CircleCI still running
-- **Staged changes (4 files):** `ServicesSection.vue` (role removed), `ServiceCard.vue` (price labels + hex), `colorbar.js` (duplicates removed), `colorbar.test.js` (stale tests removed)
-- **Awaiting:** your commit + push to update the PR
+- **PR #20888:** OPEN — needs single commit bundling all 7 modified files + updated PR body
+- **Modified files (all pending commit):**
+
+| File | Change | Date |
+|---|---|---|
+| `ServicesSection.vue` | `role` removed + cookie write removed | staged 2026-05-20 + 2026-05-28 |
+| `ServicesSection.test.js` | Cookie test → never-set assertion | 2026-05-28 |
+| `ServiceCard.vue` | Price labels + hex token | staged 2026-05-20 |
+| `colorbar.js` | Duplicate action + mutation removed | staged 2026-05-20 |
+| `colorbar.test.js` | 2 stale tests removed | staged 2026-05-20 |
+| `EnhancementSection.vue` | emit → `trackMREventAndRedirect`; `emits:[]` | 2026-05-28 |
+| `EnhancementSection.test.js` | Emit test → 4 CTA tests | 2026-05-28 |
 
 ### Pending
 
-*   [ ] **Commit + push** — stage the 4 modified files, commit, push to `DOTCOMPB-8121-clean`
-*   [ ] **PR review** — address any further reviewer comments in-thread
-*   [ ] **CI** — monitor CircleCI `website_tests` job
+*   [ ] **Commit + push** — stage all 7 files, single commit, push to `DOTCOMPB-8121-clean`
+*   [ ] **Update PR #20888 body** — add EnhancementSection fix + ServicesSection cookie removal to Changes; update Testing Coverage + QA steps
+*   [ ] **PR review** — address any remaining reviewer comments in-thread per §1.44
+*   [ ] **CI** — monitor CircleCI `website_tests` after push
 *   [ ] **Production CMS for Carley** — documented in PR Special Deployment Requirements
 *   [ ] **CMS Phases A-D** — deferred until hero PR #20771 merges
+*   [ ] **Force Addon flow broken when nearest location exists** — investigate `initializeClosestLocation` / `loadLocation` interaction with Force Addon dispatch chain
+*   [ ] **Carousel extra left-scroll space** — audit Swiper `slidesOffsetBefore`, `centeredSlides`, initial `translate`
 
----
+### Where to resume
 
-**Pricing + cookie architecture (decisions #13–#18):**
-- `saveAppointmentProgressToSession` removed from `onServiceCtaClick` (cookie-only approach)
-- 3-tier non-member pricing: live location → `bookableServices` store → empty
-- `bookableServices`/`bookableServicesByCode`/`loadBookableServices` added to `colorbar` module
-- `initializeClosestLocation` + `closestLocationInitialized` added to `colorbar` module (our version later superseded by feat-location-s canonical — see decision #25)
-- `basePrice.nonMember` removed from CMS schema and code (non-member price is auto-sourced)
-- `loadBookableServices` parallelised in wrapper `serverPrefetch` for SSR performance
-
-**Code review — 7 findings fixed (decision #19):**
-- Swiper `A11y`+`Keyboard` modules registered; `aria-label` on each `SwiperSlide`
-- `MembershipCallout` CTA: `<a>` → `<button aria-haspopup="dialog">`; `MrIcon aria-hidden`
-- `resolvedCtaAriaLabel` appends promo copy when `showPromo=true`
-- `NearestLocationCard` primary CTA focus ring fixed (white-on-white → `cta-color-1`)
-- `aria-label="Services"` fallback on empty `heroTitle`; dead `titleId` prop removed; `ctaLabel` camelCase
-
-**Architecture + CMS (decisions #20–#23):**
-- `MembershipCallout` → single `html` field; removed modal dispatch + tracking for membership
-- `variablePromo.copy` removed from template, data, and code
-- `ServicesSection` + `MembershipCallout` moved to `LocationSpecific/ServicesSection/`
-- `services-section` CMS template 1653 created (standalone component, mixin_key: `services-section`)
-- Template fields reorganised: `sectionHeader` dividers, `variablePromo` before `services[]`, concise helpTexts
-- ComponentList in cv 19460+19464: `services-section` added at position 2; `servicesSection` data migrated out of lsv2
-
-**Branch + PR + merge (decisions #24–#25):**
-- `DOTCOMPB-8121-clean` created from `feat-location-s`; 13-file diff; commit `ff3907b7ca9`
-- PR #20888 opened; `Merge Conflict` label applied by CI
-- Three commits had landed on `feat-location-s` after our branch point: canonical `initializeClosestLocation` (full address→geo→IP chain + `getLocationForBooking`) + `LocationsSection` component (PR #20879)
-- Merge commit `8e0a922ab62`: kept both `LocationsSection` + `ServicesSection` registrations; trivial trailing-newline conflict in `colorbar.js`; 563/563 green
-
-### Current state
-
-- **Branch:** `DOTCOMPB-8121-clean`
-- **PR:** #20888 — OPEN, `CONFLICTING` label should clear after merge commit pushes, CircleCI running
-- **`initializeClosestLocation`**: feat-location-s canonical version is now active. Our simpler alias has been replaced. `bookableServices` additions are intact.
-- **Components at:** `LocationSpecific/ServicesSection/` + `LocationSpecific/ServicesSection/components/MembershipCallout/` + `ServiceCard/`
-- **CMS:** template 1653 live locally; production replication is Carley's post-merge responsibility (documented in PR body)
-
-### What to watch
-
-- [ ] CircleCI `website_tests` — most likely to catch any regression from the merge
-- [ ] PR review comments — reply in-thread per §1.44 (2–4 sentences, lead with verdict)
-- [ ] CMS Phases A-D (lsv2 hero cleanup) — blocked on hero PR #20771
+* **"commit"** → stage all 7 files above; commit message should cover 3 things: PR review ADA/Pilko fixes, ServicesSection no-preselect, EnhancementSection Book a Service
+* **"PR"** → `gh pr edit 20888 --body-file <path>`; add both `[MOD] ServicesSection.vue` + `[MOD] EnhancementSection.vue` to Changes; reference Carley's Slack direction
+* **"Force Addon"** → `initializeClosestLocation` → `loadLocation` → Force Addon dispatch chain when nearest location ≤50 mi
+* **"Carousel"** → audit `swiperOptions` in `ServicesSection.vue`; check `slidesOffsetBefore`, `centeredSlides`, initial translate
 
 ---
 
@@ -939,6 +911,12 @@ Each section component:
 
 | Datetime         | Duration | Type           | Reference     | Description |
 |------------------|----------|----------------|---------------|-------------|
+| 2026-05-28 15:49 | 0.25h    | session-reset  | this          | Reset: EnhancementSection Book a Service fixed, AI issue rebutted. §5 updated — commit 7 files + update PR #20888 body next. |
+| 2026-05-28 15:30 | 0.5h     | bug-fix        | DOTCOMPB-8121 | Fixed EnhancementSection.onBookService: emit('book-service') → trackMREventAndRedirect to /services page. emits:[] + constants added. 4 CTA tests replace 1 emit test. 28/28 passing. |
+| 2026-05-28 15:10 | 0.15h    | pr-feedback    | PR #20981     | Replied to AI issue (r3320398822) flagging ServicesSection cookie removal as regression. Explained intentional fix — cookie bypassed Services page via navigateToAddons, not preserving a selection. |
+| 2026-05-28 15:01 | 0.25h    | session-reset  | this          | Reset: service preselection removed, §5 replaced with current state + pending. Next: commit all staged+today changes + update PR #20888 body. |
+| 2026-05-28 14:30 | 1h       | bug-fix        | DOTCOMPB-8121 | Removed selected_service cookie from ServicesSection.onServiceCtaClick (SERVICE_COOKIE_NAME constant + if(code) block + unused const code). Full 5-setter chain audited — only Marketing LP setter removed; 2 receivers + 4 other setters untouched. ServicesSection.test.js: deleted cookie-set test, repurposed to assert never-set with valid payload. 5910 tests passing. |
+| 2026-05-28 13:30 | 0.5h     | research       | DOTCOMPB-8121 | Full preselection chain audit per Carley Slack direction. Traced: ServicesSection → selected_service cookie → ServicesPage.setServiceFromCookie → navigateToAddons → booking-addons skip. Plan written to .tasks/DOTCOMPB-8121/no-preselect-plan.md. |
 | 2026-05-20       | —        | session-reset  | this          | Session reset — PR review complete. Pilko duplicates removed; ADA fixes (role, price labels, hex token); colorbar tests cleaned up; 5 in-thread replies + general comment posted on GH. Staged 4 files awaiting commit. Standalone Tophat architecture pattern documented. §5/§6 updated. |
 | 2026-05-20       | 0.5h     | pr-review      | PR #20888     | Resolved all PR comments: Pilko duplicate action + mutation removed from colorbar.js; ADA role/price/hex fixed in ServicesSection + ServiceCard; colorbar.test.js stale initializeClosestLocation tests removed; in-thread replies posted for all 5 inline comments + general comment for Sentry LOW + race condition. CMS membership.content helpText updated with WCAG 2.4.4 link-text authoring guidance. |
 | 2026-05-20       | 0.3h     | merge-conflict | DOTCOMPB-8121 | Merge origin/feat-location-s into DOTCOMPB-8121-clean. Three new commits on base: canonical initializeClosestLocation (commits 844ebc93254 + 7554ae2d43f) + LocationsSection (PR #20879 / b7a9cff8f91). Conflicts in mrVueApp.js + registerGlobalsSsr.js (keep both LocationsSection + ServicesSection) + colorbar.js (trivial trailing newline). colorbar.js now uses feat-location-s's initializeClosestLocation — full address→geo→IP fallback + getLocationForBooking after closest resolved. bookableServices additions untouched. Merge commit 8e0a922ab62. 563/563 green. |
