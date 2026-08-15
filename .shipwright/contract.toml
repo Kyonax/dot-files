@@ -1,0 +1,187 @@
+# =============================================================================
+# dot-files — shell, editor and window-manager configuration
+# =============================================================================
+# THIS REPOSITORY IS PUBLIC.
+#
+# That single fact makes it different from every other repo in the queue. The
+# brain and shipwright are private: a mistake there is embarrassing and
+# fixable. A mistake here is world-readable within seconds, cached by GitHub,
+# scraped, and effectively permanent — `git revert` removes it from HEAD, not
+# from history, not from anyone's fork, and not from a crawler's index.
+#
+# So the flow matches the brain (auto-save, direct push, all nine slots), but
+# [paths].never_commit is far longer. Dotfile repos are the single most common
+# source of leaked credentials on GitHub, and the leak is never the file you
+# were thinking about — it is .npmrc, or gh/hosts.yml, or a shell history that
+# recorded a token on the command line.
+#
+# Fingerprinted. Edit this and shipwright refuses to run until:
+#     shipwright approve dot-files
+# =============================================================================
+
+schema = 1
+
+[repo]
+name = "dot-files"
+default_branch = "main"
+remote = "origin"
+
+# Config files get edited in bursts and saved constantly. Ten minutes of quiet
+# is the floor before a run may commit; an Emacs `.#` lock symlink marks the
+# repo hot on its own regardless of this value.
+hot_window_min = 10
+
+[commit]
+# From this repo's own history: feat 32, fix 3, docs 3. `chore` and `refactor`
+# are added as the composer's fallbacks — without one, a dependency bump or a
+# file move has nowhere to go.
+types = ["feat", "fix", "docs", "chore", "refactor"]
+
+scope_required = false
+
+# Scopes are matched against PATH COMPONENTS, and when several match, the
+# LONGEST STRING wins — not the deepest directory. That is worth knowing before
+# editing this list, because it is counter-intuitive:
+#
+#   .config/doom-mac/gptel-directives/skills/code-review/universal/ada/x.md
+#
+# matches both `gptel-directives` (16 chars) and `code-review` (11), and the
+# parent wins on length despite being shallower. Listing `gptel-directives`
+# here therefore SWALLOWED all 322 skill files into one commit. It is
+# deliberately absent so the individual skills below can win.
+#
+# That granularity is the point. Without it, a slot produces one commit named
+# "gptel-directives" containing 322 files — accurate and useless to read back.
+scopes = [
+  # config trees
+  "doom", "doom-mac", "alacritty", "dunst", "nushell", "starship",
+  "sxhkd", "dmenu", "scripts", "windows",
+  # the agent-directives tree (NOT "gptel-directives" — see above)
+  "sessions",
+  # individual skills, so a skill edit is its own commit
+  "code-review", "dotcom-dev", "pr-scribe", "cv-summary-writing",
+  "skill-architect", "session-reset", "session-memory", "seo-web-quality",
+  "reckit-roam-node", "mr-roam-node", "emacs-expert", "roam-brain",
+  "static-site-foundation", "davinci-resolve", "discord-guild-architect",
+  "omarchy",
+]
+split_by_scope = true
+
+# Raised for the same reason as the brain: 333 files are pending right now,
+# most of them a skills tree mirrored into the Mac config. The ceiling still
+# exists so a runaway sync defers for a human rather than committing itself.
+max_files = 400
+
+trailer = true
+
+[flow]
+# Auto-save, as with the brain: commit in place, push to the branch that is
+# checked out, leave the worktree exactly as found.
+#
+# Note this pushes to a PUBLIC branch. The protection is not the flow — it is
+# the never_commit list below and the secret scanner, both of which run before
+# anything is staged.
+mode = "direct"
+branch_prefix = "auto/"
+pr_draft = false
+pr_reviewers = []
+restore_branch = true
+
+[gates]
+# Nothing to build or test in a config repo. The checks that matter here are
+# not configurable and run on every slot regardless: the secret scanner over
+# added content, the never_commit floor, the 50 MB blob ceiling, and the
+# conflict-marker invariant.
+#
+# A shell-syntax gate was considered and rejected: this repo carries fish,
+# nushell, zsh and elisp, and a parser for one of them failing on another
+# would block every run for no safety gain.
+pre_commit = []
+pre_push = []
+timeout_s = 900
+
+[tag]
+# Configuration has no releases.
+enabled = false
+when = "never"
+
+[paths]
+# THE IMPORTANT SECTION — this repo is public.
+#
+# The mandatory floor (.env, *.pem, *.key, *.p12, id_rsa, id_ed25519, .netrc,
+# *.kdbx, *.ovpn, credentials.json, service-account*.json) is unioned in
+# automatically and cannot be removed. Everything below is IN ADDITION, and
+# every entry is a real credential-bearing path that lives in a dotfiles tree.
+#
+# A match ABORTS the run rather than quietly unstaging, because a match means
+# the repo's ignore rules disagree with what is on disk — and on a public repo
+# that disagreement deserves your attention before anything is published.
+never_commit = [
+  # Emacs / auth-source. The .gpg form is ciphertext and safe; the plaintext
+  # form is a password file.
+  ".authinfo",
+  "authinfo",
+  ".authinfo.json",
+
+  # Package registries — these hold live publish tokens.
+  ".npmrc",
+  ".yarnrc.yml",
+  ".pypirc",
+  ".cargo/credentials*",
+  ".gem/credentials",
+  ".bundle/config",
+
+  # Cloud and container auth.
+  "**/aws/credentials",
+  "**/gcloud/credentials*",
+  "**/docker/config.json",
+  "**/containers/auth.json",
+  "**/kube/config",
+
+  # Forge auth. gh/hosts.yml holds an OAuth token in plaintext.
+  "**/gh/hosts.yml",
+  "**/glab-cli/config.yml",
+  ".git-credentials",
+
+  # SSH and GPG private material.
+  "**/.ssh/id_*",
+  "**/.ssh/known_hosts",
+  "**/.gnupg/**",
+  "*.gpg-agent-info",
+
+  # Shell history — records every token ever pasted on a command line.
+  ".bash_history",
+  ".zsh_history",
+  ".histfile",
+  "**/nushell/history.txt",
+  "**/fish/fish_history",
+
+  # Emacs local state that can embed paths, tokens or buffer contents.
+  "**/.emacs.d/.local/**",
+  "**/doom/.local/**",
+  "recentf",
+  "**/auto-save-list/**",
+
+  # Editor and OS noise that should never have been tracked.
+  ".DS_Store",
+  "*.swp",
+]
+
+# Empty: saving a config edit is not an event that needs review. If you later
+# want a specific area gated — say, anything under scripts/ that runs on login
+# — add it here and re-approve.
+require_pr = []
+
+[repair]
+process = true
+
+# ON, matching the brain. A conflict means the same config was edited on two
+# machines, which is a real decision about which version is correct. shipwright
+# resolves it, verifies the resolution mechanically, then FORCES a pull request
+# and files it in `shipwright review` until acknowledged.
+conflicts = true
+max_attempts = 2
+
+[schedule]
+slots = ["03:00", "06:00", "09:00", "11:00", "13:00", "15:00", "18:00", "21:00", "23:00"]
+min_interval_min = 0
