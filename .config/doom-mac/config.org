@@ -367,6 +367,10 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 (package! stylus-mode)
 (package! sws-mode)
 (package! vue-mode)
+;; Classic typescript-mode: vue-mode's mmm ts submode requires it (tree-sitter
+;; modes cannot run inside mmm's narrowed regions), and :lang javascript
+;; +tree-sitter stopped installing it.
+(package! typescript-mode)
 (package! web-mode)
 (package! yaml-mode)
 #+end_src
@@ -899,6 +903,23 @@ Setup the ~typescript-mode~ package to use it on all the TS Files.
   :hook (typescript-mode . lsp-deferred))
  #+end_src
 
+Emacs 30.2's built-in ~typescript-ts-mode~/~tsx-ts-mode~ are broken under tree-sitter >= 0.26: the font-lock query serializer emits regexp anchors (~\`~ / ~\'~) that the strict 0.26 query parser rejects with ~treesit-query-error "Syntax error"~ storms at redisplay. Probe the real serializer path once at startup; while broken, remap the ts modes onto classic ~typescript-mode~ above. Self-heals: after an Emacs rebuild with the fixed serializer, the probe passes and no remap happens.
+#+begin_src emacs-lisp :tangle config.el
+(when (and (fboundp 'treesit-available-p) (treesit-available-p))
+  (require 'treesit)
+  (when (and (treesit-language-available-p 'typescript)
+             (not (ignore-errors
+                    (treesit-query-compile
+                     'typescript '(((identifier) @c (:match "\\`x" @c))) t)
+                    t)))
+    ;; Identity pin FIRST: Emacs 30 falls through to major-mode-remap-DEFAULTS
+    ;; ((typescript-mode . typescript-ts-mode), registered by the treesit modes)
+    ;; whenever the user alist has no entry for the classic mode itself.
+    (add-to-list 'major-mode-remap-alist '(typescript-mode . typescript-mode))
+    (add-to-list 'major-mode-remap-alist '(typescript-ts-mode . typescript-mode))
+    (add-to-list 'major-mode-remap-alist '(tsx-ts-mode . typescript-mode))))
+#+end_src
+
 **** JSON-MODE
 Setup the ~json-mode~ package to use it on all the Json Files.
 #+begin_src emacs-lisp :tangle config.el
@@ -1033,10 +1054,10 @@ Setup the ~org-mode~ package to use the magick on my Org Files.
 (defvar my-org-todo-keywords
   '("TODO(t)"    ; A task that is ready to be tackled
     "CODE(m)"    ; Coding Tasks
-    "TEST(c)"    ; Blog writing assignments
-    "DEVELOP(d)" ; Things to develop
+    "TEST(s)"    ; Blog writing assignments
+    "DEVELOP(o)" ; Things to develop
     "MEET(5)"    ; A Meeting
-    "PROYECT(p)" ; A project that contains other tasks
+    "PROJECT(p)" ; A project that contains other tasks
     "REVIEW(r)"  ; A project that contains other tasks
     "WAIT(w)"    ; Something is holding up this task
     "|"          ; Separates active from inactive states
@@ -1052,7 +1073,7 @@ Setup the ~org-mode~ package to use the magick on my Org Files.
     "TEST(s)"        ; Blog writing assignments
     "DEVELOP(o)"     ; Things to develop
     "MEET(5)"        ; A Meeting
-    "PROYECT(p)"     ; A project that contains other tasks
+    "PROJECT(p)"     ; A project that contains other tasks
     "REVIEW(r)"      ; A project that contains other tasks
     "WAIT(w)"        ; Something is holding up this task
     "|"              ; Separates active from inactive states
@@ -1143,15 +1164,15 @@ Setup the ~org-agenda~ package to use it with the Org Mode. The Agenda is a node
           (tags "PRIORITY=\"C\""
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
                  (org-agenda-overriding-header "Low-priority unfinished tasks:")))
-          (tags "madison-reed"
+          (tags "madison_reed"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
-                 (org-agenda-overriding-header "Tasks for Maritz:")))
-          (tags "agile-engine"
+                 (org-agenda-overriding-header "Tasks for Madison Reed:")))
+          (tags "agile_engine"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
-                 (org-agenda-overriding-header "Tasks for Softtek:")))
-          (tags "dot-com"
+                 (org-agenda-overriding-header "Tasks for Agile Engine:")))
+          (tags "dot_com"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done))
-                 (org-agenda-overriding-header "Tasks for Shoptron:")))
+                 (org-agenda-overriding-header "Tasks for Dotcom:")))
           (tags "work"
                 ((org-agenda-skip-function '(org-agenda-skip-entry-if 'todo 'done 'wait))
                  (org-agenda-overriding-header "Work Tasks:")))
@@ -1205,7 +1226,35 @@ Setup the ~org-babel-languages~ to evaluate all this languages from the org code
    ))
 
 (setq org-babel-command:typescript "npx -p typescript -- tsc")
-(setq org-confirm-babel-evaluate nil)
+
+(defun kyo/babel-confirm-unless-trusted (lang body)
+  "Babel safelist (brain conventions, cl-017): no prompt for trusted
+contexts, y/n confirmation for everything else.
+Trusted: emacs-lisp anywhere; ANY language inside the brain's
+`kyonax/meta/tools/' folder (owner-designated TOOL nodes, e.g. the calculator).
+Everything else — tickets, docs, imported nodes — asks first."
+  (not (or (string= lang "emacs-lisp")
+           (and buffer-file-name
+                (string-prefix-p
+                 (expand-file-name "~/.brain.d/roam-nodes/kyonax/meta/tools/")
+                 (expand-file-name buffer-file-name))))))
+(setq org-confirm-babel-evaluate #'kyo/babel-confirm-unless-trusted)
+#+end_src
+
+***** ORG-CRYPT
+Transparent GPG encryption for secret-bearing subtrees in the brain (Phase 6 secrets
+policy, brain conventions > SECRETS). Any heading tagged =:crypt:= is encrypted at rest
+(ciphertext in git / invisible to AI + other brains) and decrypted in-buffer on demand
+with =C-c C-r=. Re-encrypts automatically on save. Key: the owner's password-manager GPG
+key (=personal@password.manager=). The =:ID:= / =#+TITLE= live ABOVE the crypt heading, so
+encrypted nodes stay in the org-roam graph.
+#+begin_src emacs-lisp :tangle config.el
+(require 'org-crypt)
+(org-crypt-use-before-save-magic)
+(setq org-tags-exclude-from-inheritance '("crypt")
+      org-crypt-key "BFE8D349AF88F711"   ; personal@password.manager
+      ;; never silently fall back to symmetric if the key is missing
+      org-crypt-disable-auto-save 'encrypt)
 #+end_src
 
 ***** FANCY PRIORITIEs
@@ -1234,7 +1283,7 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
      :unnarrowed t)
 
     ("x" "New Index" plain "%?"
-     :target (file+head "%<%Y-%m-%d>-${slug}.org" "#+TITLE: ${The Index Title}\n#+AUTHOR: %(user-full-name)\n#+EMAIL: %(eval user-mail-address)\n#+FILETAGS: %^{Filetags}")
+     :target (file+head kyo/org-roam-prompted-index-file "#+TITLE: Index ${title}\n#+AUTHOR: %(user-full-name)\n#+EMAIL: %(eval user-mail-address)\n#+FILETAGS: %^{Filetags|:L4:CATEGORY:TOPIC:INDEX:}")
      :unnarrowed t)
 
     ("i" "New Sentinel Inspection" plain "%[~/.brain.d/templates/new-node-sentinel-inspection.org]"
@@ -1251,6 +1300,14 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
 
     ("c" "New Doc" plain "%[~/.brain.d/templates/new-node-doc.org]"
      :target (file kyo/org-roam-prompted-file)
+     :unnarrowed t)
+
+    ("s" "New Session (agent brain)" plain "%[~/.brain.d/templates/new-node-session.org]"
+     :target (file kyo/org-roam-prompted-file)
+     :unnarrowed t)
+
+    ("m" "New Memory (agent brain)" plain "%[~/.brain.d/templates/new-node-memory.org]"
+     :target (file kyo/org-roam-prompted-file)
      :unnarrowed t))
   "My custom Org Roam personal capture templates.")
 #+end_src
@@ -1261,14 +1318,26 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
   (setq org-roam-directory "~/.brain.d/roam-nodes")
   (setq org-roam-dailies-directory "~/.brain.d/agenda")
   (setq org-roam-completion-everywhere t)
-  (setq org-roam-capture-templates my-org-roam-capture-templates))
+  (setq org-roam-capture-templates my-org-roam-capture-templates)
+  ;; Keep the db fresh on save/file changes — no manual `SPC n r s` for normal single-node edits.
+  ;; CAVEAT: incremental autosync caches deleted links, so after a MASS move/delete still do a FULL
+  ;; rebuild — `M-x org-roam-db-clear-all` then `org-roam-db-sync` (or `brain-emacs.sh sync`).
+  ;; `SPC n r s` stays bound for that.
+  (org-roam-db-autosync-mode +1))
+
+(defun kyo/org-roam--folder-candidates (base-dir)
+  "All non-hidden directories under BASE-DIR, recursively, as relative names."
+  (let ((dirs (seq-filter #'file-directory-p
+                          (directory-files-recursively
+                           base-dir "^[^.]" t
+                           (lambda (d) (not (string-prefix-p "." (file-name-nondirectory d))))))))
+    (sort (mapcar (lambda (d) (file-relative-name d base-dir)) dirs) #'string<)))
 
 (defun kyo/org-roam-prompted-file ()
-  "Prompt for a subdirectory and title, return file path for a new Org-roam node."
+  "Prompt for a destination folder (nested lobes included) and title,
+return the dated file path for a new L5 Org-roam content node."
   (let* ((base-dir (expand-file-name "~/.brain.d/roam-nodes"))
-         (subdirs (seq-filter #'file-directory-p
-                              (directory-files base-dir t "^[^.]")))
-         (folder-names (mapcar #'file-name-nondirectory subdirs)))
+         (folder-names (kyo/org-roam--folder-candidates base-dir)))
     (if folder-names
         (let* ((selected (completing-read
                           "Choose destination folder for new Org-roam node: "
@@ -1280,6 +1349,159 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
                (filename (format "%s-%s.org" date-str slug)))
           (expand-file-name filename (expand-file-name selected base-dir)))
       (user-error "No folders found in %s. Create a subfolder first!" base-dir))))
+
+(defun kyo/org-roam-prompted-index-file ()
+  "Prompt for a destination folder and title, return an UNDATED
+`index_<slug>.org' path — structural files carry no date (brain conventions)."
+  (let* ((base-dir (expand-file-name "~/.brain.d/roam-nodes"))
+         (folder-names (kyo/org-roam--folder-candidates base-dir)))
+    (if folder-names
+        (let* ((selected (completing-read
+                          "Choose destination folder for the new index: "
+                          folder-names nil t))
+               (title (read-string "Index Title: "))
+               (slug (org-roam-node-slug
+                      (org-roam-node-create :title title)))
+               (filename (format "index_%s.org" slug)))
+          (expand-file-name filename (expand-file-name selected base-dir)))
+      (user-error "No folders found in %s. Create a subfolder first!" base-dir))))
+#+end_src
+
+***** ROAM find panel (10h — typed / dated / brain·status color)
+=SPC n r f= shows *TYPE · brain/location · date · title*, styled: the TYPE badge is colored per node type; the *location* (=brain/lobe/…=, e.g. =kyonax/work/madison_reed=, =sessions/projects=) is colored by brain; the date is dimmed; the title is colored by *STATUS* (verified=green, draft=yellow, deprecated=dim, superseded=strikethrough). =SPC n r t= toggles a *verbose* view that adds the STATUS text + the full file path. Every field is part of the candidate string, so =orderless= filters across all of them (type =ticket 8120=, =session work=, =memory kyo=). Fields come from the file path + FILETAGS (read-free); STATUS is a memoized =#+STATUS= read.
+#+begin_src emacs-lisp :tangle config.el
+;; org-roam struct specializers: the cl-defmethods below error at boot
+;; ("Unknown specializer org-roam-node") unless org-roam is loaded first.
+(after! org-roam
+
+(defconst kyo/org-roam-type-tokens
+  '("BRAIN" "INDEX" "TICKET" "BUG" "EPIC" "DOC" "NOTE" "PLAN" "CV" "LEGAL"
+    "RECORD" "RESEARCH" "TOOL" "SESSION" "MEMORY" "INVOICE" "STATUS")
+  "Known positional TYPE tokens (the 4th FILETAG slot).")
+
+(defun kyo/org-roam--rel (node)
+  "NODE file path relative to `org-roam-directory'."
+  (file-relative-name (org-roam-node-file node)
+                      (expand-file-name org-roam-directory)))
+
+(cl-defmethod org-roam-node-kyobrain ((node org-roam-node))
+  "Owning brain = first path segment under roam-nodes/."
+  (car (split-string (kyo/org-roam--rel node) "/")))
+
+(cl-defmethod org-roam-node-kyolobe ((node org-roam-node))
+  "lobe[/topic] = path segments between the brain and the filename."
+  (string-join (butlast (cdr (split-string (kyo/org-roam--rel node) "/"))) "/"))
+
+(cl-defmethod org-roam-node-kyodate ((node org-roam-node))
+  "YYYY-MM-DD from the filename (dimmed), em-dash if undated."
+  (let* ((f (file-name-nondirectory (org-roam-node-file node)))
+         (d (if (string-match "\\`\\([0-9]\\{4\\}-[0-9]\\{2\\}-[0-9]\\{2\\}\\)" f)
+                (match-string 1 f) "—")))
+    (propertize d 'face 'shadow)))
+
+(cl-defmethod org-roam-node-kyopath ((node org-roam-node))
+  (kyo/org-roam--rel node))
+
+(cl-defmethod org-roam-node-kyotypetok ((node org-roam-node))
+  "TYPE token from FILETAGS (pattern match, order-independent)."
+  (or (seq-find (lambda (tg) (member tg kyo/org-roam-type-tokens))
+                (org-roam-node-tags node))
+      ""))
+
+(defvar kyo/org-roam--status-cache (make-hash-table :test 'equal)
+  "Memoize #+STATUS by file@mtime so the find panel stays fast.")
+(cl-defmethod org-roam-node-kyostatus ((node org-roam-node))
+  "Lower-cased #+STATUS keyword from the node file (memoized by mtime)."
+  (let* ((f (org-roam-node-file node))
+         (mt (and f (file-exists-p f)
+                  (float-time (file-attribute-modification-time (file-attributes f)))))
+         (key (format "%s@%s" f mt)))
+    (or (gethash key kyo/org-roam--status-cache)
+        (let ((st ""))
+          (when (and f (file-exists-p f))
+            (with-temp-buffer
+              (insert-file-contents f nil 0 2000)
+              (goto-char (point-min))
+              (when (re-search-forward "^#\\+STATUS:[ \t]*\\([A-Za-z]+\\)" nil t)
+                (setq st (downcase (match-string 1))))))
+          (puthash key st kyo/org-roam--status-cache)
+          st))))
+
+(defun kyo/org-roam--type-face (type)
+  "A distinct color per node TYPE (theme-aware font-lock faces)."
+  (pcase type
+    ("TICKET"   'font-lock-function-name-face)
+    ("BUG"      'error)
+    ("EPIC"     'font-lock-constant-face)
+    ("SESSION"  'font-lock-string-face)
+    ("MEMORY"   'font-lock-keyword-face)
+    ("PLAN"     'font-lock-builtin-face)
+    ("DOC"      'font-lock-doc-face)
+    ("NOTE"     'font-lock-comment-face)
+    ("INDEX"    'font-lock-type-face)
+    ("BRAIN"    'font-lock-warning-face)
+    ("CV"       'font-lock-variable-name-face)
+    ("LEGAL"    'font-lock-preprocessor-face)
+    ("RESEARCH" 'font-lock-constant-face)
+    ("RECORD"   'font-lock-comment-face)
+    ("TOOL"     'font-lock-builtin-face)
+    (_          'font-lock-type-face)))
+
+(defun kyo/org-roam--brain-face (brain)
+  (pcase brain
+    ("kyonax"   'font-lock-keyword-face)
+    ("sessions" 'font-lock-string-face)
+    ("docs"     'font-lock-constant-face)   ; Brain Docs — the shared-reference brain (ad-024)
+    (_          'font-lock-type-face)))
+
+(defun kyo/org-roam--status-face (status)
+  (pcase status
+    ("verified"   'success)
+    ("active"     'default)
+    ("draft"      'warning)
+    ("deprecated" 'shadow)
+    ("superseded" '(shadow (:strike-through t)))
+    (_            'default)))
+
+(cl-defmethod org-roam-node-kyotype ((node org-roam-node))
+  "TYPE badge, colored per node type."
+  (propertize (org-roam-node-kyotypetok node)
+              'face (kyo/org-roam--type-face (org-roam-node-kyotypetok node))))
+
+(cl-defmethod org-roam-node-kyoloc ((node org-roam-node))
+  "LOCATION = brain/lobe[/topic] (the folder, no filename), colored by brain."
+  (let* ((rel (kyo/org-roam--rel node))
+         (dir (directory-file-name (or (file-name-directory rel) "")))
+         (loc (if (string-empty-p dir) (org-roam-node-kyobrain node) dir)))
+    (propertize loc 'face (kyo/org-roam--brain-face (org-roam-node-kyobrain node)))))
+
+(cl-defmethod org-roam-node-kyotitle ((node org-roam-node))
+  "Title, colored by STATUS (the trust signal)."
+  (propertize (org-roam-node-title node)
+              'face (kyo/org-roam--status-face (org-roam-node-kyostatus node))))
+
+(defconst kyo/org-roam-template-compact
+  "${kyotype:9} ${kyoloc:30} ${kyodate:12} ${kyotitle}"
+  "Compact + styled: type color, brain-colored location, dim date, status title.")
+(defconst kyo/org-roam-template-verbose
+  "${kyotype:9} ${kyoloc:30} ${kyodate:12} ${kyostatus:11} ${title:48} ${kyopath}"
+  "Verbose: adds STATUS text + the full file path.")
+
+(defvar kyo/org-roam-display-verbose nil)
+(defun kyo/org-roam-toggle-display ()
+  "Toggle the org-roam find panel between compact (color-coded) and verbose (text)."
+  (interactive)
+  (setq kyo/org-roam-display-verbose (not kyo/org-roam-display-verbose)
+        org-roam-node-display-template
+        (if kyo/org-roam-display-verbose
+            kyo/org-roam-template-verbose kyo/org-roam-template-compact))
+  (message "Brain find panel: %s"
+           (if kyo/org-roam-display-verbose
+               "VERBOSE (status text + full path)" "COMPACT (color-coded + location)")))
+
+(setq org-roam-node-display-template kyo/org-roam-template-compact)
+
+) ;; end after! org-roam
 #+end_src
 
 - *Keybindings Org Roam Dailies*
@@ -1308,11 +1530,17 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
        :desc "Daily Nodes - Today" "H" #'org-roam-dailies-goto-today
        :desc "Daily Nodes - Tomorrow" "T" #'org-roam-dailies-goto-tomorrow))
 
+(defun kyo/org-roam-node-directory ()
+  "Open the brain's node folder (`org-roam-directory') in dired."
+  (interactive)
+  (dired (expand-file-name "~/.brain.d/roam-nodes")))
+
 (map! :leader
       (:prefix ("n r" . "Find Roam Nodes")
        :desc "Find Node in Brain" "f" #'org-roam-node-find
        :desc "Insert Node in Place" "i" #'org-roam-node-insert
-       :desc "Update brain destination" "d" #'kyo/org-roam-node-directory
+       :desc "Browse Brain Folder (dired)" "d" #'kyo/org-roam-node-directory
+       :desc "Toggle Find Columns" "t" #'kyo/org-roam-toggle-display
        :desc "Refresh Nodes DB" "s" #'org-roam-db-sync))
 #+end_src
 
@@ -1409,19 +1637,25 @@ Add =flycheck= with eslint for JSX/TSX/VUE/AND SO ON...
   ;; Check on save and mode-enabled (avoid constant background checks)
   (setq flycheck-check-syntax-automatically '(save mode-enabled))
 
-  ;; Force eslint checker in all vue-related buffers regardless of submode
+  ;; Force eslint checker in all vue-related buffers regardless of submode.
+  ;; GUARDED: selecting a checker that cannot run here signals a user-error,
+  ;; which aborts mmm's submode setup in eslint-less projects (the vue <script
+  ;; lang="ts"> block would lose its typescript-mode region entirely).
   (dolist (hook '(vue-mode-hook vue-html-mode-hook js-mode-hook
                   css-mode-hook scss-mode-hook))
     (add-hook hook
               (lambda ()
                 (when (and (buffer-file-name)
-                           (string-match-p "\\.vue\\'" (buffer-file-name)))
+                           (string-match-p "\\.vue\\'" (buffer-file-name))
+                           (fboundp 'flycheck-may-use-checker)
+                           (flycheck-may-use-checker 'javascript-eslint))
                   (setq-local flycheck-checker 'javascript-eslint)))))
 
-  ;; Select eslint for standalone js/ts/web buffers
+  ;; Select eslint for standalone js/ts/web buffers (same guard)
   (add-hook 'flycheck-mode-hook
             (lambda ()
-              (when (derived-mode-p 'js2-mode 'typescript-mode 'web-mode)
+              (when (and (derived-mode-p 'js2-mode 'typescript-mode 'web-mode)
+                         (flycheck-may-use-checker 'javascript-eslint))
                 (flycheck-select-checker 'javascript-eslint)))))
 #+end_src
 
@@ -2326,6 +2560,11 @@ Setup the ~latext~ package to use with org.
   ;; Minted config for much better syntax highlightig to src blocks.
   (setq
    org-latex-listings 'minted
+   ;; toc-org TOCs link to headings via #anchor without a CUSTOM_ID target, which
+   ;; aborts LaTeX export. `t' lets export proceed, degrading the unresolved TOC
+   ;; links to plain text (the heading still appears, just not clickable).
+   ;; Real fix (CUSTOM_IDs on headings) is brain Phase 7b content work.
+   org-export-with-broken-links t
    ;; minted calls the pygmentize process and thus needs shell escaping
    org-latex-pdf-process
    '("xelatex -shell-escape -interaction nonstopmode -output-directory %o %f"
