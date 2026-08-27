@@ -1,0 +1,1 @@
+/home/kyonax/Documents/github-kyonax/dot-files/.config/doom-mac/config.org
