@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "kyonax.tempo-hours",
+  "name": "Tempo Hours",
+  "version": "1.0.0",
+  "author": "kyonax",
+  "license": "MIT",
+  "description": "Hours owed to Tempo in the Omarchy bar: what is unlogged, what is drafted, and why a run refused.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Tempo Hours",
+    "description": "Unlogged hours, the current draft, and the per-day breakdown behind it.",
+    "category": "Info",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshIntervalSec": 900
+    },
+    "schema": [
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Full re-check interval (seconds)",
+        "min": 120,
+        "max": 7200,
+        "step": 60,
+        "defaultValue": 900
+      }
+    ]
+  }
+}

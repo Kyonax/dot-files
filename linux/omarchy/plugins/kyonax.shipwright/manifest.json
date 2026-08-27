@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "id": "kyonax.shipwright",
+  "name": "Shipwright",
+  "version": "1.0.0",
+  "author": "kyonax",
+  "license": "MIT",
+  "description": "Shipwright git auto-save fleet status in the Omarchy bar: last run, per-repo sync state, and why a repo was deferred or vetoed.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "Shipwright",
+    "description": "Git auto-save fleet health, with a popup listing every enrolled repo.",
+    "category": "Info",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshIntervalSec": 300
+    },
+    "schema": [
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Full re-check interval (seconds)",
+        "min": 30,
+        "max": 3600,
+        "step": 30,
+        "defaultValue": 300
+      }
+    ]
+  }
+}
