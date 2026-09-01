@@ -1325,6 +1325,79 @@ Setup the ~org-roam~ package to use the ~brain~ notes.
   ;; `SPC n r s` stays bound for that.
   (org-roam-db-autosync-mode +1))
 
+;; ---------------------------------------------------------------------------
+;; Brain out-of-band sync — the IDLE DRAIN (2026-09-01).
+;; The roam-brain CLI scripts write .org files directly and no longer call
+;; emacsclient per write (that blocked this Emacs ~1.5s every time). Instead
+;; each write appends the node's brain-relative path to ~/.brain.d/.cache/
+;; dirty-files, and this timer drains the queue when Emacs has been idle:
+;; revert (NEVER a buffer with unsaved edits — your own save syncs it via
+;; before-save toc-org + org-roam autosync), regen the :TOC: if one exists,
+;; save or file-scoped db update. A literal line `FULL` requests one full
+;; org-roam-db-sync (used after out-of-band moves/deletes).
+;; ---------------------------------------------------------------------------
+(defvar kyo/brain-sync-idle-secs 30
+  "Idle seconds before draining the brain dirty queue.")
+
+(defvar kyo/brain-dirty-file (expand-file-name "~/.brain.d/.cache/dirty-files")
+  "Queue of brain-relative paths written out-of-band by the roam-brain CLI.")
+
+(defvar kyo/brain--drain-timer nil)
+
+(defun kyo/brain--drain-one (abs)
+  "Refresh ABS from disk without ever discarding an owner's unsaved edits."
+  (let ((buf (find-buffer-visiting abs)))
+    (cond
+     ((not (file-exists-p abs)) nil)     ; moved/deleted — a FULL line covers it
+     ((and buf (buffer-modified-p buf))
+      (message "brain-drain: %s has unsaved edits; your save will sync it" abs))
+     (t
+      (let ((opened (not buf)))
+        (with-current-buffer (or buf (find-file-noselect abs))
+          (revert-buffer :ignore-auto :noconfirm :preserve-modes)
+          (when (and (fboundp 'toc-org-insert-toc)
+                     (save-excursion (goto-char (point-min))
+                                     (re-search-forward ":TOC:" nil t)))
+            (ignore-errors (toc-org-insert-toc)))
+          (if (buffer-modified-p)
+              (save-buffer)              ; autosync hook updates the db
+            (when (org-roam-file-p abs)  ; belt: never db-update a non-roam file
+              (org-roam-db-update-file abs)))
+          (when opened (kill-buffer))))))))
+
+(defun kyo/brain-drain-dirty ()
+  "Drain the dirty queue: atomic rename, dedupe, per-file error isolation.
+Crash-safe: an interrupted drain leaves .work, reprocessed first next time."
+  (when (featurep 'org-roam)
+    (let* ((q kyo/brain-dirty-file) (work (concat q ".work")))
+      (unless (file-exists-p work)
+        (when (file-exists-p q) (rename-file q work)))
+      (when (file-exists-p work)
+        (let ((lines (delete-dups
+                      (split-string (with-temp-buffer
+                                      (insert-file-contents work) (buffer-string))
+                                    "\n" t)))
+              (base (expand-file-name "~/.brain.d/"))
+              (full nil) (requeue nil))
+          (dolist (rel lines)
+            (if (string= rel "FULL") (setq full t)
+              (condition-case err
+                  (kyo/brain--drain-one (expand-file-name rel base))
+                (error (message "brain-drain: %s failed: %s" rel err)
+                       (push rel requeue)))))
+          (when full (org-roam-db-sync))
+          (delete-file work)
+          (when requeue
+            (write-region (concat (mapconcat #'identity (nreverse requeue) "\n") "\n")
+                          nil q 'append)))))))
+
+(after! org-roam
+  (when (timerp kyo/brain--drain-timer) (cancel-timer kyo/brain--drain-timer))
+  (setq kyo/brain--drain-timer
+        (run-with-idle-timer kyo/brain-sync-idle-secs t #'kyo/brain-drain-dirty))
+  ;; startup catch-up: pick up whatever accumulated while Emacs was down
+  (run-with-idle-timer 10 nil #'kyo/brain-drain-dirty))
+
 (defun kyo/org-roam--folder-candidates (base-dir)
   "All non-hidden directories under BASE-DIR, recursively, as relative names."
   (let ((dirs (seq-filter #'file-directory-p
@@ -2554,6 +2627,20 @@ Setup the ~latext~ package to use with org.
                  ("\\subsection{%s}" . "\\subsection*{%s}")
                  ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
                  ("\\paragraph{%s}" . "\\paragraph*{%s}")
+                 ("\\subparagraph{%s}" . "\\subparagraph*{%s}")))
+  (add-to-list 'org-latex-classes
+               '("org-plain-latex-tagged"
+                 "\\DocumentMetadata{lang=en,tagging=on}
+                 \\documentclass{article}
+                 [NO-DEFAULT-PACKAGES]
+                 [PACKAGES]
+                 \\newcommand{\\checkbox}{\\text{[ ]}}
+                 \\newcommand{\\checkedbox}{\\text{[X]}}
+                 [EXTRA]"
+                 ("\\section{%s}" . "\\section*{%s}")
+                 ("\\subsection{%s}" . "\\subsection*{%s}")
+                 ("\\subsubsection{%s}" . "\\subsubsection*{%s}")
+                 ("\\paragraph{%s}" . "\\paragraph*{%s}")
                  ("\\subparagraph{%s}" . "\\subparagraph*{%s}"))))
 
 (after! org
@@ -2621,8 +2708,13 @@ Setup the ~latext~ package to use with org.
 Configure the ~pdf~ viewer.
 #+begin_src emacs-lisp :tangle config.el
 (use-package pdf-view
-  :hook (pdf-tools-enabled . pdf-view-midnight-minor-mode)
+  ;; PDFs open in NORMAL (light) colors by default — the way recruiters, ATS
+  ;; previewers, and everyone else sees them. The dark "midnight" view is now
+  ;; opt-in per buffer: press `M' in a PDF (or M-x pdf-view-midnight-minor-mode)
+  ;; to toggle between the dark theme and the default.
   :hook (pdf-tools-enabled . hide-mode-line-mode)
+  :bind (:map pdf-view-mode-map
+         ("M" . pdf-view-midnight-minor-mode))
   :config
   (setq pdf-view-midnight-colors '("#888888" . "#111111")))
 #+end_src
