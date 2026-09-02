@@ -815,11 +815,55 @@ Set the default theme of Emacs with the next elisp code. See some ~theme~ option
 - *doom-monokai-spectrum*
 - *gruber-darker*
 
-Load a new Theme using the Keybinding ~"SPC h t"~ and select the Theme.
+On *Omarchy* the theme is not a fixed choice anymore. Every =omarchy theme set=
+renders ~omarchy-theme.el~ into ~$XDG_STATE_HOME/omarchy/current/theme/~ from my
+own template at ~~/.config/omarchy/themed/omarchy-theme.el.tpl~, built out of the
+active theme's ~colors.toml~. Emacs follows that file, so the editor matches the
+bar, the terminal and Neovim without me picking anything. Machines with no
+Omarchy on them fall back to ~kyo/fallback-theme~.
+
+Load a new Theme using the Keybinding ~"SPC h t"~ and select the Theme. Force a
+re-read of the generated theme with ~"SPC h T"~.
 #+begin_src emacs-lisp :tangle config.el
-(setq doom-theme 'doom-monokai-spectrum)
+(defvar kyo/omarchy-theme-directory
+  (expand-file-name "omarchy/current/theme"
+                    (or (getenv "XDG_STATE_HOME")
+                        (expand-file-name ".local/state" (getenv "HOME"))))
+  "Directory where Omarchy renders the generated `omarchy-theme.el'.")
+
+(defvar kyo/fallback-theme 'doom-monokai-spectrum
+  "Theme loaded when the Omarchy generated theme is not on this machine.")
+
+(defun kyo/omarchy-theme-p ()
+  "Return non-nil when Omarchy has rendered a theme Emacs can load."
+  (file-readable-p
+   (expand-file-name "omarchy-theme.el" kyo/omarchy-theme-directory)))
+
+(when (kyo/omarchy-theme-p)
+  (add-to-list 'custom-theme-load-path kyo/omarchy-theme-directory))
+
+(setq doom-theme (if (kyo/omarchy-theme-p) 'omarchy kyo/fallback-theme))
+
+(defun kyo/omarchy-theme-reload ()
+  "Re-read the Omarchy theme from disk and apply it to every live frame.
+Called by the Omarchy `theme-set' hook so a system theme switch lands in a
+running Emacs without a restart.  `doom/reload-theme' only calls
+`enable-theme', which re-applies the copy already in memory and therefore
+cannot see the regenerated file; this one loads it from disk again."
+  (interactive)
+  (if (not (kyo/omarchy-theme-p))
+      (message "kyo/omarchy-theme-reload: no theme at %s" kyo/omarchy-theme-directory)
+    (add-to-list 'custom-theme-load-path kyo/omarchy-theme-directory)
+    ;; Drop every colorscheme first: a stale theme left enabled underneath
+    ;; still supplies any face the generated theme does not define.
+    (mapc #'disable-theme custom-enabled-themes)
+    (load-theme 'omarchy t)
+    (setq doom-theme 'omarchy)
+    (message "Omarchy theme reloaded")))
+
 (map! :leader
-      :desc "Load new theme" "h t" #'counsel-load-theme)
+      :desc "Load new theme" "h t" #'counsel-load-theme
+      :desc "Reload Omarchy theme" "h T" #'kyo/omarchy-theme-reload)
 #+end_src
 
 **** TREEMASCS PACKAGE
