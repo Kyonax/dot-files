@@ -11,8 +11,16 @@ import Quickshell.Io
 //   refreshQuick()  --no-fetch: local state, no network at all. Cheap enough to
 //                   run every time the popup opens, so the panel is never stale.
 //
-// Process.running is the anti-stampede guard. Without it a fast poll would
-// spawn a second CLI before the first returned and pile up requests.
+// EACH COST GETS ITS OWN Process, and that is load-bearing rather than tidy.
+// Sharing one meant a single `if (running) return` covering both, and the panel
+// opens by calling refreshQuick() and then Qt.callLater(refresh()) — so the
+// quick read set `running` and the fetch that was supposed to follow it was
+// silently discarded EVERY TIME the popup opened. The bar showed cached hours
+// and never went to Tempo, which is the opposite of what those two lines say.
+//
+// Measured: `status --json` ~2.0s (network), `status --no-fetch --json` ~0.02s
+// (replays the cache). Two processes, and the anti-stampede guard stays — one
+// per path instead of one for both.
 
 import "Model.js" as Model
 
@@ -24,24 +32,53 @@ QtObject {
 
     property var snap: Model.parse("")
     property bool loaded: false
-    property bool refreshing: false
     property string lastError: ""
     property bool available: true
 
+    // Results are applied in the order they were ASKED for. Without it the 2s
+    // fetch lands after the 0.02s cache replay and overwrites it — the panel
+    // would go backwards whenever both ran, which is every time it opens.
+    property int seq: 0
+    property int appliedSeq: 0
+    property int fullQueued: 0
+
+    // `busy` is the network check only. The cache replay is 20ms and is not
+    // worth telling anyone about.
     readonly property bool busy: statusProcess.running
+    readonly property bool refreshing: statusProcess.running || quickProcess.running
     readonly property string state: Model.state(snap)
     readonly property string barText: Model.barText(snap)
 
-    function refresh() { start(false) }
-    function refreshQuick() { start(true) }
-
-    function start(noFetch) {
-        if (statusProcess.running) return
-        refreshing = true
-        statusProcess.command = noFetch
-            ? [bin, "status", "--no-fetch", "--json"]
-            : [bin, "status", "--json"]
+    // The network check. An explicit ask is remembered rather than dropped: the
+    // panel asks for one every time it opens, and "I pressed it and nothing
+    // happened" is the whole complaint this file now answers.
+    function refresh() {
+        if (statusProcess.running) { fullQueued = 1; return }
+        fullQueued = 0
+        seq += 1
+        statusProcess.seq = seq
+        statusProcess.command = [bin, "status", "--json"]
         statusProcess.running = true
+    }
+
+    // The cache replay, on its own process so the network check can never
+    // block it — and so it can never block the network check either.
+    function refreshQuick() {
+        if (quickProcess.running) return
+        seq += 1
+        quickProcess.seq = seq
+        quickProcess.command = [bin, "status", "--no-fetch", "--json"]
+        quickProcess.running = true
+    }
+
+    // One place that decides whether a result is still worth showing.
+    function applyStatus(text, forSeq) {
+        if (forSeq < appliedSeq) return
+        appliedSeq = forSeq
+        root.snap = Model.parse(text)
+        root.loaded = true
+        root.available = root.snap.ok
+        root.lastError = root.snap.ok ? "" : "tempo-hours returned nothing usable"
     }
 
     // LAUNCHING MUST USE execDetached, NOT A Process.
@@ -81,25 +118,33 @@ QtObject {
     property string tempoUrl:
         "https://agileenginecloud.atlassian.net/plugins/servlet/ac/io.tempo.jira/tempo-app#!/my-work/timesheet"
 
+    // The slow one: goes to Tempo.
     property Process statusProcess: Process {
+        property int seq: 0
         stdout: StdioCollector {
-            onStreamFinished: {
-                root.snap = Model.parse(this.text)
-                root.loaded = true
-                root.available = root.snap.ok
-                root.lastError = root.snap.ok ? "" : "tempo-hours returned nothing usable"
-                root.refreshing = false
-            }
+            onStreamFinished: root.applyStatus(this.text, statusProcess.seq)
         }
         stderr: StdioCollector {
             onStreamFinished: { if (this.text && !root.snap.ok) root.lastError = this.text.trim() }
         }
         onExited: function (code) {
-            root.refreshing = false
             if (code !== 0 && code !== 13) {   // 13 = nothing owed, a fine answer
                 root.available = false
                 if (!root.lastError) root.lastError = "exit " + code
             }
+            // An ask that arrived mid-flight is honoured now rather than lost.
+            if (root.fullQueued === 1 && root.available) {
+                root.fullQueued = 0
+                root.refresh()
+            }
+        }
+    }
+
+    // The fast one: replays the cache, no network, so it runs alongside.
+    property Process quickProcess: Process {
+        property int seq: 0
+        stdout: StdioCollector {
+            onStreamFinished: root.applyStatus(this.text, quickProcess.seq)
         }
     }
 

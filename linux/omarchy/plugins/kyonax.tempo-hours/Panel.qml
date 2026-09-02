@@ -88,6 +88,13 @@ Panel {
   IpcHandler {
     target: root.ipcTarget
     function refresh(): string { service.refresh(); return "ok" }
+    function diag(): string {
+      return "opened=" + root.opened
+        + " quickRunning=" + service.quickProcess.running
+        + " fullRunning=" + service.busy
+        + " appliedSeq=" + service.appliedSeq
+        + " seq=" + service.seq
+    }
     function state(): string { return root.uiState }
     function owed(): string { return root.label }
     // Exposed so the same code path a button click takes can be exercised
@@ -208,7 +215,8 @@ Panel {
                 iconText: "󰑐"
                 foreground: root.foreground
                 fontFamily: root.fontFamily
-                enabled: !service.busy
+                // Never disabled. A press while a check is in flight is
+                // remembered and honoured when it lands.
                 onClicked: service.refresh()
                 PanelToolTip {
                   visible: parent.containsMouse === true

@@ -15,8 +15,16 @@ import "Model.js" as Model
 //   refreshQuick() `--no-fetch`, local state only. Cheap, so it runs every time
 //                  the popup opens and the panel never shows a stale table.
 //
-// A single `busy` guard replaces the flock the bash module needed: Process
-// exposes `running`, so an overlapping refresh simply never starts.
+// The two paths get their OWN Process, and that is the whole point rather than
+// an implementation detail. Sharing one meant a single `if (running) return`
+// covering both, so opening the popup while the slow check was in flight
+// silently did nothing and showed the very table the click was meant to
+// replace. Measured on this fleet: the full check takes ~26s and the quick one
+// ~0.5s, and the full one is on a `triggeredOnStart` timer — so a click was
+// dropped for ~26s out of every 300, and ALWAYS for the first 26s after login,
+// which is exactly when someone looks at the bar.
+//
+// `--no-fetch` touches no remote, so running it alongside a fetch is safe.
 Item {
   id: root
 
@@ -33,9 +41,28 @@ Item {
   property int prsMine: 0
   property string lastError: ""
   property bool loaded: false
-  property bool refreshing: false
 
+  // Results are applied in the order they were ASKED FOR, never the order they
+  // happen to come back in. Without this, a full check that started before you
+  // made a commit lands ~26s later and overwrites the quick check that saw it —
+  // the panel would go backwards in front of you.
+  property int seq: 0
+  property int appliedSeq: 0
+  property int fullQueued: 0
+  property double lastFullAt: 0
+
+  // `busy` is the EXPENSIVE check only, because that is what the panel greys
+  // its re-check button on. A half-second local re-read is not worth disabling
+  // a button for — and greying it out during the slow check was the one moment
+  // the owner most wanted to press it.
+  readonly property bool quickRunning: quickProcess.running
   readonly property bool busy: healthProcess.running
+  readonly property bool refreshing: healthProcess.running || quickProcess.running
+
+  // How stale the fetched columns may be before opening the popup pays for a
+  // new fetch. `behind` cannot be known without one, so a click has to be
+  // allowed to buy that occasionally, without buying it on every glance.
+  readonly property int staleAfterSec: Math.min(60, refreshIntervalSec)
   readonly property int refreshIntervalSec: intSetting("refreshIntervalSec", 300, 30, 3600)
   readonly property string fleetState: Model.fleetState(repos)
   readonly property int alertCount: Model.countByState(repos, "alert")
@@ -60,21 +87,49 @@ Item {
     return n
   }
 
-  function refresh() { start(false) }
-  function refreshQuick() { start(true) }
+  // What the popup calls every time it opens. It must NEVER be a no-op: the
+  // panel's whole promise is that what you are looking at is what the click
+  // revealed.
+  //
+  // Both halves, deliberately. The local re-read is instant and always runs, so
+  // the table is right the moment it appears; the fetch is started only when
+  // the remote-derived columns have gone stale, so glancing at the bar twice in
+  // a row does not queue two minutes of git.
+  function refreshOnOpen() {
+    refreshQuick()
+    if (!healthProcess.running && (nowSec() - lastFullAt) >= staleAfterSec) refresh()
+  }
 
-  function start(noFetch) {
-    if (healthProcess.running) return
-    refreshing = true
-    healthProcess.command = noFetch
-      ? [shipwrightBin, "health", "--no-fetch", "--json"]
-      : [shipwrightBin, "health", "--json"]
+  function nowSec() { return Date.now() / 1000 }
+
+  // The full check. An explicit ask is never dropped: if one is already in
+  // flight the request is REMEMBERED and honoured when that one lands, because
+  // the owner pressing re-check and nothing happening is the complaint this
+  // whole file exists to answer.
+  function refresh() {
+    if (healthProcess.running) { fullQueued = 1; return }
+    fullQueued = 0
+    seq += 1
+    healthProcess.seq = seq
+    healthProcess.command = [shipwrightBin, "health", "--json"]
     healthProcess.running = true
   }
 
-  function applyHealth(raw) {
+  // The cheap check, on its own process so the slow one can never block it.
+  function refreshQuick() {
+    if (quickProcess.running) return
+    seq += 1
+    quickProcess.seq = seq
+    quickProcess.command = [shipwrightBin, "health", "--no-fetch", "--json"]
+    quickProcess.running = true
+  }
+
+  function applyHealth(raw, forSeq) {
+    // Anything older than what is already on screen is dropped on the floor.
+    if (forSeq < appliedSeq) return
+    appliedSeq = forSeq
+
     var parsed = Model.parseHealth(raw)
-    refreshing = false
 
     if (!parsed.ok) {
       lastError = parsed.lastError
@@ -116,17 +171,53 @@ Item {
     tuiProcess.running = true
   }
 
+  // The slow one: fetches every repo's remote. Seconds, not milliseconds.
   Process {
     id: healthProcess
+    property int seq: 0
     stdout: StdioCollector {
       waitForEnd: true
-      onStreamFinished: root.applyHealth(text)
+      onStreamFinished: root.applyHealth(text, healthProcess.seq)
     }
     onExited: function(exitCode) {
-      root.refreshing = false
       // 127 is the shell's "no such command"; anything else non-zero still
       // produced no parseable payload, so say so rather than showing a
       // table that silently stopped updating.
+      if (exitCode === 127) {
+        root.available = false
+        root.lastError = "shipwright is not installed"
+        root.loaded = true
+      } else if (exitCode === 0) {
+        root.lastFullAt = root.nowSec()
+        // The fetch has just updated this machine's remote-tracking refs on
+        // disk, so a local re-read now sees BOTH the fresh remote state and
+        // whatever changed in the working tree during the ~26s it took.
+        //
+        // It also settles the ordering rule honestly. A click during the fetch
+        // produces a newer result, which correctly wins — but that would
+        // otherwise throw the fetch away and leave `behind` stale until the
+        // next cycle. Re-reading costs half a second and means the fetch is
+        // never wasted, whether or not anyone clicked while it ran.
+        root.refreshQuick()
+      }
+      // An ask that arrived while this one was running is honoured now rather
+      // than forgotten.
+      if (root.fullQueued === 1 && root.available) {
+        root.fullQueued = 0
+        root.refresh()
+      }
+    }
+  }
+
+  // The fast one: local state only, so it can run while the slow one fetches.
+  Process {
+    id: quickProcess
+    property int seq: 0
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.applyHealth(text, quickProcess.seq)
+    }
+    onExited: function(exitCode) {
       if (exitCode === 127) {
         root.available = false
         root.lastError = "shipwright is not installed"

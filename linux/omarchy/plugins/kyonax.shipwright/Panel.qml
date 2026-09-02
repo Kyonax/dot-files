@@ -111,12 +111,18 @@ Panel {
   implicitHeight: button.implicitHeight
 
   // Opening always costs a local re-read (`--no-fetch`, instant) so the table is
-  // never older than the click that revealed it. The expensive fetch stays on
-  // its own timer.
+  // never older than the click that revealed it, and additionally starts a
+  // fetch when the remote-derived columns have gone stale.
+  //
+  // This used to call refreshQuick() directly, which shared one Process — and
+  // therefore one `if (running) return` — with the ~26s fetch on the timer. The
+  // click was silently dropped for the whole of that window, so the promise in
+  // the line above was false exactly when it mattered: right after login, and
+  // once every five minutes.
   onOpenedChanged: if (opened) {
     cursorActive = false
     if (panelFlick) panelFlick.contentY = 0
-    shipwright.refreshQuick()
+    shipwright.refreshOnOpen()
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
   }
   onRepoIndexChanged: scrollCursorIntoView()
@@ -140,6 +146,13 @@ Panel {
     function toggle(): void { root.toggle() }
     function refresh(): string { shipwright.refresh(); return "ok" }
     function state(): string { return shipwright.fleetState }
+    function diag(): string {
+      return "opened=" + root.opened
+        + " quickRunning=" + shipwright.quickRunning
+        + " fullRunning=" + shipwright.busy
+        + " appliedSeq=" + shipwright.appliedSeq
+        + " seq=" + shipwright.seq
+    }
   }
 
   BarIconButton {
@@ -221,12 +234,14 @@ Panel {
                 iconText: "󰑐"
                 foreground: root.foreground
                 fontFamily: root.fontFamily
-                enabled: !shipwright.busy
+                // Never disabled. A press while a check is in flight is now
+                // remembered and honoured when it lands, so the button that
+                // says "re-check" always does.
                 onClicked: shipwright.refresh()
 
                 PanelToolTip {
                   visible: parent.containsMouse === true
-                  text: shipwright.busy ? "Checking…" : "Re-check every repo"
+                  text: shipwright.busy ? "Checking… (press to re-check again)" : "Re-check every repo"
                   fontFamily: root.fontFamily
                 }
               }
