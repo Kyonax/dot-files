@@ -1940,6 +1940,16 @@ Panel {
         return
       }
 
+      // A BATCH THAT WAS REFUSED, and the one row that had nothing to show.
+      // No plan was written, so planPath is empty and `read` would have fallen
+      // through to the inbox — which lists the threads and says nothing at all
+      // about why the batch meant to answer them did not run.
+      // `shipwright why <task-id>` writes what was refused, the reason in the
+      // planner's own words, how to solve it and what to run, then opens it.
+      // The task id is the row key, which is why the key is the id and not a
+      // rendering index.
+      if (which === "why") { shipwright.openReport(wk.item.key); return }
+
       if (which === "read") {
         // `read` means "show me the thing this row is about", and that is a
         // different document per kind. openReport takes a REPO and runs

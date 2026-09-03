@@ -19,7 +19,7 @@ import { dirname, join } from "node:path"
 const here = dirname(fileURLToPath(import.meta.url))
 const src = readFileSync(join(here, "Model.js"), "utf8").replace(/^\.pragma library/m, "")
 const M = {}
-new Function("exports", src + "\n;Object.assign(exports, {calendarGrid, workRows, workWaitingCount, workButtonsFor, humanDuration, WEEKDAY_RAIL, calendarScaleText});")(M)
+new Function("exports", src + "\n;Object.assign(exports, {calendarGrid, workRows, workWaitingCount, workButtonsFor, workCheckedText, humanDuration, WEEKDAY_RAIL, calendarScaleText});")(M)
 
 let pass = 0
 const fails = []
@@ -137,6 +137,49 @@ is("and is -1 when there is nothing to measure", rows[1].progress, -1)
 is("the chip counts what waits on you, not what is running",
    M.workWaitingCount(payload), 3)
 
+head("work: a refused batch is a row, not a silence")
+
+// THE DEFECT THIS PINS. `failed` was a filter in _work_agents, so a batch that
+// refused vanished from the one tab whose job is "what needs you now" — five
+// went by in a day with the bar reporting nothing wrong. It is a flag now, and
+// the row's FIRST button is the document, because Enter presses the first one
+// and re-running something that refused for an unread reason is how the same
+// batch failed five times.
+is("a refused batch reads the document before it retries",
+   M.workButtonsFor({ kind: "agent", state: "failed" }), ["why", "agent"])
+is("a finished batch still carries nothing",
+   M.workButtonsFor({ kind: "agent", state: "done" }), [])
+
+const refused = M.workRows({ running: [
+  { kind: "agent", id: "agent-1", repo: "demo", pr: 7, state: "failed",
+    done: 0, total: 15, failed: true, failure: "refused",
+    error: "no plan: the model answered, but not with a plan",
+    title: "no plan: the model answered, but not with a plan",
+    action: "shipwright why agent-1" }
+], waiting: [] })
+is("the refusal is carried, not dropped", refused.length, 1)
+is("and the row says what happened",
+   refused[0].detail, "no plan: the model answered, but not with a plan")
+is("and it knows it was refused", refused[0].failed, true)
+is("and why, in one token", refused[0].failure, "refused")
+is("and what to run is on the row",
+   refused[0].action, "shipwright why agent-1")
+// A stopped batch under "Running now" was the complaint itself: the tab
+// reported work in flight while nothing was in flight.
+is("it gets its own heading, not \"Running now\"",
+   refused[0].groupLabel, "Refused")
+
+// And it must not take the running section with it when both exist.
+const bothKinds = M.workRows({ running: [
+  { kind: "agent", id: "agent-live", repo: "demo", pr: 7, state: "running",
+    done: 2, total: 5 },
+  { kind: "agent", id: "agent-dead", repo: "demo", pr: 9, state: "failed",
+    done: 0, total: 15, failed: true, title: "the batch was refused",
+    action: "shipwright why agent-dead" }
+], waiting: [] })
+is("a refusal sorts above the batch that is still running",
+   bothKinds.map((r) => r.groupLabel), ["Refused", "Running now"])
+
 head("work: a whole pull request in one press")
 
 // Fifteen threads on one PR are ONE piece of work — `shipwright agent --pr N`
@@ -204,6 +247,49 @@ const mixed = M.workRows({ running: [], waiting: [
 is("ready-to-run comes before review threads",
    mixed.filter((r) => r.groupLabel).map((r) => r.groupLabel),
    ["Ready to run", "Review threads"])
+
+head("work: a thread you answered is not a thread waiting on you")
+
+// The bar showed fifteen review threads on a pull request that had been MERGED
+// six hours earlier, every one of them flagged "anchor moved". Shipwright now
+// drops a merged PR outright and marks a thread whose last comment is yours.
+// The widget's job is the rest: count what is your move, and keep drawing what
+// is not, because the section under-reported itself to four rows once already.
+const answered = M.workRows({ running: [], waiting: [
+  { kind: "comment", id: "a1", repo: "bluespring", pr: 152, title: "needs you" },
+  { kind: "comment", id: "a2", repo: "bluespring", pr: 152, title: "anchor moved", outdated: true },
+  { kind: "comment", id: "a3", repo: "bluespring", pr: 152, title: "you replied", answered: true }
+] }, [])
+
+is("every thread is still drawn", answered.length, 3)
+is("the heading counts only what is your move", answered[0].groupCount, 2)
+is("and says how many are already answered", answered[0].groupAnswered, 1)
+is("the answered row is marked, not removed",
+   answered.map((r) => r.answered), [false, false, true])
+is("an outdated thread is not mistaken for an answered one",
+   answered.map((r) => r.outdated), [false, true, false])
+
+// The chip and the section must not disagree. Shipwright computes the same
+// number by the same rule, so prefer its answer and fall back to the rows.
+is("the chip trusts the payload's own count",
+   M.workWaitingCount({ waiting: [1, 2, 3], counts: { waiting: 2, answered: 1 } }), 2)
+is("and filters the rows itself when there is no count block",
+   M.workWaitingCount({ waiting: [
+     { answered: true }, { answered: false }, {} ] }), 2)
+
+head("work: how old the answer is")
+
+// The inbox is written by the watch timer and read by the bar. With that timer
+// not installed the tab showed a confident eleven-hour-old picture and said
+// nothing about it — which is how a merged PR stayed listed and a new one never
+// appeared. Silent under one poll interval; a warning after that.
+is("a fresh sweep says nothing", M.workCheckedText({ checked_age_s: 120 }), "")
+is("a stale one says how stale", M.workCheckedText({ checked_age_s: 3000 }), "checked 50m ago")
+is("hours, once minutes stop meaning anything",
+   M.workCheckedText({ checked_age_s: 39600 }), "checked 11h ago")
+is("days, for a timer that is not running at all",
+   M.workCheckedText({ checked_age_s: 300000 }), "checked 3d ago")
+is("and a missing age is not silence", M.workCheckedText({}), "never checked")
 
 console.log("\n" + pass + " passed, " + fails.length + " failed")
 if (fails.length) { fails.forEach((f) => console.log("  - " + f)); process.exit(1) }

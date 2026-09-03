@@ -362,6 +362,11 @@ Item {
   // gate that failed with the tail of its log, what the dossier saw, and the
   // last eight runs. The CLI writes it and opens it; the bar only asks.
   //
+  // IT ALSO TAKES AN AGENT TASK ID (`agent-...`), and answers the same question
+  // for a batch that was refused: what was refused, the reason in the planner's
+  // own words, how to solve it and what to run. One verb, because it is one
+  // question — the Work tab's `why` pill passes a task id here unchanged.
+  //
   // This is the popup's answer to "and then what?". A status line can say
   // `skipped-drift, 5 runs`; it cannot say that the five runs before those were
   // all deferred-hot because the repo is edited every ten minutes, which is the

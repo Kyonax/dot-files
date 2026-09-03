@@ -997,7 +997,10 @@ function todayCount(activity) {
 // running outranks a decision you have not made, which outranks a comment
 // somebody is waiting on. Anything not named here sorts last, so a new item
 // kind from a future shipwright appears rather than vanishing.
-var WORK_ORDER = ["agent", "run", "drift", "repo", "conflict", "check", "comment"]
+// `refused` FIRST, above the batches that are still running. A batch that
+// stopped is not "running now", and putting it under that heading was the whole
+// complaint: the tab reported work in flight while nothing was in flight.
+var WORK_ORDER = ["refused", "agent", "run", "drift", "repo", "conflict", "check", "comment"]
 
 // SENTENCE CASE, like every other band on this panel — "Needs you", "Always",
 // "Pull requests", "Last 24 weeks". These went in lowercase and were the only
@@ -1008,6 +1011,10 @@ var WORK_ORDER = ["agent", "run", "drift", "repo", "conflict", "check", "comment
 // and the attention band already heads its groups with the command that clears
 // them. Capitalising a command would make it a command you cannot paste.
 var WORK_LABEL = {
+  // Its own heading, and it names what happened rather than what was asked
+  // for. The row underneath carries the reason and the button that opens the
+  // document explaining it.
+  refused:  "Refused",
   agent:    "Running now",
   run:      "Running now",
   drift:    "shipwright approve",
@@ -1082,11 +1089,14 @@ function workRows(payload, repos) {
     // agent and run share one heading: from the outside they are both "work
     // that is happening without you", and splitting them would put a one-row
     // section above a one-row section.
-    var section = (k === "agent" || k === "run") ? "running" : k
+    // A refused batch leaves the running section: it is not running, and the
+    // heading is read before the row is.
+    var section = all[i].failed === true ? "refused"
+                : (k === "agent" || k === "run") ? "running" : k
     var pr = all[i].pr !== undefined && all[i].pr !== null ? String(all[i].pr) : ""
     // Only the blocked kinds split by pull request. A drifted contract and a
     // repo waiting to run have no PR, and a running batch is already one row.
-    var key = (section === "running" || pr === "")
+    var key = (section === "running" || section === "refused" || pr === "")
       ? section
       : section + "\u0000" + String(all[i].repo || "") + "\u0000" + pr
     if (!buckets[key]) { buckets[key] = []; order.push(key) }
@@ -1120,7 +1130,8 @@ function workRows(payload, repos) {
         // The heading is drawn by the FIRST row of its section, the same way
         // the attention band does it, so a heading can never outlive its rows.
         groupLabel: j === 0
-          ? (String(order[s]).indexOf("\u0000") >= 0 || order[s] === "running"
+          ? (order[s] === "refused" ? WORK_LABEL.refused
+             : String(order[s]).indexOf("\u0000") >= 0 || order[s] === "running"
              ? (order[s] === "running" ? WORK_LABEL.agent : (WORK_LABEL[kind] || kind))
              : (WORK_LABEL[kind] || kind))
           : "",
@@ -1136,15 +1147,36 @@ function workRows(payload, repos) {
           ? ["agent", "read"] : [],
         groupPr: pr,
         groupRepo: String(r.repo || ""),
-        groupCount: j === 0 ? rows.length : 0,
+        // WHAT IS WAITING ON YOU, not how many rows there are. Three of the
+        // fifteen threads on a pull request can already be answered, and a
+        // heading that says 15 when 12 need you is off by the only amount
+        // anybody reads it for.
+        groupCount: j === 0 ? countWaiting(rows) : 0,
+        groupAnswered: j === 0 ? (rows.length - countWaiting(rows)) : 0,
         label: workLabelFor(r),
         detail: String(r.title || r.label || ""),
         repo: String(r.repo || ""),
         pr: r.pr !== undefined && r.pr !== null ? String(r.pr) : "",
         state: String(r.state || ""),
+        // A thread you already replied to. The row STAYS — the reviewer has
+        // not resolved it and it is still between this work and a merge — but
+        // it is not your move, and drawing it identically to fourteen threads
+        // that ARE your move is what made the section unreadable.
+        answered: r.answered === true,
+        // GitHub lost the anchor because the code moved. A FLAG, never a
+        // filter: hiding these under-reported one pull request as four
+        // blockers when fifteen were unresolved.
+        outdated: r.outdated === true,
         action: String(r.action || ""),
         url: String(r.url || ""),
         planPath: String(r.plan_path || ""),
+        // A BATCH THAT WAS REFUSED. A flag, never a filter — the CLI hid these
+        // rows entirely until five of them went by in one day with the bar
+        // reporting nothing wrong. `read` on such a row opens the document that
+        // says what was refused, why, how to solve it and what to run.
+        failed: r.failed === true,
+        failure: String(r.failure || ""),
+        error: String(r.error || ""),
         // 0..1, and only for a batch that knows its own size. A rail bound to
         // 0/0 draws a full bar for work that has not started.
         // 0..1 for anything that knows its own size — an agent batch counts
@@ -1177,6 +1209,15 @@ function workButtonsFor(r) {
     if (state === "holding") return ["go", "stop"]
     if (state === "running") return ["pause", "stop"]
     if (state === "paused")  return ["go", "stop"]
+    // REFUSED, and the first button is the document rather than "try again".
+    // Re-running something that refused for a reason nobody has read is how the
+    // same batch failed five times in one day. Enter presses the FIRST button,
+    // so the default press explains before it retries.
+    //
+    // The token is `why` rather than `read` because the pill is drawn from the
+    // token itself, and it is also the command it runs: a person who reads the
+    // bar has already learnt `shipwright why`.
+    if (state === "failed")  return ["why", "agent"]
     return []
   }
   if (kind === "run")   return []
@@ -1187,10 +1228,42 @@ function workButtonsFor(r) {
   return ["agent", "read"]
 }
 
+// countWaiting(rows) — of these rows, how many are actually your move.
+function countWaiting(rows) {
+  var n = 0
+  for (var i = 0; i < rows.length; i++) if (rows[i].answered !== true) n++
+  return n
+}
+
 // The count the tab's chip shows: things WAITING ON YOU, not things happening.
 // A running batch is not a number you need on a chip; it is already visible on
 // the tab, and counting it would make the chip go up when work starts.
+//
+// Nor is a thread you have answered. `counts.waiting` is computed by the same
+// rule shipwright applies to the list itself, so the chip and the section
+// cannot disagree; the array length is the fallback for an older payload that
+// has no counts block, and it is filtered the same way.
 function workWaitingCount(payload) {
   var p = payload && typeof payload === "object" ? payload : {}
-  return Array.isArray(p.waiting) ? p.waiting.length : 0
+  if (p.counts && typeof p.counts.waiting === "number") return p.counts.waiting
+  return Array.isArray(p.waiting) ? countWaiting(p.waiting) : 0
+}
+
+// HOW OLD THE ANSWER IS, which is the difference between "nothing is blocked"
+// and "nothing has been checked". The inbox is written by the watch timer and
+// read by the bar, so when that timer is not running the tab shows a confident,
+// silent, eleven-hour-old picture — which is exactly what happened: a pull
+// request merged at 09:42 was still listed as blocked at 15:30, and the new one
+// opened in between was not listed at all.
+//
+// Under one poll interval this says nothing. It is a staleness warning, not a
+// clock.
+function workCheckedText(payload) {
+  var p = payload && typeof payload === "object" ? payload : {}
+  var s = Number(p.checked_age_s)
+  if (!isFinite(s) || s < 0) return "never checked"
+  if (s < 900) return ""
+  if (s < 5400) return "checked " + Math.round(s / 60) + "m ago"
+  if (s < 172800) return "checked " + Math.round(s / 3600) + "h ago"
+  return "checked " + Math.round(s / 86400) + "d ago"
 }
