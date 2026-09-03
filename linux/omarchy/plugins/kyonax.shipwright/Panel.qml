@@ -33,10 +33,12 @@ Panel {
   // to a different one. Chips at the top, keys 1-4 to switch — and switching by
   // NUMBER is what frees `h` and `l`, which were bound to two unrelated TUI
   // launches while the panel's own cursor also wanted them (D14).
-  // TWO TABS. Activity and attention are things you want to see without asking
-  // for them, so they live at the top of the Fleet tab; a pull request list is
-  // a different job with different rows and its own filter, so it keeps one.
-  readonly property var pageNames: ["fleet", "prs"]
+  // THREE TABS. Activity and attention are things you want to see without
+  // asking for them, so they live at the top of the Fleet tab; a pull request
+  // list is a different job with different rows and its own filter, so it keeps
+  // one. Work is the third: not a list of things that are true, but a list of
+  // things happening and things you can act on, with a button on every row.
+  readonly property var pageNames: ["fleet", "prs", "work"]
   property int page: 0
 
   function setPage(index) {
@@ -65,6 +67,18 @@ Panel {
   readonly property var attentionRows:
     Model.attentionRows(attentionGroups, expandedCauses)
 
+  // The Work tab's single list. Flat, with a groupLabel on the first row of
+  // each section, so the cursor walks one array and metrics() can still prove
+  // dup=0 across it.
+  // The repos come from the health the fleet tab already has, so a "ready to
+  // run" row costs no extra process and no fetch.
+  readonly property var workRows: Model.workRows(shipwright.work, shipwright.repos)
+
+  // The chip counts what is WAITING ON YOU, not what is happening. Counting a
+  // running batch would make the number go up when work starts, which is
+  // backwards for a badge whose whole job is "how much is on your plate".
+  readonly property int workWaiting: Model.workWaitingCount(shipwright.work)
+
   // The git state of a repo the attention band names. The band lists repos by
   // name; the fleet rows below hold what those repos actually look like.
   function repoDetailFor(name) {
@@ -90,6 +104,7 @@ Panel {
   function cursorList() {
     if (page === 0) return root.attentionRows.concat(shipwright.repos)
     if (page === 1) return shipwright.prsVisible
+    if (page === 2) return root.workRows
     return []
   }
 
@@ -260,6 +275,15 @@ Panel {
     var item = selectedRepo()
     if (!item) return
     if (page === 1) { shipwright.openUrl(item.url); return }
+    // A Work row answers for itself: it already knows which of its buttons is
+    // the primary one. Without this the row fell through to the fleet path
+    // below, found neither `name` nor `target`, and returned — so the key hint
+    // promised "⏎ act" and Enter did nothing at all.
+    if (page === 2) {
+      var wrow = cursorItemAt(repoIndex)
+      if (wrow && wrow.activate) wrow.activate()
+      return
+    }
     // A folded group has no single repo to answer for; ⏎ unfolds it into the
     // repos it stands for, which is the only useful thing to do with it.
     if (item.kind === "more") { root.toggleCause(item.groupKey); return }
@@ -320,7 +344,9 @@ Panel {
   // widget was written. The offset is computed rather than hard-coded so a
   // column that gains another child still works.
   function cursorItemAt(index) {
-    var cols = page === 1 ? [prColumn] : [attentionColumn, fleetColumn]
+    var cols = page === 2 ? [workColumn]
+             : page === 1 ? [prColumn]
+             : [attentionColumn, fleetColumn]
     for (var c = 0; c < cols.length; c++) {
       if (!cols[c]) continue
       var kids = cols[c].children
@@ -377,6 +403,9 @@ Panel {
     // The strip is on the main tab now, so it loads on every open rather than
     // when a page is switched to. It is a cache read; it costs nothing.
     shipwright.refreshActivity(false)
+    // Same reasoning as the strip: a cache read costs nothing, and a tab that
+    // only loads when you switch to it shows a stale badge on its own chip.
+    shipwright.refreshWork()
     Qt.callLater(function() { keyCatcher.forceActiveFocus() })
   }
 
@@ -429,6 +458,14 @@ Panel {
         + " ghOk=" + (shipwright.activity && shipwright.activity.source
                       && shipwright.activity.source.github
                       ? shipwright.activity.source.github.ok : "none")
+        // The Work tab, in the only form that counts as evidence. Without these
+        // an empty tab is indistinguishable from a tab whose Process never ran.
+        + " workSeq=" + shipwright.workSeq
+        + " workApplied=" + shipwright.workAppliedSeq
+        + " workLoaded=" + shipwright.workLoaded
+        + " workRows=" + root.workRows.length
+        + " workWaiting=" + root.workWaiting
+        + " workErr='" + shipwright.workError + "'"
     }
     // What the SHELL actually lays out, as opposed to what arithmetic about
     // the tokens predicts. Every number a design is drawn to has to come from
@@ -506,7 +543,9 @@ Panel {
       // The columns of the page ACTUALLY SHOWN — the same set cursorItemAt
       // walks. Scanning the fleet's columns while the PR tab is up reported a
       // uniqueness result for rows nobody could hover.
-      var cols = root.page === 1 ? [prColumn] : [attentionColumn, fleetColumn]
+      var cols = root.page === 2 ? [workColumn]
+               : root.page === 1 ? [prColumn]
+               : [attentionColumn, fleetColumn]
       for (var c = 0; c < cols.length; c++) {
         if (!cols[c]) continue
         var kids = cols[c].children
@@ -697,6 +736,7 @@ Panel {
       onTextKey: function(t) {
         if (t === "1") root.setPage(0)
         else if (t === "2") root.setPage(1)
+        else if (t === "3") root.setPage(2)
         else if (t === "e" || t === "E") root.openSelectedInEditor()
         else if (t === "l") {
           // The ledger: what shipwright actually published for this repo.
@@ -731,7 +771,13 @@ Panel {
         }
         else if (t === "n" || t === "N") {
           var item = root.selectedRepo()
-          if (root.page === 0 && item && item.target) shipwright.runNow(item.target)
+          if (root.page === 0 && item && item.target) shipwright.runNow(item.target, false)
+          // On the Work tab, only a "ready to run" row. Every other row carries
+          // a repo name too — a review thread's is the CLIENT repo — so keying
+          // off `repo` alone would let `n` publish a client repository from a
+          // row whose buttons deliberately do not offer it.
+          else if (root.page === 2 && item && item.kind === "repo")
+            shipwright.runNow(item.repo, false)
         }
       }
 
@@ -748,7 +794,9 @@ Panel {
         verticalAlignment: Text.AlignBottom
         text: root.page === 0
           ? "j/k move  \u21b5 why  e editor  t template  a advise  l ledger"
-          : "j/k move  \u21b5 open  m mine/all  o open all"
+          : root.page === 1
+          ? "j/k move  \u21b5 open  m mine/all  o open all"
+          : "j/k move  \u21b5 act  n run  g go  p pause  s stop"
         color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
@@ -901,7 +949,10 @@ Panel {
               { value: "fleet", label: "1 Fleet" },
               { value: "prs",   label: shipwright.prs.length > 0
                                        ? "2 Pull requests " + shipwright.prs.length
-                                       : "2 Pull requests" }
+                                       : "2 Pull requests" },
+              { value: "work",  label: root.workWaiting > 0
+                                       ? "3 Work " + root.workWaiting
+                                       : "3 Work" }
             ]
             value: root.pageNames[root.page]
             foreground: root.foreground
@@ -1160,6 +1211,82 @@ Panel {
               visible: shipwright.prs.length === 0
               width: parent.width
               text: "Nothing open. Everything shipwright raised has been merged."
+              color: root.dim
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.bodySmall
+              wrapMode: Text.WordWrap
+            }
+          }
+
+          // ========================================================= TAB 3: WORK
+          //
+          // Not an inbox list. The Fleet tab reports things that are TRUE; this
+          // one carries things that are HAPPENING and things you can act on,
+          // and every row has a button that does the obvious thing.
+          Column {
+            visible: root.page === 2
+            width: parent.width
+            spacing: Style.space(8)
+
+            Row {
+              width: parent.width
+              Text {
+                text: shipwright.workLoaded
+                  ? (root.workWaiting === 0 ? "Nothing is waiting on you"
+                                            : root.workWaiting + " waiting on you")
+                  : "reading\u2026"
+                color: root.foreground
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+              Item {
+                width: Math.max(0, parent.width - parent.children[0].implicitWidth
+                                  - workAge.implicitWidth)
+                height: 1
+              }
+              Text {
+                id: workAge
+                // What it is showing, and how old that is. The bar never
+                // fetches, so "when was this true" is not a detail.
+                text: shipwright.work && shipwright.work.checked_age_s !== undefined
+                  ? "checked " + Model.humanDuration(shipwright.work.checked_age_s) + " ago"
+                  : ""
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+            }
+
+            Text {
+              visible: shipwright.workError !== ""
+              width: parent.width
+              text: shipwright.workError
+              color: root.urgent
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.bodySmall
+              wrapMode: Text.WordWrap
+            }
+
+            Column {
+              id: workColumn
+              width: parent.width
+              spacing: 0
+
+              Repeater {
+                model: root.workRows
+                WorkRow {
+                  width: workColumn.width
+                  item: modelData
+                  rowIndex: index
+                }
+              }
+            }
+
+            Text {
+              visible: shipwright.workLoaded && root.workRows.length === 0
+                       && shipwright.workError === ""
+              width: parent.width
+              text: "Nothing is running and nothing is blocked. Every pull request is mergeable, reviewed and green."
               color: root.dim
               font.family: root.fontFamily
               font.pixelSize: Style.font.bodySmall
@@ -1525,9 +1652,16 @@ Panel {
     readonly property var grid: Model.calendarGrid(shipwright.activity, weeksThatFit)
     readonly property string caveat: Model.activityCaveatText(shipwright.activity)
 
+    // GitHub's ramp starts at a VISIBLE floor, not at nothing: its zero-days are
+    // a filled square barely above the page, and it draws no borders at all.
+    // Ours drew an empty day as transparent-plus-a-hairline, and at 24 columns
+    // most days are empty — so the thing you saw first was a lattice of outlines
+    // with a few filled cells inside it, rather than the shape of the work.
+    // A faint fill says "no contributions" just as clearly and disappears into
+    // the background instead of drawing it.
     function levelColor(level) {
       var base = root.stateColorFor("settled")
-      var alphas = [0.0, 0.30, 0.52, 0.76, 1.0]
+      var alphas = [0.07, 0.30, 0.52, 0.76, 1.0]
       return Qt.rgba(base.r, base.g, base.b, alphas[Math.max(0, Math.min(4, level))])
     }
 
@@ -1613,15 +1747,12 @@ Panel {
               // an outline would claim they had.
               visible: modelData !== null
               color: modelData ? cal.levelColor(modelData.level) : "transparent"
-              border.width: modelData && (modelData.isToday || modelData.empty) ? 1 : 0
-              // A hairline for an empty day, not the muted grey. At 24 columns
-              // most cells are empty, and an outline strong enough to read as a
-              // box turns the whole grid into a lattice with a few smudges in
-              // it — the shape stops being the thing you see. Today keeps the
-              // full-strength outline, because that one IS meant to be found.
-              border.color: modelData && modelData.isToday
-                ? root.foreground
-                : Qt.rgba(1, 1, 1, 0.14)
+              // ONLY today is outlined now. An empty day carries the ramp's
+              // floor fill instead of a hairline, which is what stops the grid
+              // reading as a lattice; today keeps the full-strength outline,
+              // because that one IS meant to be found.
+              border.width: modelData && modelData.isToday ? 1 : 0
+              border.color: root.foreground
 
               MouseArea { id: cellMouse; anchors.fill: parent; hoverEnabled: true }
 
@@ -1641,6 +1772,69 @@ Panel {
             }
           }
         }
+      }
+    }
+
+    // THE LEGEND. GitHub closes its calendar with one ("Less ▢▢▢▢▢ More") and
+    // this grid had none, which mattered more here than it does there: GitHub's
+    // scale is fixed across the year, while ours saturates at the 75th
+    // percentile of whatever window is drawn, so the same shade means different
+    // things at 12 weeks and at 52. Without the number beside it the intensity
+    // was not interpretable at all — it just looked like a heatmap.
+    //
+    // The swatches are the grid's OWN ramp at the grid's OWN cell size, so the
+    // match is something you can see rather than something you have to trust.
+    Row {
+      width: parent.width
+      spacing: Style.space(8)
+
+      Text {
+        id: calScale
+        anchors.verticalCenter: parent.verticalCenter
+        text: Model.calendarScaleText(cal.grid.peak)
+        color: root.dim
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+      }
+
+      Item {
+        width: Math.max(0, parent.width - calScale.implicitWidth
+                        - calLess.implicitWidth - calRamp.implicitWidth
+                        - calMore.implicitWidth - parent.spacing * 4)
+        height: 1
+      }
+
+      Text {
+        id: calLess
+        anchors.verticalCenter: parent.verticalCenter
+        text: "Less"
+        color: root.dim
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+      }
+
+      Row {
+        id: calRamp
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: cal.cellGap
+        Repeater {
+          model: 5
+          Rectangle {
+            required property int index
+            width: cal.cellSize
+            height: cal.cellSize
+            color: cal.levelColor(index)
+          }
+        }
+      }
+
+      Text {
+        id: calMore
+        anchors.verticalCenter: parent.verticalCenter
+        text: "More"
+        color: root.dim
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
       }
     }
 
@@ -1673,6 +1867,361 @@ Panel {
   //
   // 20 px: a 12 px line of text plus 4 px of padding — deliberately tighter than
   // the kit's rowPaddingX, and the reason the whole tab fits 528.
+  // A Work row: a heading when it starts a section, a 20 px body, a progress
+  // rail under anything that is mid-batch, and buttons that do the obvious
+  // thing.
+  //
+  // THE BUTTONS EACH GET THEIR OWN MouseArea, layered OVER the row's. A kit
+  // Button is 28 px and will not fit a 20 px row, so these are the same
+  // hairline pills the attention band uses. Each one must accept its click
+  // without swallowing the hover that sets the cursor, which is why the row's
+  // MouseArea stays hoverEnabled underneath rather than being replaced.
+  component WorkRow: Item {
+    id: wk
+    property var item: null
+    property int rowIndex: 0
+
+    readonly property string groupLabel: wk.item ? String(wk.item.groupLabel || "") : ""
+    readonly property string groupSub: wk.item ? String(wk.item.groupSub || "") : ""
+    readonly property var groupButtons: wk.item && wk.item.groupButtons ? wk.item.groupButtons : []
+    readonly property var buttons: wk.item && wk.item.buttons ? wk.item.buttons : []
+    readonly property real progress: wk.item ? Number(wk.item.progress) : -1
+    readonly property bool hasRail: wk.progress >= 0
+
+    readonly property string tipText: {
+      if (!wk.item) return ""
+      var bits = []
+      if (wk.item.detail !== "") bits.push(String(wk.item.detail))
+      if (wk.item.state !== "") bits.push("state: " + wk.item.state)
+      if (wk.item.action !== "") bits.push(String(wk.item.action))
+      return bits.join("\n")
+    }
+
+    // The same rhythm the attention band uses, and for the same reason: the gap
+    // that separates two sections belongs ABOVE the heading, not between the
+    // heading and the rows it labels. 10 above, 2 below.
+    // A rail is EXTRA CHROME BETWEEN TWO ROWS, so it needs air on both sides.
+    // It had 3 above and none below, so the bar sat flush against the next
+    // row's text and read as that row's underline rather than as this row's
+    // progress — worst exactly where rows are densest, which is where a rail
+    // appears at all.
+    implicitHeight: wkBody.implicitHeight
+      + (groupLabel !== "" ? Style.space(10) + wkHeader.implicitHeight + Style.space(2) : 0)
+      + (hasRail ? Style.space(3) + 3 + Style.space(4) : 0)
+
+    // THREE KINDS OF BUTTON, and getting the kind wrong is how one does nothing
+    // visible:
+    //   a TERMINAL for anything long or anything that publishes, so it can be
+    //     watched and interrupted;
+    //   a DETACHED command for one that opens its own editor window;
+    //   a DETACHED command for an instant state flip, where the row changing is
+    //     the feedback.
+    // A command that merely PRINTS is the one shape that must never be
+    // detached: its output goes nowhere and the press looks like a no-op.
+    function act(which) {
+      if (!wk.item) return
+      var id = String(wk.item.key)
+
+      // Instant state flips. The tab re-reads a moment later, so the row
+      // changing under you is the confirmation.
+      if (which === "go")      { shipwright.workAction("agent go", id); return }
+      if (which === "pause")   { shipwright.workAction("agent pause", id); return }
+      if (which === "stop")    { shipwright.workAction("agent stop", id); return }
+      if (which === "resume")  { shipwright.workAction("resume", wk.item.repo); return }
+      if (which === "approve") { shipwright.workAction("approve", wk.item.repo); return }
+
+      // Long, and they publish. A terminal you can watch and Ctrl-C, which is
+      // the same path the `n` key has always used.
+      if (which === "run")     { shipwright.runNow(wk.item.repo, false); return }
+      if (which === "dry")     { shipwright.runNow(wk.item.repo, true); return }
+      if (which === "agent") {
+        shipwright.launchTui("shipwright-agent",
+                             "shipwright agent --pr " + String(wk.item.pr))
+        return
+      }
+
+      if (which === "read") {
+        // `read` means "show me the thing this row is about", and that is a
+        // different document per kind. openReport takes a REPO and runs
+        // `shipwright why`; openEditor takes a PATH. Handing one the other's
+        // argument opens nothing and reports no error.
+        if (wk.item.planPath !== "") { shipwright.openEditor(wk.item.planPath); return }
+        // A contract you are being asked to approve: the diff has to be one
+        // click away, which is the only reason an approve button on a bar is
+        // acceptable at all. `contract --all` WRITES contracts.org and opens it
+        // in the editor; plain `contract <repo>` only prints, so detached it
+        // would show you nothing at all.
+        if (wk.item.kind === "drift") { shipwright.workAction("contract --all"); return }
+        if (wk.item.url !== "") { shipwright.openUrl(wk.item.url); return }
+        // `shipwright inbox` opens the document itself, so it needs no terminal.
+        shipwright.workAction("inbox")
+      }
+    }
+
+    // The heading's buttons act on the WHOLE group, which for a pull request is
+    // the whole batch: `shipwright agent --pr N` already takes every blocker on
+    // that PR, so pressing it once per thread would start the same batch
+    // fifteen times.
+    function actGroup(which) {
+      if (!wk.item) return
+      if (which === "agent") {
+        shipwright.launchTui("shipwright-agent",
+                             "shipwright agent --pr " + String(wk.item.groupPr))
+        return
+      }
+      if (which === "read") { shipwright.workAction("inbox") }
+    }
+
+    // Enter does whatever the row's FIRST button does. A row whose primary
+    // action is unreachable from the keyboard is a row the cursor can select
+    // and then do nothing with.
+    function activate() { if (wk.buttons.length > 0) wk.act(String(wk.buttons[0])) }
+
+    Row {
+      id: wkHeader
+      visible: wk.groupLabel !== ""
+      anchors.top: parent.top
+      anchors.topMargin: Style.space(10)
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.leftMargin: Style.space(7)
+      spacing: Style.space(8)
+
+      Text {
+        id: wkHeaderLabel
+        text: wk.groupLabel
+        color: root.foreground
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+        font.bold: true
+      }
+
+      // What the heading's buttons will act on, said once for the group rather
+      // than repeated down every row.
+      Text {
+        id: wkHeaderSub
+        anchors.verticalCenter: parent.verticalCenter
+        text: wk.groupSub
+        color: root.dim
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+      }
+
+      Item {
+        width: Math.max(0, parent.width - wkHeaderLabel.implicitWidth
+                          - wkHeaderSub.implicitWidth - wkGroupPills.implicitWidth
+                          - wkHeaderCount.implicitWidth - parent.spacing * 4)
+        height: 1
+        anchors.verticalCenter: parent.verticalCenter
+        Rectangle {
+          anchors.verticalCenter: parent.verticalCenter
+          width: parent.width
+          height: 1
+          color: root.foreground
+          opacity: 0.25
+        }
+      }
+
+      Row {
+        id: wkGroupPills
+        anchors.verticalCenter: parent.verticalCenter
+        spacing: Style.space(4)
+
+        Repeater {
+          model: wk.groupButtons
+          Rectangle {
+            id: gpill
+            required property var modelData
+            anchors.verticalCenter: parent.verticalCenter
+            width: gpillLabel.implicitWidth + Style.space(8)
+            height: gpillLabel.implicitHeight + Style.space(2)
+            color: "transparent"
+            border.width: 1
+            // Brighter than a row's pill: this one acts on everything below it,
+            // and a button with a larger blast radius should not look identical
+            // to the one beside it that touches a single thread.
+            border.color: root.foreground
+            opacity: gpillMouse.containsMouse ? 0.85 : 0.45
+
+            Text {
+              id: gpillLabel
+              anchors.centerIn: parent
+              text: String(gpill.modelData) + " all"
+              color: root.foreground
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.caption
+            }
+
+            MouseArea {
+              id: gpillMouse
+              anchors.fill: parent
+              hoverEnabled: true
+              cursorShape: Qt.PointingHandCursor
+              onClicked: wk.actGroup(String(gpill.modelData))
+            }
+          }
+        }
+      }
+
+      Text {
+        id: wkHeaderCount
+        text: wk.item && wk.item.groupCount > 0 ? String(wk.item.groupCount) : ""
+        color: root.dim
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+      }
+    }
+
+    CursorSurface {
+      id: wkBody
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.top: wk.groupLabel !== "" ? wkHeader.bottom : parent.top
+      anchors.topMargin: wk.groupLabel !== "" ? Style.space(2) : 0
+      implicitHeight: wkText.implicitHeight + Style.space(4)
+      height: implicitHeight
+
+      hasCursor: root.page === 2 && root.cursorActive && root.repoIndex === wk.rowIndex
+      foreground: root.foreground
+
+      MouseArea {
+        id: wkMouse
+        anchors.fill: parent
+        hoverEnabled: true
+        cursorShape: Qt.PointingHandCursor
+        onEntered: root.setRepoCursor(wk.rowIndex)
+        onClicked: wk.activate()
+      }
+
+      PanelToolTip {
+        x: Math.min(Style.space(7), Math.max(0, wkBody.width - width))
+        y: wkBody.height + Style.space(2)
+        visible: wkMouse.containsMouse && wk.tipText !== ""
+        text: wk.tipText
+        fontFamily: root.fontFamily
+      }
+
+      Rectangle {
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: Style.space(2)
+        color: wk.hasRail ? root.stateColorFor("settled") : root.dim
+      }
+
+      Row {
+        id: wkRow
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.verticalCenter: parent.verticalCenter
+        anchors.leftMargin: Style.space(7)
+        spacing: Style.space(6)
+
+        Text {
+          id: wkText
+          text: wk.item ? String(wk.item.label) : ""
+          color: root.foreground
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.body
+        }
+
+        Text {
+          id: wkDetail
+          anchors.verticalCenter: parent.verticalCenter
+          width: Math.max(0, wkRow.width - wkText.implicitWidth
+                            - wkPills.implicitWidth - wkRow.spacing * 2
+                            - Style.space(7))
+          text: {
+            if (!wk.item) return ""
+            // The STATE first, with the count appended only once there is one.
+            // Falling back to `detail` whenever total was 0 meant the opening
+            // seconds of a run showed the tooltip's whole sentence instead of
+            // the two words that belong on a 20 px row.
+            if (String(wk.item.state) !== "")
+              return wk.item.state
+                   + (wk.item.total > 0 ? " · " + wk.item.done + " of " + wk.item.total : "")
+            return String(wk.item.detail)
+          }
+          color: root.dim
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+          elide: Text.ElideRight
+        }
+
+        Row {
+          id: wkPills
+          anchors.verticalCenter: parent.verticalCenter
+          spacing: Style.space(4)
+
+          Repeater {
+            model: wk.buttons
+            Rectangle {
+              id: pill
+              required property var modelData
+              anchors.verticalCenter: parent.verticalCenter
+              width: pillLabel.implicitWidth + Style.space(8)
+              height: pillLabel.implicitHeight + Style.space(2)
+              color: "transparent"
+              border.width: 1
+              // `stop` is the one that cannot be taken back, so it is the one
+              // that looks different.
+              border.color: pill.modelData === "stop" ? root.urgent : root.foreground
+              opacity: pillMouse.containsMouse ? 0.75 : 0.30
+
+              Text {
+                id: pillLabel
+                anchors.centerIn: parent
+                text: String(pill.modelData)
+                color: root.dim
+                font.family: root.fontFamily
+                font.pixelSize: Style.font.caption
+              }
+
+              MouseArea {
+                id: pillMouse
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                // Set the cursor as well as acting: a pill that stole the hover
+                // without moving the cursor would leave the highlight on
+                // whatever row you came from.
+                onEntered: root.setRepoCursor(wk.rowIndex)
+                onClicked: wk.act(String(pill.modelData))
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // The progress rail, borrowed from the slot rail: a 3 px Item with a
+    // background Rectangle at 0.10 and a filled one over it. Only drawn for a
+    // batch that knows its own size — bound to 0/0 it would show a full bar for
+    // work that has not started.
+    Item {
+      visible: wk.hasRail
+      anchors.left: parent.left
+      anchors.right: parent.right
+      anchors.top: wkBody.bottom
+      anchors.topMargin: Style.space(3)
+      anchors.leftMargin: Style.space(7)
+      height: 3
+
+      Rectangle {
+        anchors.fill: parent
+        color: root.foreground
+        opacity: 0.10
+      }
+      Rectangle {
+        anchors.left: parent.left
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: parent.width * Math.max(0, Math.min(1, wk.progress))
+        color: root.stateColorFor("settled")
+      }
+    }
+  }
+
   component AttentionRow: Item {
     id: att
     property var item: null

@@ -778,6 +778,11 @@ function stripCells(activity) {
 // CLI already aligns weeks to Sunday and leaves the final one short at today.
 // Re-deriving the columns from a flat list would mean re-deriving that boundary,
 // and getting it wrong by one puts every weekday in the wrong row.
+// How many week columns a month needs before it earns a label. Three is what
+// keeps the labels evenly spaced: a month clipped to one or two columns by the
+// edge of the window is drawn, but not named.
+var MONTH_LABEL_MIN_COLS = 3
+
 function calendarGrid(activity, wantWeeks) {
   if (!activity || !Array.isArray(activity.weeks)) return { rows: [], months: [], weeks: 0 }
   var all = activity.weeks
@@ -810,13 +815,38 @@ function calendarGrid(activity, wantWeeks) {
   // A month label sits over the first column that belongs to it. Repeating it on
   // every column is noise; omitting it entirely leaves 24 identical squares with
   // no way to say when any of them was.
-  var months = []
-  var last = ""
+  //
+  // A COLUMN BELONGS TO THE MONTH OF ITS FIRST DAY, which is how GitHub assigns
+  // them too: the week of 31 May to 6 June is May's, so June's label starts at
+  // the column after it. Splitting a column between two months would put a
+  // label over a boundary that is not where the eye sees the month change.
+  //
+  // AND A MONTH CLIPPED BY THE WINDOW EDGE GETS NO LABEL — this is the rule
+  // that was missing, and it is why GitHub's leftmost columns are bare. A
+  // 24-week window starting on 22 March gave March exactly two columns and
+  // labelled it anyway, so "Mar" and "Apr" sat two columns apart while every
+  // other pair sat four or five. Labels that are not evenly spaced stop reading
+  // as a scale and start reading as a mistake, which is exactly what they were.
+  // Dropping it costs nothing: the header already says how long the window is.
+  var owner = []
   for (var m = 0; m < cols.length; m++) {
     var d0 = String((cols[m].days || [{}])[0].date || "")
-    var name = d0 === "" ? "" : MONTH[parseInt(d0.slice(5, 7), 10) - 1]
-    months.push(name !== last ? name : "")
-    if (name !== "") last = name
+    owner.push(d0 === "" ? "" : d0.slice(0, 7))   // YYYY-MM, unique in <= 53 weeks
+  }
+  var span = {}
+  for (var s = 0; s < owner.length; s++)
+    if (owner[s] !== "") span[owner[s]] = (span[owner[s]] || 0) + 1
+
+  var months = []
+  var seen = {}
+  for (var t = 0; t < owner.length; t++) {
+    var key = owner[t]
+    if (key === "" || seen[key] === true || span[key] < MONTH_LABEL_MIN_COLS) {
+      months.push("")
+      continue
+    }
+    seen[key] = true
+    months.push(MONTH[parseInt(key.slice(5, 7), 10) - 1])
   }
 
   return { rows: rows, months: months, weeks: cols.length, peak: peak }
@@ -888,6 +918,19 @@ function activitySaturation(cells) {
   return hits[idx]
 }
 
+// What the darkest square means, which on this grid is NOT "the busiest day".
+//
+// The ramp saturates at the 75th percentile of active days (activitySaturation),
+// so the top quarter of them all paint at full strength — and the value moves
+// when the window does, because it is computed over what is DRAWN. GitHub's
+// legend can be a bare Less/More because its scale is fixed for the year; ours
+// cannot, so the legend says the number the darkest step is reached at.
+function calendarScaleText(peak) {
+  var p = toInt(peak)
+  if (p <= 0) return ""
+  return p + "+ a day is darkest"
+}
+
 function stripHeaderText() {
   return "Last " + Math.round(STRIP_DAYS / 7) + " weeks"
 }
@@ -946,4 +989,208 @@ function todayCount(activity) {
     return cells[i].github > 0 ? cells[i].github : cells[i].commits
   }
   return 0
+}
+
+// ---------------------------------------------------------------- the work tab
+
+// The order the sections appear in, and it is not alphabetical: a batch already
+// running outranks a decision you have not made, which outranks a comment
+// somebody is waiting on. Anything not named here sorts last, so a new item
+// kind from a future shipwright appears rather than vanishing.
+var WORK_ORDER = ["agent", "run", "drift", "repo", "conflict", "check", "comment"]
+
+// SENTENCE CASE, like every other band on this panel — "Needs you", "Always",
+// "Pull requests", "Last 24 weeks". These went in lowercase and were the only
+// headings on the widget that did, which read as a different kind of label
+// rather than as the same one.
+//
+// `shipwright approve` is the exception and stays verbatim: it is a COMMAND,
+// and the attention band already heads its groups with the command that clears
+// them. Capitalising a command would make it a command you cannot paste.
+var WORK_LABEL = {
+  agent:    "Running now",
+  run:      "Running now",
+  drift:    "shipwright approve",
+  repo:     "Ready to run",
+  conflict: "Conflicts",
+  check:    "Failed checks",
+  comment:  "Review threads"
+}
+
+function workOrderOf(kind) {
+  var i = WORK_ORDER.indexOf(String(kind))
+  return i < 0 ? WORK_ORDER.length : i
+}
+
+// workRows(payload) — ONE FLAT LIST, with a groupLabel on the first row of each
+// section.
+//
+// Flat because the cursor walks a single array and metrics() counts rowIndex
+// uniqueness across it. A nested shape would put the cursor and metrics() out
+// of step about how many rows exist, which is the exact class of bug the dup=
+// counter was added to catch.
+// workRepoRows(repos) — the repos you could run right now, from the health the
+// widget already has. No extra process and no fetch: `uncommitted` and `ahead`
+// are local git facts the fleet is already showing on the other tab.
+//
+// Only repos with something to do. Listing all ten would put a permanent
+// ten-row section under a tab whose entire premise is that everything on it
+// needs you.
+function workRepoRows(repos) {
+  var rs = Array.isArray(repos) ? repos : []
+  var out = []
+  for (var i = 0; i < rs.length; i++) {
+    var r = rs[i]
+    if (r.missing === true) continue
+    var work = toInt(r.uncommittedN) + toInt(r.aheadN)
+    if (work <= 0 && r.paused !== true) continue
+    var bits = []
+    if (toInt(r.uncommittedN) > 0) bits.push(r.uncommittedN + " uncommitted")
+    if (toInt(r.aheadN) > 0) bits.push(r.aheadN + " unpushed")
+    if (r.paused === true) bits.push("paused")
+    else if (r.armed !== true) bits.push("dry run only")
+    out.push({
+      kind: "repo",
+      id: "repo:" + String(r.name),
+      repo: String(r.name),
+      title: bits.join(" \u00b7 "),
+      paused: r.paused === true,
+      action: "shipwright now " + String(r.name)
+    })
+  }
+  return out
+}
+
+function workRows(payload, repos) {
+  var p = payload && typeof payload === "object" ? payload : {}
+  var running = Array.isArray(p.running) ? p.running : []
+  var waiting = Array.isArray(p.waiting) ? p.waiting : []
+
+  var all = running.concat(waiting).concat(workRepoRows(repos))
+
+  // GROUPED BY KIND *AND* PULL REQUEST, not by kind alone.
+  //
+  // Fifteen review threads on one pull request are one piece of work, and the
+  // agent lane already treats them that way: `shipwright agent --pr N` takes the
+  // whole batch. Grouping only by kind meant the heading could not carry a
+  // button, so acting on fifteen threads meant fifteen clicks that each started
+  // a separate batch — the opposite of what the lane is for.
+  var buckets = {}
+  var order = []
+  for (var i = 0; i < all.length; i++) {
+    var k = String(all[i].kind || "other")
+    // agent and run share one heading: from the outside they are both "work
+    // that is happening without you", and splitting them would put a one-row
+    // section above a one-row section.
+    var section = (k === "agent" || k === "run") ? "running" : k
+    var pr = all[i].pr !== undefined && all[i].pr !== null ? String(all[i].pr) : ""
+    // Only the blocked kinds split by pull request. A drifted contract and a
+    // repo waiting to run have no PR, and a running batch is already one row.
+    var key = (section === "running" || pr === "")
+      ? section
+      : section + "\u0000" + String(all[i].repo || "") + "\u0000" + pr
+    if (!buckets[key]) { buckets[key] = []; order.push(key) }
+    buckets[key].push(all[i])
+  }
+
+  // Stable within a group: the payload's own order is meaningful (newest batch
+  // first, the inbox in the order the sweep found it), so only the SECTION is
+  // sorted, never the rows inside one.
+  order.sort(function (a, b) {
+    var ka = String(a).split("\u0000")[0], kb = String(b).split("\u0000")[0]
+    ka = ka === "running" ? "agent" : ka
+    kb = kb === "running" ? "agent" : kb
+    var d = workOrderOf(ka) - workOrderOf(kb)
+    return d !== 0 ? d : (a < b ? -1 : a > b ? 1 : 0)
+  })
+
+  var out = []
+  for (var s = 0; s < order.length; s++) {
+    var rows = buckets[order[s]]
+    for (var j = 0; j < rows.length; j++) {
+      var r = rows[j]
+      var kind = String(r.kind || "other")
+      var isAgent = kind === "agent"
+      var total = Number(r.total || 0)
+      var done = Number(r.done || 0)
+      var pr = r.pr !== undefined && r.pr !== null ? String(r.pr) : ""
+      out.push({
+        kind: kind,
+        key: String(r.id || (kind + "#" + s + "#" + j)),
+        // The heading is drawn by the FIRST row of its section, the same way
+        // the attention band does it, so a heading can never outlive its rows.
+        groupLabel: j === 0
+          ? (String(order[s]).indexOf("\u0000") >= 0 || order[s] === "running"
+             ? (order[s] === "running" ? WORK_LABEL.agent : (WORK_LABEL[kind] || kind))
+             : (WORK_LABEL[kind] || kind))
+          : "",
+        // Which pull request the whole group belongs to, so the heading can say
+        // what its buttons will act on.
+        groupSub: (j === 0 && pr !== "") ? (String(r.repo || "") + " #" + pr) : "",
+        // THE WHOLE STACK IN ONE PRESS. `shipwright agent --pr N` is already a
+        // batch command; without a button on the heading the only way to reach
+        // it from the bar was to click one row, which starts a batch for that
+        // pull request anyway — so fifteen clicks did fifteen times the same
+        // thing. Only groups that share a pull request get them.
+        groupButtons: (j === 0 && pr !== "" && kind !== "agent" && kind !== "run")
+          ? ["agent", "read"] : [],
+        groupPr: pr,
+        groupRepo: String(r.repo || ""),
+        groupCount: j === 0 ? rows.length : 0,
+        label: workLabelFor(r),
+        detail: String(r.title || r.label || ""),
+        repo: String(r.repo || ""),
+        pr: r.pr !== undefined && r.pr !== null ? String(r.pr) : "",
+        state: String(r.state || ""),
+        action: String(r.action || ""),
+        url: String(r.url || ""),
+        planPath: String(r.plan_path || ""),
+        // 0..1, and only for a batch that knows its own size. A rail bound to
+        // 0/0 draws a full bar for work that has not started.
+        // 0..1 for anything that knows its own size — an agent batch counts
+        // threads, a run counts repos. Still gated on total: a rail bound to
+        // 0/0 would draw a full bar for work that has not started.
+        progress: total > 0 ? (done / total) : -1,
+        done: done,
+        total: total,
+        holdUntil: Number(r.hold_until || 0),
+        buttons: workButtonsFor(r)
+      })
+    }
+  }
+  return out
+}
+
+function workLabelFor(r) {
+  var repo = String(r.repo || "")
+  var pr = r.pr !== undefined && r.pr !== null ? (" #" + r.pr) : ""
+  return repo + pr
+}
+
+// The buttons a row carries, and every one of them does the obvious thing.
+// A row with no button is a row that only reports, which is what the Fleet tab
+// is for — this tab exists because those rows had nothing to press.
+function workButtonsFor(r) {
+  var kind = String(r.kind || "")
+  var state = String(r.state || "")
+  if (kind === "agent") {
+    if (state === "holding") return ["go", "stop"]
+    if (state === "running") return ["pause", "stop"]
+    if (state === "paused")  return ["go", "stop"]
+    return []
+  }
+  if (kind === "run")   return []
+  if (kind === "drift") return ["approve", "read"]
+  // A paused repo cannot run at all, so the only useful button is the one that
+  // un-pauses it — offering `run` there would be a button that does nothing.
+  if (kind === "repo")  return r.paused === true ? ["resume"] : ["run", "dry"]
+  return ["agent", "read"]
+}
+
+// The count the tab's chip shows: things WAITING ON YOU, not things happening.
+// A running batch is not a number you need on a chip; it is already visible on
+// the tab, and counting it would make the chip go up when work starts.
+function workWaitingCount(payload) {
+  var p = payload && typeof payload === "object" ? payload : {}
+  return Array.isArray(p.waiting) ? p.waiting.length : 0
 }

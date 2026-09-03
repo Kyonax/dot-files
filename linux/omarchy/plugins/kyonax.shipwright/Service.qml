@@ -55,6 +55,15 @@ Item {
   property int activityWeeks: 12
   property int activitySeq: 0
   property int activityAppliedSeq: 0
+  // The Work tab. ONE payload for four things — agent batches, the inbox,
+  // contract drift and the live run — so the tab is one read rather than four
+  // Processes racing to render half a picture each.
+  property var work: null
+  property bool workLoaded: false
+  property string workError: ""
+  property int workSeq: 0
+  property int workAppliedSeq: 0
+  readonly property bool workRunning: workProcess.running
   readonly property bool activityRunning: activityProcess.running
 
   // Results are applied in the order they were ASKED FOR, never the order they
@@ -91,12 +100,17 @@ Item {
   // to `tick` so it re-evaluates while the popup is open — a readonly property
   // over Date.now() alone would freeze at whatever it said when it was built.
   property int tick: 0
+  // Deliberately terse, and it got terser when the third tab arrived. It has
+  // exactly one consumer: the slack the chips leave beside them. Two chips left
+  // room for "checked 19s ago"; three leave about eighty pixels, so the old
+  // wording elided on EVERY frame rather than in the worst case the layout was
+  // designed around. Beside a row of tabs, "19s ago" says the same thing.
   readonly property string lastCheckedText: {
     tick
-    if (lastFullAt <= 0) return busy ? "checking…" : "not checked yet"
+    if (lastFullAt <= 0) return busy ? "checking…" : "not checked"
     if (busy) return "checking…"
     var secs = Math.max(0, Math.floor(nowSec() - lastFullAt))
-    return "checked " + Model.humanDuration(secs) + " ago"
+    return Model.humanDuration(secs) + " ago"
   }
   readonly property int alertCount: Model.countByState(repos, "alert")
   readonly property int pendingCount: Model.countByState(repos, "pending")
@@ -250,6 +264,55 @@ Item {
     activityLoaded = true
   }
 
+  function applyWork(raw, forSeq) {
+    // The same seq guard the other three carry. Two refreshes in flight and the
+    // slower one landing last would show older state than the tab already had.
+    if (forSeq < workAppliedSeq) return
+    workAppliedSeq = forSeq
+    try {
+      work = JSON.parse(raw)
+      workError = ""
+    } catch (e) {
+      // Keep the last good payload. An empty Work tab reads as "nothing is
+      // waiting on you", which is the most misleading thing it could say.
+      workError = "could not read shipwright work"
+    }
+    workLoaded = true
+  }
+
+  function refreshWork() {
+    if (workProcess.running) return
+    workSeq += 1
+    workProcess.seq = workSeq
+    // --no-refresh, always. The bar never fetches: this reads the caches a run
+    // or the watch timer wrote, and returns before any age check.
+    workProcess.command = [shipwrightBin, "work", "--json", "--no-refresh"]
+    workProcess.running = true
+  }
+
+  // The buttons on a Work row. Detached, for the same reason launchTui is: a
+  // Process is a child of the shell, so re-assigning `command` while one is
+  // still running silently drops the second press — which on a row of buttons
+  // is the difference between "stop" working and appearing to.
+  function workAction(cmd, arg) {
+    if (!cmd) return
+    var args = [shipwrightBin]
+    var parts = String(cmd).split(" ")
+    for (var i = 0; i < parts.length; i++) if (parts[i] !== "") args.push(parts[i])
+    if (arg !== undefined && arg !== null && String(arg) !== "") args.push(String(arg))
+    Quickshell.execDetached(args)
+    // Ask again shortly: the state file has changed, and a button that does not
+    // visibly do anything is one people press twice.
+    workRecheck.restart()
+  }
+
+  Timer {
+    id: workRecheck
+    interval: 700
+    repeat: false
+    onTriggered: root.refreshWork()
+  }
+
   // `shipwright logs --list` and friends are TUIs; the panel launches them
   // through omarchy so they land in a styled terminal instead of nowhere.
   //
@@ -259,8 +322,14 @@ Item {
   // drops the second launch — the same shared-object bug that made the popup
   // ignore clicks. A terminal the operator opens should outlive the widget
   // that opened it. tempo-hours documents the same fix.
+  // THE APP ID IS A FLAG, NOT A POSITIONAL. omarchy-launch-or-focus-tui's
+  // signature is `[--app-id=<id>] <command> [args...]`, so passing the id bare
+  // makes it the COMMAND: every call here died with
+  //   Failed to spawn command 'shipwright-inbox': No such file or directory
+  // detached, where nothing shows it. That silently broke `read`, the ledger,
+  // `L` logs, `H` health and the middle-click for as long as it has been wrong.
   function launchTui(appId, command) {
-    Quickshell.execDetached(["omarchy-launch-or-focus-tui", appId, command])
+    Quickshell.execDetached(["omarchy-launch-or-focus-tui", "--app-id=" + appId, command])
   }
 
   // A PR row is a link. xdg-open rather than a hardcoded browser, because the
@@ -328,14 +397,24 @@ Item {
   // says "running…" the moment it is pressed, because the run takes seconds and
   // a button that looks unpressed for that long gets pressed twice.
   property var runningNow: ({})
-  function runNow(repo) {
+  // runNow(repo, dry) — the full pipeline against one repo, right now.
+  //
+  // A TERMINAL, not a detached process. This is the one action on the bar that
+  // can PUBLISH, it takes tens of seconds, and it prints why it deferred; a
+  // silent background launch would leave the operator watching a widget that
+  // says nothing until it is over. `dry` runs the identical pipeline and stops
+  // before anything is written, which is what makes it safe to offer beside it.
+  function runNow(repo, dry) {
     if (!repo) return
     var next = {}
     for (var k in runningNow) next[k] = runningNow[k]
     next[repo] = true
     runningNow = next
-    Quickshell.execDetached(["omarchy-launch-or-focus-tui", "shipwright-now",
-                             shipwrightBin + " now " + repo])
+    var cmd = shipwrightBin + " now " + repo + (dry === true ? " --dry-run" : "")
+    Quickshell.execDetached(["omarchy-launch-or-focus-tui", "--app-id=shipwright-now", cmd])
+    // A run changes the queue, the ledger and the inbox; ask again once it has
+    // had a moment, so the tab is not left describing the state before it.
+    workRecheck.restart()
   }
   function clearRunningNow() { runningNow = ({}) }
 
@@ -424,6 +503,30 @@ Item {
         // rather than leaving an empty grid that reads as "you did nothing".
         root.activityError = "this shipwright has no 'activity' command yet"
         root.activityLoaded = true
+      }
+    }
+  }
+
+  // A FOURTH Process, never a fourth caller of an existing one. The header of
+  // this file records what sharing one cost: clicks dropped for 26 seconds at a
+  // time, because `if (running) return` was guarding two operations with
+  // completely different costs.
+  Process {
+    id: workProcess
+    property int seq: 0
+    stdout: StdioCollector {
+      waitForEnd: true
+      onStreamFinished: root.applyWork(text, workProcess.seq)
+    }
+    onExited: function(exitCode) {
+      if (exitCode === 127) {
+        root.workError = "shipwright is not installed"
+        root.workLoaded = true
+      } else if (exitCode !== 0 && !root.workLoaded) {
+        // An older shipwright has no `work` command. Say so once, rather than
+        // leaving an empty tab that reads as "nothing is waiting on you".
+        root.workError = "this shipwright has no 'work' command yet"
+        root.workLoaded = true
       }
     }
   }
