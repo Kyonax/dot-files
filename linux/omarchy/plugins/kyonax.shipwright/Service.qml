@@ -369,7 +369,13 @@ Item {
         root.refreshQuick()
         // The runs that just finished are part of the picture the grid draws,
         // and the CLI's own cache means this is usually free.
-        if (root.activityLoaded) root.refreshActivity(true)
+        //
+        // `activityLoaded` is the wrong gate on the one path that matters. The
+        // first check after login has not loaded the grid yet, so a run that
+        // published during it left the calendar showing the day before — and
+        // the CLI drops its derived cache precisely when a run published, so
+        // this is the read that picks the new numbers up.
+        root.refreshActivity(true)
         root.clearRunningNow()
       }
       // An ask that arrived while this one was running is honoured now rather

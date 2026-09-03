@@ -560,8 +560,16 @@ function activityLevel(commits) {
 // What a cell counts: GitHub's number when there is one, the local count when
 // GitHub could not be reached. One place, so the strip, the totals and the
 // tooltip can never disagree about whether a day was empty.
+//
+// TODAY IS THE EXCEPTION, and it takes the larger of the two. A commit is not
+// in GitHub's contributions calendar the instant the push returns — the API
+// has its own propagation delay — while local git knew the moment it happened.
+// Preferring GitHub unconditionally meant the square for the work you just did
+// stayed a shade behind for minutes. Every other day is GitHub's number, which
+// is what the profile page shows and what these squares are for.
 function cellCount(cell) {
   if (!cell) return 0
+  if (cell.isToday) return Math.max(toInt(cell.github), toInt(cell.commits))
   return cell.github > 0 ? cell.github : cell.commits
 }
 
@@ -656,6 +664,11 @@ function dayTooltip(cell) {
   // The CLI already worded why the two halves differ, and it names the CAUSE
   // — "on branches" is not "not pushed". Never re-derive it here.
   if (cell.note !== "" && cell.note !== head) lines.push(cell.note)
+  // Say so when today is being drawn from local git because GitHub has not
+  // counted it yet — otherwise the square disagrees with the profile page and
+  // nothing explains why.
+  if (cell.isToday && toInt(cell.commits) > toInt(cell.github))
+    lines.push("counted here; github.com has not caught up yet")
   var runs = []
   if (cell.published > 0) runs.push(cell.published + " published")
   if (cell.deferred > 0) runs.push(cell.deferred + " deferred")
