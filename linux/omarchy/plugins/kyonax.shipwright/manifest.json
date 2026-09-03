@@ -5,7 +5,7 @@
   "version": "1.0.0",
   "author": "kyonax",
   "license": "MIT",
-  "description": "Shipwright git auto-save fleet status in the Omarchy bar: last run, per-repo sync state, and why a repo was deferred or vetoed.",
+  "description": "Shipwright git auto-save fleet status in the Omarchy bar: what needs you, your GitHub contributions, per-repo sync state, and open PRs.",
   "kinds": [
     "bar-widget"
   ],
@@ -14,7 +14,7 @@
   },
   "barWidget": {
     "displayName": "Shipwright",
-    "description": "Git auto-save fleet health, with a popup listing every enrolled repo.",
+    "description": "Git auto-save fleet health, your GitHub contribution strip, and what needs you.",
     "category": "Info",
     "allowMultiple": false,
     "defaultSection": "right",
@@ -30,6 +30,15 @@
         "max": 3600,
         "step": 30,
         "defaultValue": 300
+      },
+      {
+        "key": "activityWeeks",
+        "type": "integer",
+        "label": "Activity window (weeks)",
+        "min": 1,
+        "max": 53,
+        "step": 1,
+        "defaultValue": 26
       }
     ]
   }

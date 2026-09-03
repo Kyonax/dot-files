@@ -23,13 +23,22 @@ schema = 1
 
 [repo]
 name = "dot-files"
+
+# Tier: this is my own repository, and a day with no commit is a day of
+# work lost. Direct push, no ceremony, and a transient deferral is waited
+# out inside the slot rather than losing the day to the next one.
+tier = "always"
 default_branch = "main"
 remote = "origin"
 
 # Config files get edited in bursts and saved constantly. Ten minutes of quiet
 # is the floor before a run may commit; an Emacs `.#` lock symlink marks the
 # repo hot on its own regardless of this value.
-hot_window_min = 10
+hot_window_min = 1
+# Seconds, not minutes. A whole minute of sitting on finished work is a
+# long time; this is the wait that stops a run landing on top of an edit
+# you are still making, and 30s is enough for that.
+hot_window_s = 30
 
 [commit]
 # From this repo's own history: feat 32, fix 3, docs 3. `chore` and `refactor`
@@ -184,4 +193,15 @@ max_attempts = 2
 
 [schedule]
 slots = ["03:00", "06:00", "09:00", "11:00", "13:00", "15:00", "18:00", "21:00", "23:00"]
+
+# Ship yes or yes. A day with no commit is a day of work lost, so a
+# transient deferral — a file written seconds ago, a held index.lock, an
+# editor still open — is waited out and retried inside the slot rather
+# than written off until the next one. It never widens what a run may
+# DO: the same guards, the same gates, just another look a few minutes
+# later. Implied by the always tier; written down so it survives a tier
+# change and so reading the file tells you.
+persist = true
+persist_max_wait_min = 20
+persist_max_attempts = 3
 min_interval_min = 0
