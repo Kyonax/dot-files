@@ -19,7 +19,7 @@ import { dirname, join } from "node:path"
 const here = dirname(fileURLToPath(import.meta.url))
 const src = readFileSync(join(here, "Model.js"), "utf8").replace(/^\.pragma library/m, "")
 const M = {}
-new Function("exports", src + "\n;Object.assign(exports, {calendarGrid, workRows, workWaitingCount, workButtonsFor, workCheckedText, humanDuration, WEEKDAY_RAIL, calendarScaleText});")(M)
+new Function("exports", src + "\n;Object.assign(exports, {calendarGrid, workRows, workWaitingCount, workButtonsFor, workCheckedText, attentionVerb, humanDuration, WEEKDAY_RAIL, calendarScaleText});")(M)
 
 let pass = 0
 const fails = []
@@ -313,6 +313,22 @@ is("hours, once minutes stop meaning anything",
 is("days, for a timer that is not running at all",
    M.workCheckedText({ checked_age_s: 300000 }), "checked 3d ago")
 is("and a missing age is not silence", M.workCheckedText({}), "never checked")
+
+head("the bar can run an attention row's own fix")
+
+// Every attention row already carried its fix as a string and drew it as prose,
+// so the one thing the row knew how to do was the one thing you could not do
+// from there.
+is("a push row offers push", M.attentionVerb("shipwright push bluespring-98"), "push")
+is("an approve row offers approve", M.attentionVerb("shipwright approve brain"), "approve")
+is("a resume row offers resume", M.attentionVerb("shipwright resume shipwright"), "resume")
+// A prose fix has no button, and that is correct - there is nothing to press.
+is("a prose fix offers nothing", M.attentionVerb("ssh-add -l, then check the remote"), "")
+is("and neither does an empty one", M.attentionVerb(""), "")
+// A whitelist, not "whatever the sentence starts with".
+is("an unlisted verb is refused", M.attentionVerb("shipwright forget brain"), "")
+is("and so is anything not shipwright", M.attentionVerb("rm -rf /tmp/x"), "")
+
 
 console.log("\n" + pass + " passed, " + fails.length + " failed")
 if (fails.length) { fails.forEach((f) => console.log("  - " + f)); process.exit(1) }

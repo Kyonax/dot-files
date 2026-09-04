@@ -1223,6 +1223,29 @@ function workRows(payload, repos) {
 //
 // Outside a group the old label is still the right one, so `inGroup` decides
 // rather than the kind.
+// attentionVerb(action) — the shipwright verb an attention row can run itself,
+// or "" when its fix is not a shipwright command.
+//
+// EVERY ATTENTION ROW ALREADY CARRIES ITS OWN FIX as a string, and the bar drew
+// it as prose with a `why` pill beside it — so the one thing the row knew how to
+// do was the one thing you could not do from there. A reader on the bar had to
+// retype a command the row was already showing them.
+//
+// WHITELISTED, and deliberately short. The action string is assembled from an
+// outcome token, but it is still a string being turned into a process, and the
+// answer to "which verbs may a click run" should be a list somebody chose —
+// never whatever the sentence happens to start with. Nothing here can destroy
+// anything: `push` refuses a default branch, `approve` only re-blesses a
+// contract you are being shown, `resume` and `run` are the ordinary lane.
+var ATTENTION_VERBS = ["push", "approve", "resume", "run"]
+
+function attentionVerb(action) {
+  var a = String(action || "").trim()
+  var m = a.match(/^shipwright\s+([a-z-]+)\s+(\S+)\s*$/)
+  if (!m) return ""
+  return ATTENTION_VERBS.indexOf(m[1]) >= 0 ? m[1] : ""
+}
+
 function workLabelFor(r, inGroup) {
   if (inGroup) {
     var where = workWhereFor(r)

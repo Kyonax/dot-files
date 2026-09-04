@@ -2189,7 +2189,19 @@ Panel {
 
       Text {
         id: wkHeaderCount
-        text: wk.item && wk.item.groupCount > 0 ? String(wk.item.groupCount) : ""
+        // A COUNT OF ZERO OVER FIFTEEN ROWS READS AS A BUG. `groupCount` is
+        // what waits on YOU, so once every thread is answered it correctly
+        // drops to nothing — and the section then drew fifteen rows under a
+        // blank number, which looks like a full tab of work rather than a
+        // finished one. `groupAnswered` was computed for exactly this and had
+        // never been drawn.
+        text: {
+          if (!wk.item) return ""
+          if (wk.item.groupCount > 0) return String(wk.item.groupCount)
+          if (wk.item.groupAnswered > 0)
+            return wk.item.groupAnswered + " answered"
+          return ""
+        }
         color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
@@ -2435,6 +2447,7 @@ Panel {
 
     readonly property bool isMore: att.item ? att.item.kind === "more" : false
     readonly property string groupLabel: att.item ? String(att.item.groupLabel || "") : ""
+    readonly property string fixVerb: att.item ? Model.attentionVerb(att.item.action || "") : ""
     readonly property string target: att.item ? String(att.item.target || "") : ""
 
     // A repo is in this band because something is wrong with it; what its
@@ -2574,13 +2587,48 @@ Panel {
         Text {
           id: attWhy
           width: Math.max(0, attRow.width - attText.implicitWidth
-                          - attPill.width - attRow.spacing * 2)
+                          - attPill.width - attFixPill.width
+                          - attRow.spacing * (attFixPill.visible ? 3 : 2))
           anchors.verticalCenter: parent.verticalCenter
           text: att.detail
           color: root.dim
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption
           elide: Text.ElideRight
+        }
+
+        // THE ROW'S OWN FIX, as a button. Every attention row already carried
+        // its remedy as a string and drew it as prose, so the one action the
+        // row knew about was the one you could not take from here — you had to
+        // retype a command the row was showing you. Only shipwright verbs from
+        // a short whitelist get a button; a prose remedy ("ssh-add -l, then
+        // ...") correctly gets none, because there is nothing to press.
+        Rectangle {
+          id: attFixPill
+          visible: !att.isMore && att.fixVerb !== ""
+          anchors.verticalCenter: parent.verticalCenter
+          width: visible ? fixLabel.implicitWidth + Style.space(8) : 0
+          height: fixLabel.implicitHeight + Style.space(2)
+          color: "transparent"
+          border.width: 1
+          border.color: root.foreground
+          opacity: attFixMouse.containsMouse ? 0.85 : 0.45
+          Text {
+            id: fixLabel
+            anchors.centerIn: parent
+            text: att.fixVerb
+            color: root.dim
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.caption
+          }
+          MouseArea {
+            id: attFixMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onEntered: root.setRepoCursor(att.rowIndex)
+            onClicked: shipwright.workAction(att.fixVerb, att.target)
+          }
         }
 
         // A hairline pill, not a kit Button: a Button is 28 px and will not fit
