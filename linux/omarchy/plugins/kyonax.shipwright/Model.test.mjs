@@ -148,6 +148,14 @@ head("work: a refused batch is a row, not a silence")
 is("a refused batch reads the document before it retries",
    M.workButtonsFor({ kind: "agent", state: "failed" }),
    ["why", "agent", "dismiss", "delete"])
+// Re-running is right when no plan exists and WRONG when only delivery failed:
+// it would redo every edit to change nothing.
+is("a delivery failure offers reply, not a re-run",
+   M.workButtonsFor({ kind: "agent", state: "failed", failure: "replies" }),
+   ["why", "reply", "dismiss", "delete"])
+is("and an undelivered branch offers push",
+   M.workButtonsFor({ kind: "agent", state: "failed", failure: "push" }),
+   ["why", "push", "dismiss", "delete"])
 // buttons[0] is what Enter presses, and the panel hides a SUFFIX when the row
 // is not focused — so the first action must be the same either way, and the two
 // that cannot be taken back must never be reachable by a stray Enter.
@@ -313,6 +321,47 @@ is("hours, once minutes stop meaning anything",
 is("days, for a timer that is not running at all",
    M.workCheckedText({ checked_age_s: 300000 }), "checked 3d ago")
 is("and a missing age is not silence", M.workCheckedText({}), "never checked")
+
+head("an answered thread offers the close, not the batch again")
+
+// THE DEFECT. Every comment row offered `agent`, which starts a batch over the
+// whole pull request. On a row you have ALREADY answered that is fifteen model
+// edits to change nothing - the most expensive button on the tab, doing the
+// least. Meanwhile the one thing the row needed, the close, was unreachable:
+// GitHub does not resolve a thread when the reviewer reads it, so an answered
+// fix stays open until somebody clicks Resolve, and that somebody is us.
+is("an unanswered thread still starts the batch",
+   M.workButtonsFor({ kind: "comment", answered: false, resolvable: true }),
+   ["agent", "read"])
+is("an answered review thread offers resolve instead",
+   M.workButtonsFor({ kind: "comment", answered: true, resolvable: true }),
+   ["resolve", "read"])
+
+// buttons[0] is what Enter presses. On a row whose work is done the default
+// press must FINISH it, never redo it.
+is("and resolve is what Enter presses",
+   M.workButtonsFor({ kind: "comment", answered: true, resolvable: true })[0],
+   "resolve")
+
+// A failing check or a merge conflict has no conversation behind it, so there
+// is nothing to close - offering the button would be offering a no-op.
+is("a non-thread row is never offered a close",
+   M.workButtonsFor({ kind: "check", answered: true, resolvable: false }),
+   ["agent", "read"])
+
+// AN OLD CACHE HAS NO `resolvable` ON IT. Reading a missing field as true would
+// put a close on rows that cannot be closed; the CLI derives the flag from the
+// kind before it ever reaches here, so the widget can require it.
+is("a row with no resolvable flag is not offered a close",
+   M.workButtonsFor({ kind: "comment", answered: true }),
+   ["agent", "read"])
+
+const closable = M.workRows({ running: [], waiting: [
+  { kind: "comment", id: "t1", repo: "bluespring-98", pr: 152, title: "x on a.ts:1",
+    answered: true, resolvable: true, action: "answered - close it" }
+] })
+is("and the row carries the flag through", closable[0].resolvable, true)
+is("with the close on it", closable[0].buttons, ["resolve", "read"])
 
 head("the bar can run an attention row's own fix")
 

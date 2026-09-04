@@ -2043,6 +2043,40 @@ Panel {
       // rendering index.
       if (which === "why") { shipwright.openReport(wk.item.key); return }
 
+      // Delivery, not re-work. `reply` re-sends the words this batch already
+      // drafted and you already approved, pushing the branch first if it is
+      // behind; `push` sends commits that are already made. Both are terminal
+      // launches because both talk to a remote and both can ask a question.
+      if (which === "reply") {
+        shipwright.launchTui("shipwright-agent",
+                             "shipwright agent reply " + String(wk.item.key))
+        return
+      }
+      if (which === "push") {
+        shipwright.launchTui("shipwright-push",
+                             "shipwright push " + String(wk.item.repo))
+        return
+      }
+
+      // THE CLOSE, which is the half of delivery the bar could not reach.
+      //
+      // A row is a THREAD, and `shipwright agent resolve` used to take only a
+      // batch id — a string that appears on no surface a person reads. It takes
+      // a repo and a pull request now, looks up the batch that actually
+      // DELIVERED the replies, and closes only what that batch called a fix.
+      //
+      // A terminal launch rather than a detached action, for the same reason
+      // `reply` is one: it talks to a remote, it can fail on a credential, and
+      // the counts it prints (resolved / left open / unanswered) are the whole
+      // point of running it. A close that reports nothing is how fifteen
+      // threads sat open for a day.
+      if (which === "resolve") {
+        shipwright.launchTui("shipwright-resolve",
+                             "shipwright agent resolve --repo " + String(wk.item.repo)
+                             + " --pr " + String(wk.item.pr))
+        return
+      }
+
       // Dismissal is reversible in every sense that matters: the record, the
       // plan and the planner's own words all survive, and `agent list --all`
       // still shows it. So it needs no confirmation.

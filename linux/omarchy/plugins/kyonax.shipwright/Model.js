@@ -1176,6 +1176,10 @@ function workRows(payload, repos) {
         // it is not your move, and drawing it identically to fourteen threads
         // that ARE your move is what made the section unreadable.
         answered: r.answered === true,
+        // WHICH ROWS CAN BE CLOSED AT ALL. A GitHub review thread can; a failing
+        // check or a merge conflict is work with no conversation behind it, so
+        // there is nothing to resolve. Decides whether the row offers the close.
+        resolvable: r.resolvable === true,
         // GitHub lost the anchor because the code moved. A FLAG, never a
         // filter: hiding these under-reported one pull request as four
         // blockers when fifteen were unresolved.
@@ -1306,7 +1310,17 @@ function workButtonsFor(r) {
     // `visibleButtons` in Panel.qml. Order is the contract: `activate()` presses
     // buttons[0], so Enter explains, and the two that cannot be taken back sit
     // last where a mis-aimed press is least likely to reach them.
-    if (state === "failed")  return ["why", "agent", "dismiss", "delete"]
+    // THE SECOND BUTTON DEPENDS ON WHAT FAILED. Re-running the whole batch is
+    // the right answer when no plan was drafted; it is the WRONG one when the
+    // plan exists and only delivery failed — that redoes every edit to change
+    // nothing. `reply` re-sends the approved words (and pushes first if the
+    // branch is behind); `push` sends commits that are already made.
+    if (state === "failed") {
+      var f = String(r.failure || "")
+      if (f === "replies") return ["why", "reply", "dismiss", "delete"]
+      if (f === "push")    return ["why", "push", "dismiss", "delete"]
+      return ["why", "agent", "dismiss", "delete"]
+    }
     return []
   }
   if (kind === "run")   return []
@@ -1314,6 +1328,22 @@ function workButtonsFor(r) {
   // A paused repo cannot run at all, so the only useful button is the one that
   // un-pauses it — offering `run` there would be a button that does nothing.
   if (kind === "repo")  return r.paused === true ? ["resume"] : ["run", "dry"]
+
+  // AN ANSWERED THREAD DOES NOT WANT THE BATCH RUN AGAIN.
+  //
+  // Every comment row offered `agent`, which starts a batch over the whole pull
+  // request — fifteen model edits that find nothing to change, because the work
+  // already landed. On a row you have ALREADY answered that is the single most
+  // expensive button on the tab and it accomplishes nothing.
+  //
+  // What the row actually needs is the thing nobody could reach: the close.
+  // GitHub does not resolve a thread when the reviewer reads it, so an answered
+  // fix stays open until somebody clicks Resolve, and that somebody is us.
+  //
+  // `resolve` FIRST because Enter presses buttons[0] — on a row whose work is
+  // done, the default press should finish it rather than redo it.
+  if (r.answered === true && r.resolvable === true) return ["resolve", "read"]
+
   return ["agent", "read"]
 }
 
