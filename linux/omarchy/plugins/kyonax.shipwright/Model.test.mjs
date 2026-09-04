@@ -146,7 +146,14 @@ head("work: a refused batch is a row, not a silence")
 // and re-running something that refused for an unread reason is how the same
 // batch failed five times.
 is("a refused batch reads the document before it retries",
-   M.workButtonsFor({ kind: "agent", state: "failed" }), ["why", "agent"])
+   M.workButtonsFor({ kind: "agent", state: "failed" }),
+   ["why", "agent", "dismiss", "delete"])
+// buttons[0] is what Enter presses, and the panel hides a SUFFIX when the row
+// is not focused — so the first action must be the same either way, and the two
+// that cannot be taken back must never be reachable by a stray Enter.
+is("the safe pair is first, so Enter can only explain",
+   M.workButtonsFor({ kind: "agent", state: "failed" }).slice(0, 2),
+   ["why", "agent"])
 is("a finished batch still carries nothing",
    M.workButtonsFor({ kind: "agent", state: "done" }), [])
 
@@ -179,6 +186,22 @@ const bothKinds = M.workRows({ running: [
 ], waiting: [] })
 is("a refusal sorts above the batch that is still running",
    bothKinds.map((r) => r.groupLabel), ["Refused", "Running now"])
+
+head("work: a thread carries where it points, and how true that is")
+
+// GitHub NULLS `line` on an outdated thread and moves the number to
+// `originalLine`. The inbox asked for `line` alone, so the one row whose anchor
+// had moved lost its line number entirely and read as a broken row rather than
+// an informative one. Both fields reach the widget now, and the flag travels
+// with the number so it is never passed off as current.
+const anchored = M.workRows({ running: [], waiting: [
+  { kind: "comment", id: "o/r#7:thread:A", repo: "demo", owner_repo: "o/r", pr: 7,
+    title: "who on playwright.config.ts:46 (anchor moved)",
+    detail: "payee-a11y.spec.ts is not excluded here",
+    path: "playwright.config.ts", line: 46, outdated: true, url: "u" }
+]})
+is("an outdated thread keeps its line", anchored[0].label, "playwright.config.ts:46")
+is("and still says the anchor moved", anchored[0].outdated, true)
 
 head("work: a whole pull request in one press")
 

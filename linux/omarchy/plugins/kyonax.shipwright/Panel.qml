@@ -101,6 +101,27 @@ Panel {
     expandedCauses = next
   }
 
+  // workPress(name) — press the named button on the row under the cursor, if it
+  // offers one.
+  //
+  // WHY THIS DID NOT EXIST, and why the footer was lying. Enter reaches
+  // `buttons[0]` and nothing reached the rest, so `go`, `pause`, `stop`, `dry`,
+  // `why`, `read`, `approve` and `resume` were mouse-only — while the footer
+  // advertised `g go  p pause  s stop` as though all three were bound. Three of
+  // its five Work-tab hints named keys that did nothing at all.
+  //
+  // Guarded on the row OFFERING the action rather than on its kind: the buttons
+  // are already the authority on what a row may do, and a second opinion here
+  // is how `n` nearly published a client repository from a review-thread row.
+  function workPress(name) {
+    if (page !== 2 || !cursorActive) return
+    var row = cursorItemAt(repoIndex)
+    if (!row || !row.buttons || !row.act) return
+    for (var i = 0; i < row.buttons.length; i++) {
+      if (String(row.buttons[i]) === name) { row.act(name); return }
+    }
+  }
+
   function cursorList() {
     if (page === 0) return root.attentionRows.concat(shipwright.repos)
     if (page === 1) return shipwright.prsVisible
@@ -779,7 +800,21 @@ Panel {
           else if (root.page === 2 && item && item.kind === "repo")
             shipwright.runNow(item.repo, false)
         }
+        // The keys the footer has been promising. Each is a no-op on a row that
+        // does not offer it, which is what makes one binding safe across every
+        // kind the Work tab draws.
+        else if (t === "g") root.workPress("go")
+        else if (t === "p") root.workPress("pause")
+        else if (t === "s") root.workPress("stop")
+        else if (t === "w") root.workPress("why")
+        else if (t === "d") root.workPress("dismiss")
       }
+
+      // `x` is the kit's own delete gesture: PanelKeyCatcher emits it and no
+      // panel has ever connected it. Routed through the same two-press latch as
+      // the pill, so the keyboard cannot do in one action what the mouse
+      // deliberately cannot.
+      onDeleteRequested: root.workPress("delete")
 
       // The key hints are PINNED, not scrolled. As the last child of a column
       // that runs 800 px with eleven repos in it, they sat about 700 px down —
@@ -793,10 +828,15 @@ Panel {
         height: implicitHeight + Style.space(4)
         verticalAlignment: Text.AlignBottom
         text: root.page === 0
-          ? "j/k move  \u21b5 why  e editor  t template  a advise  l ledger"
+          // `L`, not `l`. PanelKeyCatcher matches `event.text === "l"` for
+          // vim-right and accepts the event before `textKey` fires, so the
+          // lowercase binding in the handler above has never once been
+          // reachable. `L` was already the working one; the hint had not caught
+          // up.
+          ? "j/k move  \u21b5 why  e editor  t template  a advise  L ledger"
           : root.page === 1
           ? "j/k move  \u21b5 open  m mine/all  o open all"
-          : "j/k move  \u21b5 act  n run  g go  p pause  s stop"
+          : "j/k move  \u21b5 act  n run  w why  d dismiss  x delete"
         color: root.dim
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
@@ -1248,9 +1288,22 @@ Panel {
                 id: workAge
                 // What it is showing, and how old that is. The bar never
                 // fetches, so "when was this true" is not a detail.
-                text: shipwright.work && shipwright.work.checked_age_s !== undefined
-                  ? "checked " + Model.humanDuration(shipwright.work.checked_age_s) + " ago"
-                  : ""
+                // TWO CLOCKS THAT DISAGREED. This lifted `checked_age_s` out
+                // of the last parsed payload and was never bound to `tick`, so
+                // it froze while `lastCheckedText` beside it counted live: ten
+                // minutes with the panel open and one read `10m ago` while this
+                // still read `1m ago`.
+                //
+                // `Model.workCheckedText` exists for exactly this and had never
+                // been called. It stays SILENT under fifteen minutes, because a
+                // sweep that fresh is not news, and says `never checked` when
+                // the field is missing rather than drawing an empty string over
+                // a real absence. Reading `tick` makes it a clock again.
+                // It takes the PAYLOAD, not the age — it does its own
+                // `Number(p.checked_age_s)` and answers "never checked" for
+                // anything that is not a finite non-negative number, which is
+                // the correct reading of a missing field.
+                text: { shipwright.tick; return Model.workCheckedText(shipwright.work) }
                 color: root.dim
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
@@ -1650,7 +1703,19 @@ Panel {
       (width - railW - gutter + cellGap) / (cellSize + cellGap)))
 
     readonly property var grid: Model.calendarGrid(shipwright.activity, weeksThatFit)
-    readonly property string caveat: Model.activityCaveatText(shipwright.activity)
+    // A FAILED READ IS NOT A QUIET YEAR. `activityError` has been set in four
+    // places since the calendar was written and rendered in none of them, so a
+    // read that failed drew seven rows of level-0 cells — pixel-identical to
+    // "you did nothing for twenty-four weeks". The caveat below cannot cover it
+    // either: it only speaks when the payload PARSED, and a hard failure leaves
+    // `activity` null.
+    //
+    // It outranks the caveat rather than sitting beside it: if the fetch failed,
+    // nothing else on this band is worth reading.
+    readonly property string caveat: shipwright.activityError !== ""
+      ? shipwright.activityError
+      : Model.activityCaveatText(shipwright.activity)
+    readonly property bool caveatIsError: shipwright.activityError !== ""
 
     // GitHub's ramp starts at a VISIBLE floor, not at nothing: its zero-days are
     // a filled square barely above the page, and it draws no borders at all.
@@ -1844,10 +1909,14 @@ Panel {
       visible: cal.caveat !== ""
       width: parent.width
       text: cal.caveat
-      color: root.dim
+      // An outage is drawn like every other failure on this panel; a caveat
+      // about stale data is not a failure and stays dim.
+      color: cal.caveatIsError ? root.urgent : root.dim
       font.family: root.fontFamily
       font.pixelSize: Style.font.caption
-      elide: Text.ElideRight
+      // A cause the operator has to act on must not be cut off mid-sentence.
+      wrapMode: cal.caveatIsError ? Text.WordWrap : Text.NoWrap
+      elide: cal.caveatIsError ? Text.ElideNone : Text.ElideRight
     }
   }
 
@@ -1885,6 +1954,30 @@ Panel {
     readonly property string groupSub: wk.item ? String(wk.item.groupSub || "") : ""
     readonly property var groupButtons: wk.item && wk.item.groupButtons ? wk.item.groupButtons : []
     readonly property var buttons: wk.item && wk.item.buttons ? wk.item.buttons : []
+
+    // WHAT IS ACTUALLY DRAWN, which is not always everything the row can do.
+    //
+    // A refused batch offers four actions and this row is ~368px wide with no
+    // label column to spare — four pills at rest would push the detail to
+    // nothing on every row in the section. So the two safe ones are always
+    // there and the two that change or destroy the record appear only under the
+    // cursor: the width is spent on the single row that has your attention, and
+    // a destructive pill cannot be reached by a stray click on a row you are
+    // not looking at.
+    //
+    // Only ever a SUFFIX is hidden, never a reordering — `activate()` presses
+    // buttons[0] and that must be the same action whether or not the row has
+    // focus.
+    // The second-press latch for `delete`. Per row, and it forgets itself: an
+    // armed button left armed is a trap for whoever next moves the cursor here.
+    property bool armed: false
+    Timer { id: wkDisarm; interval: 4000; repeat: false; onTriggered: wk.armed = false }
+
+    readonly property var visibleButtons: {
+      var b = wk.buttons
+      if (b.length <= 2) return b
+      return wkBody.hasCursor ? b : b.slice(0, 2)
+    }
     readonly property real progress: wk.item ? Number(wk.item.progress) : -1
     readonly property bool hasRail: wk.progress >= 0
 
@@ -1949,6 +2042,27 @@ Panel {
       // The task id is the row key, which is why the key is the id and not a
       // rendering index.
       if (which === "why") { shipwright.openReport(wk.item.key); return }
+
+      // Dismissal is reversible in every sense that matters: the record, the
+      // plan and the planner's own words all survive, and `agent list --all`
+      // still shows it. So it needs no confirmation.
+      if (which === "dismiss") {
+        shipwright.workAction("agent dismiss", wk.item.key)
+        return
+      }
+
+      // Deletion is not. It throws away refusal.txt, which is the only copy of
+      // what the planner said — and a refusal nobody can read is exactly how one
+      // batch failed five times over two days without anyone learning why. So
+      // the first press ARMS and the second acts, and the pill says which state
+      // it is in rather than relying on the operator to remember.
+      if (which === "delete") {
+        if (!wk.armed) { wk.armed = true; wkDisarm.restart(); return }
+        wk.armed = false
+        wkDisarm.stop()
+        shipwright.workAction("agent delete --yes", wk.item.key)
+        return
+      }
 
       if (which === "read") {
         // `read` means "show me the thing this row is about", and that is a
@@ -2092,6 +2206,10 @@ Panel {
       height: implicitHeight
 
       hasCursor: root.page === 2 && root.cursorActive && root.repoIndex === wk.rowIndex
+      // Leaving the row disarms it. The destructive pill is only drawn while
+      // this row has the cursor, so an armed latch that survived the cursor
+      // moving away would fire on a row nobody was looking at.
+      onHasCursorChanged: if (!hasCursor) { wk.armed = false; wkDisarm.stop() }
       foreground: root.foreground
 
       MouseArea {
@@ -2133,28 +2251,97 @@ Panel {
           color: root.foreground
           font.family: root.fontFamily
           font.pixelSize: Style.font.body
+          // LIGATURES OFF. This text is full of code: `--rail-half`, `->`,
+          // `!=`, `=>`. A programming font renders `--` as a single em dash, so
+          // a CSS custom property named `--rail-half` was drawn as
+          // `—rail-half` — a different identifier, on a panel whose entire job
+          // is being precise about code. The string was always correct; only
+          // the shaping was not. Qt 6.6+.
+          font.features: ({ "liga": 0, "calt": 0, "dlig": 0, "clig": 0 })
+          // A COLUMN, NOT A NATURAL WIDTH — and this is what made the row
+          // unable to carry another button.
+          //
+          // The Fleet tab pins its name column (line 1530). This one never did,
+          // so `wkText` took whatever width its text wanted and `wkDetail` was
+          // handed the remainder by hand-rolled subtraction. Nothing clips here,
+          // so a long label did not elide: it pushed the pills past the right
+          // edge of the panel, silently, and the row lost its actions rather
+          // than its text. Capped rather than fixed, because a short label
+          // ("bluespring #151") should not leave a hole the way a fixed column
+          // would — the detail beside it gets the difference.
+          width: Math.min(implicitWidth, Style.space(150))
+          // ElideLeft, because the TAIL is the identifying part of both shapes
+          // this label takes. `create-payee-form.tsx:125` elided on the right
+          // becomes `create-payee-form.t…` for all fifteen rows — the file is
+          // shared across a section and the LINE is what tells them apart, so
+          // eliding right throws away the only distinguishing characters and
+          // reinstates the problem this whole change was made to fix. From the
+          // left it reads `…-form.tsx:125`. The same holds for `repo #PR`.
+          elide: Text.ElideLeft
         }
 
         Text {
           id: wkDetail
           anchors.verticalCenter: parent.verticalCenter
-          width: Math.max(0, wkRow.width - wkText.implicitWidth
+          // `wkText.width`, never `implicitWidth`. Now that the label is capped,
+          // the natural width is what it WANTED, not what it got — subtracting
+          // it would hand the detail a negative budget on exactly the long
+          // labels the cap exists for.
+          width: Math.max(0, wkRow.width - wkText.width
                             - wkPills.implicitWidth - wkRow.spacing * 2
                             - Style.space(7))
           text: {
             if (!wk.item) return ""
-            // The STATE first, with the count appended only once there is one.
-            // Falling back to `detail` whenever total was 0 meant the opening
-            // seconds of a run showed the tooltip's whole sentence instead of
-            // the two words that belong on a 20 px row.
+            // A REFUSED BATCH SAYS WHY, not what state it is in. The section
+            // above it is already headed "Refused", so drawing the word
+            // `failed` here spends the only informative line on a repetition —
+            // and the reason ("stopped after 1 of 15 item(s)") is the entire
+            // thing an operator needs in order to know what to do next.
+            if (wk.item.failed === true) return String(wk.item.detail)
+            // Otherwise the STATE first, with the count appended only once
+            // there is one. Falling back to `detail` whenever total was 0 meant
+            // the opening seconds of a run showed the tooltip's whole sentence
+            // instead of the two words that belong on a 20 px row.
             if (String(wk.item.state) !== "")
               return wk.item.state
                    + (wk.item.total > 0 ? " · " + wk.item.done + " of " + wk.item.total : "")
-            return String(wk.item.detail)
+            // ALREADY ANSWERED, and this was computed and never drawn. The
+            // heading counts what waits on YOU, so it can legitimately read 12
+            // above 15 rows — and with nothing marking the three you have
+            // replied to, the difference had no explanation on screen. The
+            // model's own comment names this as what made the section
+            // unreadable.
+            // BOTH FLAGS, and neither had ever been drawn. `outdated` matters
+            // more than it looks: GitHub nulls a thread's line the moment the
+            // code under it moves, so the number on the row is `originalLine`
+            // — where the comment USED to point. Printing that as though it
+            // were current would be the widget stating something false, which
+            // is the failure this whole pass has been about.
+            // `moved` goes IN FRONT. A caveat appended to a sentence that
+            // elides at ~40 characters is a caveat nobody ever sees, and this
+            // one qualifies the line number in the label beside it: the number
+            // is where the comment USED to point, because GitHub nulls `line`
+            // once the code moves and only `originalLine` survives. A reader
+            // has to meet that before they trust the number, not after.
+            //
+            // `answered` still trails, because it is not a caveat about what
+            // the row SAYS — it means the row is not your move, and the dimmed
+            // opacity below already carries that.
+            return (wk.item.outdated === true ? "moved · " : "")
+                 + String(wk.item.detail)
+                 + (wk.item.answered === true ? "  · answered" : "")
           }
           color: root.dim
+          opacity: (wk.item && wk.item.answered === true) ? 0.55 : 1.0
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption
+          // LIGATURES OFF. This text is full of code: `--rail-half`, `->`,
+          // `!=`, `=>`. A programming font renders `--` as a single em dash, so
+          // a CSS custom property named `--rail-half` was drawn as
+          // `—rail-half` — a different identifier, on a panel whose entire job
+          // is being precise about code. The string was always correct; only
+          // the shaping was not. Qt 6.6+.
+          font.features: ({ "liga": 0, "calt": 0, "dlig": 0, "clig": 0 })
           elide: Text.ElideRight
         }
 
@@ -2164,7 +2351,7 @@ Panel {
           spacing: Style.space(4)
 
           Repeater {
-            model: wk.buttons
+            model: wk.visibleButtons
             Rectangle {
               id: pill
               required property var modelData
@@ -2175,14 +2362,23 @@ Panel {
               border.width: 1
               // `stop` is the one that cannot be taken back, so it is the one
               // that looks different.
-              border.color: pill.modelData === "stop" ? root.urgent : root.foreground
+              // `stop` and `delete` are the two that cannot be taken back, so
+              // they are the two that look different. Outline, never hue — the
+              // panel's palette is grayscale and severity is drawn in weight.
+              border.color: (pill.modelData === "stop" || pill.modelData === "delete")
+                            ? root.urgent : root.foreground
               opacity: pillMouse.containsMouse ? 0.75 : 0.30
 
               Text {
                 id: pillLabel
                 anchors.centerIn: parent
-                text: String(pill.modelData)
-                color: root.dim
+                // An armed delete SAYS so. A destructive button that looks
+                // identical before and after arming is a button that gets
+                // pressed twice by accident.
+                text: (pill.modelData === "delete" && wk.armed)
+                      ? "sure?" : String(pill.modelData)
+                color: (pill.modelData === "delete" && wk.armed)
+                       ? root.urgent : root.dim
                 font.family: root.fontFamily
                 font.pixelSize: Style.font.caption
               }

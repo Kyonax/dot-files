@@ -1153,8 +1153,21 @@ function workRows(payload, repos) {
         // anybody reads it for.
         groupCount: j === 0 ? countWaiting(rows) : 0,
         groupAnswered: j === 0 ? (rows.length - countWaiting(rows)) : 0,
-        label: workLabelFor(r),
-        detail: String(r.title || r.label || ""),
+        // `groupSub` is non-empty exactly when this section's heading already
+        // names the repo and pull request, which is the condition for dropping
+        // them from the row. Computed from the same expression the heading uses
+        // so the two cannot drift apart.
+        label: workLabelFor(r, pr !== "" && String(order[s]).indexOf("\u0000") >= 0),
+        // `detail` before `title`: an inbox row's title is "<author> on
+        // <path>:<line>", which the label now says by itself, so preferring it
+        // would make the row repeat itself a second time. The reviewer's own
+        // first line is the thing that tells one finding from another.
+        detail: workDetailFor(r),
+        // Carried at last. The row cannot say WHERE a thread points without
+        // them, and every consumer had to parse it back out of `title`.
+        path: String(r.path || ""),
+        line: r.line !== undefined && r.line !== null ? Number(r.line) : -1,
+        author: String(r.author || ""),
         repo: String(r.repo || ""),
         pr: r.pr !== undefined && r.pr !== null ? String(r.pr) : "",
         state: String(r.state || ""),
@@ -1193,10 +1206,59 @@ function workRows(payload, repos) {
   return out
 }
 
-function workLabelFor(r) {
+// workLabelFor(r, inGroup) — the part of a row that is NOT already on the
+// heading above it.
+//
+// THE DUPLICATION THIS REMOVES. `groupSub` builds "<repo> #<pr>" for the
+// heading, and this function built the identical string, by a second
+// expression, for every row underneath it. They could not differ: the bucket
+// key splits on repo AND pr, so the label was provably constant all the way
+// down a section. Fifteen review threads therefore spent ~90px each restating
+// the sixteen-character line directly above them, subtracted from the ONE
+// eliding element in the row — so the file and line that actually tell the
+// threads apart were the first thing to disappear.
+//
+// It is an ordering artefact rather than a decision: this function predates
+// PR-splitting, and back then repo+PR really was a row's only identity.
+//
+// Outside a group the old label is still the right one, so `inGroup` decides
+// rather than the kind.
+function workLabelFor(r, inGroup) {
+  if (inGroup) {
+    var where = workWhereFor(r)
+    if (where !== "") return where
+  }
   var repo = String(r.repo || "")
   var pr = r.pr !== undefined && r.pr !== null ? (" #" + r.pr) : ""
   return repo + pr
+}
+
+// workDetailFor(r) — what the row says after its label.
+//
+// Markdown reaches here verbatim because the source is a GitHub comment, and a
+// QML Text draws `**bold**` as four literal asterisks. Only the two markers
+// that actually occur in review prose are stripped; this is a display tidy, not
+// a parser, and anything cleverer would start rewriting a reviewer's words.
+function workDetailFor(r) {
+  var body = String(r.detail || r.title || r.label || "")
+  return body.replace(/\*\*/g, "").replace(/`/g, "")
+}
+
+// workWhereFor(r) — "create-payee-form.tsx:125", or "".
+//
+// The basename only. A review thread's path is `app/dashboard/payees/create/...`
+// and the leading directories are shared by every thread on a pull request —
+// they are the part that does NOT distinguish one row from another, which is
+// the whole complaint this is fixing. `cmd-work.sh` has carried `path` and
+// `line` on every inbox row since the tab was written; the normaliser dropped
+// both, so they had never once reached the widget.
+function workWhereFor(r) {
+  var path = String(r.path || "")
+  if (path === "") return ""
+  var base = path.split("/").pop()
+  if (base === "") return ""
+  var line = r.line !== undefined && r.line !== null ? String(r.line) : ""
+  return line !== "" ? base + ":" + line : base
 }
 
 // The buttons a row carries, and every one of them does the obvious thing.
@@ -1217,7 +1279,11 @@ function workButtonsFor(r) {
     // The token is `why` rather than `read` because the pill is drawn from the
     // token itself, and it is also the command it runs: a person who reads the
     // bar has already learnt `shipwright why`.
-    if (state === "failed")  return ["why", "agent"]
+    // FOUR, and the panel decides how many of them are drawn at rest — see
+    // `visibleButtons` in Panel.qml. Order is the contract: `activate()` presses
+    // buttons[0], so Enter explains, and the two that cannot be taken back sit
+    // last where a mis-aimed press is least likely to reach them.
+    if (state === "failed")  return ["why", "agent", "dismiss", "delete"]
     return []
   }
   if (kind === "run")   return []
