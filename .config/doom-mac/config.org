@@ -2760,7 +2760,17 @@ Configure the ~pdf~ viewer.
   :bind (:map pdf-view-mode-map
          ("M" . pdf-view-midnight-minor-mode))
   :config
-  (setq pdf-view-midnight-colors '("#888888" . "#111111")))
+  (setq pdf-view-midnight-colors '("#888888" . "#111111"))
+  ;; epdfinfo is a C binary linked against libpoppler.so.<N>. Arch bumps that
+  ;; soname roughly monthly, which breaks the binary and makes Emacs fall back
+  ;; to "Viewing PDFs in Emacs requires epdfinfo" until it is rebuilt. The
+  ;; pacman hook 60-epdfinfo-rebuild.hook runs ~/.local/bin/rebuild-epdfinfo on
+  ;; every poppler upgrade and installs the result here — outside straight's
+  ;; build tree, where `doom sync' cannot wipe it. Fall back to the bundled
+  ;; copy when the stable one is missing.
+  (let ((epdfinfo (expand-file-name "epdfinfo" "~/.local/bin")))
+    (when (file-executable-p epdfinfo)
+      (setq pdf-info-epdfinfo-program epdfinfo))))
 #+end_src
 
 *** TRAMP
