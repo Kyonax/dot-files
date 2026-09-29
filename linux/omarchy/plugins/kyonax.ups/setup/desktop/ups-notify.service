@@ -1,0 +1,10 @@
+[Unit]
+Description=Desktop notifications for UPS events (journal tag ups-event)
+
+[Service]
+ExecStart=%h/.local/bin/ups-notify
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=default.target

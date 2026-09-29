@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# ups-instcmd — send ONE harmless NUT instant command for the kyonax.ups widget.
+#
+#   ups-instcmd [--cred FILE] beeper.toggle
+#   ups-instcmd [--cred FILE] test.battery.start.quick | test.battery.stop
+#   ups-instcmd [--cred FILE] --check        log in and out, send nothing
+#
+# Prints "OK" or "ERR <REASON>" — upsd's own tokens (ACCESS-DENIED, ...) or
+# this script's (no-credential, not-allowed, upsd-unreachable, timeout) — and
+# exits 0 only on OK.
+#
+# The password never reaches argv. upscmd would need `-p PASSWORD`, which any
+# process on the machine can read in `ps`; this reads it from a mode-600 file
+# and speaks upsd's own line protocol on 127.0.0.1:3493 instead.
+#
+# upsd itself refuses anything outside this user's instcmds list (see
+# setup/setup-widget-access.sh); the allow-list below is the second lock.
+set -u
+UPS=ups
+cred="${XDG_CONFIG_HOME:-$HOME/.config}/kyonax-ups/upsd-widget"
+if [ "${1:-}" = "--cred" ]; then cred=${2:-}; shift 2; fi
+cmd=${1:-}
+case "$cmd" in
+  --check|beeper.toggle|test.battery.start.quick|test.battery.stop) ;;
+  *) echo "ERR not-allowed"; exit 2 ;;
+esac
+[ -n "$cred" ] && [ -r "$cred" ] || { echo "ERR no-credential"; exit 3; }
+user=$(sed -n 's/^user=//p' "$cred" | head -n1)
+pass=$(sed -n 's/^password=//p' "$cred" | head -n1)
+[ -n "$user" ] && [ -n "$pass" ] || { echo "ERR no-credential"; exit 3; }
+
+{ exec 3<>/dev/tcp/127.0.0.1/3493; } 2>/dev/null || { echo "ERR upsd-unreachable"; exit 4; }
+reply=""
+ask() {   # send one line, read one reply into $reply
+  printf '%s\n' "$1" >&3
+  if IFS= read -r -t 5 reply <&3; then reply=${reply%$'\r'}; else reply="ERR timeout"; fi
+}
+ask "USERNAME $user"; case $reply in OK*) ;; *) echo "$reply"; exit 5 ;; esac
+ask "PASSWORD $pass"; case $reply in OK*) ;; *) echo "$reply"; exit 5 ;; esac
+if [ "$cmd" = --check ]; then result=OK; else ask "INSTCMD $UPS $cmd"; result=$reply; fi
+printf 'LOGOUT\n' >&3 2>/dev/null
+exec 3>&-
+echo "$result"
+case $result in OK*) exit 0 ;; *) exit 6 ;; esac

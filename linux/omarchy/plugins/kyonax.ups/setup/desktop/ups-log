@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# ups-log — the UPS's recent history in a terminal. The kyonax.ups widget's
+# outage-log button (e) and middle click open it.
+#
+# A single word on PATH on purpose: omarchy-launch-or-focus-tui flattens its
+# arguments into one string, so only a bare command survives the trip. And a
+# terminal opened that way has stdout pointed away from the tty, so the first
+# thing this does is take the terminal back (both lessons: kyonax.tempo-hours).
+exec < /dev/tty > /dev/tty 2>&1
+
+{
+  printf '\033[1mUPS right now\033[0m   upsc ups@localhost\n\n'
+  now=$(upsc ups@localhost 2>&1)
+  if printf '%s\n' "$now" | grep -q '^ups.status:'; then
+    printf '%s\n' "$now" | grep -E '^(ups\.(status|load|temperature|beeper\.status|type|firmware)|input\.(voltage|frequency)|output\.voltage|battery\.(charge|voltage)):'
+  else
+    printf '%s\n' "$now"
+  fi
+
+  printf '\n\033[1mUPS events\033[0m   journalctl -t ups-event, last 90 days\n\n'
+  journalctl -t ups-event --since "-90 days" --no-pager -o short-iso 2>&1 | tail -n 300
+
+  printf '\n\033[1mNUT services\033[0m   driver, server, monitor; last 7 days\n\n'
+  journalctl -u nut-driver@ups -u nut-server -u nut-monitor --since "-7 days" --no-pager -o short-iso 2>&1 \
+    | grep -v 'upsnotify' | tail -n 80
+} | less -R +G

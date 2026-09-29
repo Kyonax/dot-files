@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "kyonax.ups",
+  "name": "UPS",
+  "version": "1.0.0",
+  "author": "kyonax",
+  "license": "MIT",
+  "description": "The desk UPS in the Omarchy bar: mains or battery, the countdown to the clean shutdown, load and battery, whether the PC is protected, the outage log, and the beeper, battery-test and shutdown controls.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Panel.qml"
+  },
+  "barWidget": {
+    "displayName": "UPS",
+    "description": "Mains or battery at a glance; readings, protection, outages and UPS controls in the popup.",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "refreshIntervalSec": 5,
+      "barLabel": "Icon only"
+    },
+    "schema": [
+      {
+        "key": "refreshIntervalSec",
+        "type": "integer",
+        "label": "Reading interval on mains (seconds)",
+        "min": 2,
+        "max": 60,
+        "step": 1,
+        "defaultValue": 5
+      },
+      {
+        "key": "barLabel",
+        "type": "enum",
+        "label": "Bar label on mains",
+        "options": ["Icon only", "Load", "Input voltage"],
+        "defaultValue": "Icon only",
+        "description": "What sits next to the icon while on mains. On battery the bar always shows the countdown to the clean shutdown."
+      }
+    ]
+  }
+}

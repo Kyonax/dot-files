@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# ups-probe — the facts the kyonax.ups widget shows under PROTECTION, one per
+# line, so Model.parseServices reads them without guessing.
+#
+#   ups-probe [CRED_FILE]
+#   nut-driver@ups=active   nut-server=active   nut-monitor=active
+#   ups-notify=active       cred=yes|no
+#
+# `systemctl is-active` exits non-zero for anything not active; its stdout is
+# still the answer, so the exit code is deliberately ignored.
+for u in nut-driver@ups nut-server nut-monitor; do
+  printf '%s=%s\n' "$u" "$(systemctl is-active "$u.service" 2>/dev/null)"
+done
+printf 'ups-notify=%s\n' "$(systemctl --user is-active ups-notify.service 2>/dev/null)"
+if [ -n "${1:-}" ] && [ -r "$1" ]; then echo cred=yes; else echo cred=no; fi

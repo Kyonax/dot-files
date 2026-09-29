@@ -1,0 +1,11 @@
+#!/bin/sh
+# Turn the "ups-event" journal lines (written by /etc/nut/upssched-cmd) into
+# desktop notifications. Runs as the user unit ups-notify.service.
+journalctl -f -n0 -o cat -t ups-event | while IFS= read -r msg; do
+  case "$msg" in
+    Test*) urgency=low ;;
+    "Power back"*|*"contact restored"*) urgency=normal ;;
+    *) urgency=critical ;;
+  esac
+  notify-send -a UPS -u "$urgency" "UPS" "$msg"
+done

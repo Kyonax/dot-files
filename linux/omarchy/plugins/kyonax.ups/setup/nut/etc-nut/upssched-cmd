@@ -1,0 +1,43 @@
+#!/bin/sh
+# /etc/nut/upssched-cmd (kyo-labs). Called by upssched, as the nut user, with
+# an event or timer name. Each case writes ONE journal entry tagged
+# "ups-event": the human MESSAGE, which ups-notify turns into a desktop
+# notification, and a machine field UPS_EVENT, which the kyonax.ups widget
+# reads instead of parsing the prose.
+#
+# Source of truth: the kyonax.ups plugin, setup/nut/etc-nut/upssched-cmd.
+# The 3-minute wording matches `AT ONBATT * START-TIMER onbatt-3min 180` in
+# upssched.conf; change both together.
+
+# ev KEY PRIORITY LEVEL MESSAGE — PRIORITY is syslog's number for journald,
+# LEVEL its name for the plain-logger fallback, so a journald hiccup can never
+# swallow the notification.
+ev() {
+  printf 'MESSAGE=%s\nPRIORITY=%s\nSYSLOG_FACILITY=3\nSYSLOG_IDENTIFIER=ups-event\nUPS_EVENT=%s\n' \
+      "$4" "$2" "$1" | /usr/bin/logger --journald 2>/dev/null \
+    || /usr/bin/logger -t ups-event -p "daemon.$3" -- "$4"
+}
+
+case "${1:-}" in
+  onbatt)
+    ev onbatt 4 warning "On battery: mains power lost. Clean shutdown in 3 minutes unless power returns." ;;
+  online)
+    ev online 5 notice "Power back: running on mains again. Shutdown cancelled." ;;
+  onbatt-3min)
+    ev timeout 2 crit "On battery for 3 minutes: shutting down cleanly now."
+    /usr/bin/upsmon -c fsd ;;
+  lowbatt)
+    ev lowbatt 2 crit "UPS battery low: if still on battery, the PC shuts down now." ;;
+  fsd|shutdown)
+    ev shutdown 2 crit "UPS: clean system shutdown in progress." ;;
+  commbad|nocomm)
+    ev commbad 4 warning "UPS: lost contact with the UPS (USB cable?)." ;;
+  commok)
+    ev commok 5 notice "UPS: contact restored." ;;
+  replbatt)
+    ev replbatt 4 warning "UPS: the battery needs replacing." ;;
+  selftest)
+    ev test 6 info "Test: the UPS event pipeline works." ;;
+  *)
+    ev other 5 notice "UPS event: ${1:-none}" ;;
+esac
