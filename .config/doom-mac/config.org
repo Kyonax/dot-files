@@ -317,6 +317,11 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 (package! nerd-icons-ivy-rich)
 #+end_src
 
+*** JINX
+#+begin_src emacs-lisp :tangle packages.el
+(package! jinx)
+#+end_src
+
 *** LANG
 #+begin_src emacs-lisp :tangle packages.el
 (package! opencl-mode)
@@ -391,6 +396,11 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 (package! lsp-mode)
 (package! lsp-ui)
 ;;(package! lsp-ivy)
+#+end_src
+
+*** LSP-LTEX-PLUS
+#+begin_src emacs-lisp :tangle packages.el
+(package! lsp-ltex-plus :recipe (:host github :repo "ltex-plus/emacs-ltex-plus"))
 #+end_src
 
 *** MAGIT
@@ -1775,6 +1785,377 @@ Add =flycheck= with eslint for JSX/TSX/VUE/AND SO ON...
                          (flycheck-may-use-checker 'javascript-eslint))
                 (flycheck-select-checker 'javascript-eslint)))))
 #+end_src
+
+**** WRITING CHECKs
+Grammar, spelling and house-style checks for every file meant for writing: Org, Markdown, plain text and Git commit messages, reStructuredText, AsciiDoc, LaTeX, Typst, Quarto and email, all on this machine. LTeX+ (LanguageTool) underlines grammar and style as I type, jinx checks spelling in English and Spanish at once, Vale enforces my own rules (the CV recipe's banned buzzwords and tech-name casing), and =kyo/proofread-region= (=SPC o l p=) asks gptel for a deeper pass that I review as a diff. Markup is never checked as prose: in Org, keyword lines such as =#+ATTR_LATEX:= or any custom =#+KEY:=, drawers, comments, blocks, tables, commented subtrees, inline code, macros and link targets; in Markdown, front matter and code; in a commit message, Git's =#= help lines.
+
+Outside Emacs: the LTeX+ server unpacked under =~/.local/share/ltex-ls-plus= (a link to the release folder), =vale=, =hunspell-en_us= and =hunspell-es_co= from pacman, and the Vale styles in =~/.config/vale= (dot-files). Every piece checks that its tool exists, so a machine without them just skips it.
+
+*Writing modes and what counts as prose:* =kyo/prose-modes= names the major modes for writing, matched exactly: YAML, CSV, XML and snippet modes also derive from =text-mode=, and they are configuration. In Org, Org's own parser marks the syntax regions of a buffer; Vale gets the buffer with those regions blanked out, and whatever LTeX+ reports inside them is dropped.
+#+begin_src emacs-lisp :tangle config.el
+(defvar kyo/prose-max-buffer-size 200000
+  "Buffers bigger than this many characters skip the grammar and style checks.
+Mostly long session nodes that scripts maintain, not text I write by hand.")
+
+(defvar kyo/prose-modes
+  '(org-mode markdown-mode gfm-mode markdown-ts-mode text-mode rst-mode adoc-mode
+    latex-mode LaTeX-mode typst-mode typst-ts-mode quarto-mode message-mode mail-mode)
+  "Major modes for writing prose; the writing checks run in exactly these.
+Matched by name, never by derivation: YAML, CSV, XML and snippet modes also
+derive from `text-mode', and they are configuration, not prose.  Plain
+`text-mode' covers .txt files and Git commit messages.")
+
+(defconst kyo/org-syntax-elements
+  '(babel-call clock comment comment-block diary-sexp drawer example-block
+    export-block fixed-width horizontal-rule keyword latex-environment
+    node-property planning property-drawer src-block table)
+  "Org elements whose whole text is syntax or configuration, never prose.")
+
+(defconst kyo/org-syntax-objects
+  '(citation code entity export-snippet footnote-reference inline-babel-call
+    inline-src-block latex-fragment line-break macro radio-target
+    statistics-cookie target timestamp verbatim)
+  "Org objects inside prose that are syntax, not words.")
+
+(defconst kyo/org-wrapper-types
+  '(bold italic underline strike-through link center-block quote-block
+    special-block verse-block footnote-definition)
+  "Org nodes whose contents are prose but whose delimiters are syntax.")
+
+(defvar-local kyo/org--syntax-cache nil
+  "Cons of (MODIFIED-TICK . INTERVALS) for `kyo/org-syntax-intervals'.")
+
+(defun kyo/org--headline-syntax (headline)
+  "Return the syntax regions of HEADLINE's own line: stars, keyword, tags."
+  (let ((beg (org-element-property :begin headline)))
+    (save-excursion
+      (goto-char beg)
+      (let ((eol (line-end-position)))
+        (if (and (looking-at org-complex-heading-regexp) (match-beginning 4))
+            (list (cons beg (match-beginning 4)) (cons (match-end 4) eol))
+          (list (cons beg eol)))))))
+
+(defun kyo/org-syntax-intervals ()
+  "Return the regions of this Org buffer that are syntax, never prose.
+Org's own parser decides: keyword lines such as #+ATTR_LATEX: or any
+custom #+KEY:, drawers, comments, blocks, tables, commented subtrees,
+inline code, macros, link targets and markup delimiters are syntax.
+Armored PGP text from org-crypt is syntax too.  Cached per edit."
+  (let ((tick (buffer-chars-modified-tick)))
+    (if (eq (car kyo/org--syntax-cache) tick)
+        (cdr kyo/org--syntax-cache)
+      (let (intervals)
+        (org-element-map (org-element-parse-buffer 'object)
+            (append org-element-all-elements org-element-all-objects)
+          (lambda (node)
+            (let* ((type (org-element-type node))
+                   (beg (org-element-property :begin node))
+                   (end (org-element-property :end node))
+                   (post (org-element-property :post-affiliated node))
+                   (cbeg (org-element-property :contents-begin node))
+                   (cend (org-element-property :contents-end node)))
+              (when (and post (> post beg))
+                (push (cons beg post) intervals))
+              (cond
+               ((and (eq type 'headline) (org-element-property :commentedp node))
+                (push (cons beg end) intervals))
+               ((memq type '(headline inlinetask))
+                (setq intervals (nconc (kyo/org--headline-syntax node) intervals)))
+               ((memq type kyo/org-syntax-elements)
+                (push (cons (or post beg) end) intervals))
+               ((memq type kyo/org-syntax-objects)
+                (push (cons beg end) intervals))
+               ((memq type kyo/org-wrapper-types)
+                (if (and cbeg cend)
+                    (progn (push (cons beg cbeg) intervals)
+                           (push (cons cend end) intervals))
+                  (push (cons beg end) intervals)))))
+            nil))
+        (save-excursion
+          (goto-char (point-min))
+          (while (re-search-forward "^-----BEGIN PGP MESSAGE-----$" nil t)
+            (let ((start (match-beginning 0)))
+              (when (re-search-forward "^-----END PGP MESSAGE-----$" nil t)
+                (push (cons start (match-end 0)) intervals)))))
+        (setq intervals (sort intervals (lambda (a b) (< (car a) (car b)))))
+        (setq kyo/org--syntax-cache (cons tick intervals))
+        intervals))))
+
+(defun kyo/org-prose-position-p (pos)
+  "Return non-nil when POS in this Org buffer is prose, not syntax."
+  (not (seq-some (lambda (iv) (and (<= (car iv) pos) (< pos (cdr iv))))
+                 (kyo/org-syntax-intervals))))
+
+(defun kyo/org-prose-text ()
+  "Return the buffer text with every syntax character blanked out.
+Newlines are kept, so line and column positions match the buffer."
+  (let ((text (buffer-substring-no-properties (point-min) (point-max)))
+        (offset (point-min)))
+    (dolist (iv (kyo/org-syntax-intervals) text)
+      (cl-loop for i from (- (car iv) offset)
+               below (min (length text) (- (cdr iv) offset))
+               unless (eq (aref text i) ?\n) do (aset text i ?\s)))))
+
+(defun kyo/prose-position-p (pos)
+  "Return non-nil when POS is prose, not markup, in this buffer.
+Org asks Org's parser; a Git commit message skips Git's # help lines."
+  (cond ((derived-mode-p 'org-mode) (kyo/org-prose-position-p pos))
+        ((bound-and-true-p git-commit-mode)
+         (save-excursion (goto-char pos) (beginning-of-line) (not (looking-at-p "#"))))
+        (t t)))
+#+end_src
+
+*LTeX+, grammar and style as I type:* starts only when a file is shown in a window, so org-roam syncs and agenda scans never trigger it. The language follows =#+LANGUAGE:= in Org, then the Brain Paula folder and file names ending in =_es=. =C-c "= on an underline offers the fixes, /add to dictionary/, /hide false positive/ and /disable rule/.
+#+begin_src emacs-lisp :tangle config.el
+(defvar kyo/ltex-server (expand-file-name "~/.local/share/ltex-ls-plus/bin/ltex-ls-plus")
+  "The LTeX+ server.  ~/.local/share/ltex-ls-plus links to the unpacked release.")
+
+(defun kyo/ltex-language ()
+  "Return the LTeX+ language for this buffer.
+In Org, #+LANGUAGE: wins.  Otherwise Brain Paula files and files named
+*_es.<ext> are Spanish, and everything else is American English."
+  (let ((keyword (and (derived-mode-p 'org-mode)
+                      (cadr (assoc "LANGUAGE" (org-collect-keywords '("LANGUAGE"))))))
+        (file (or buffer-file-name "")))
+    (cond ((and keyword (string-prefix-p "es" (downcase keyword))) "es")
+          ((and keyword (string-prefix-p "en" (downcase keyword))) "en-US")
+          ((string-match-p "/roam-nodes/paula/" file) "es")
+          ((string-match-p "_es\\.[[:alnum:]]+\\'" file) "es")
+          (t "en-US"))))
+
+(defun kyo/ltex-enable-on-display (&optional _window)
+  "Start LTeX+ in this buffer, once, in the language of the file."
+  (remove-hook 'window-buffer-change-functions #'kyo/ltex-enable-on-display t)
+  (setq-local lsp-ltex-plus-language (kyo/ltex-language))
+  (lsp-ltex-plus-mode 1))
+
+(defun kyo/ltex-maybe-enable ()
+  "Grammar-check this file with LTeX+ once it is shown in a window.
+Files opened in the background (org-roam syncs, agenda scans) are never
+checked, nor files bigger than `kyo/prose-max-buffer-size'."
+  (when (and buffer-file-name
+             (file-executable-p kyo/ltex-server)
+             (< (buffer-size) kyo/prose-max-buffer-size))
+    (if (get-buffer-window (current-buffer) t)
+        (kyo/ltex-enable-on-display)
+      (add-hook 'window-buffer-change-functions #'kyo/ltex-enable-on-display nil t))))
+
+(use-package lsp-ltex-plus
+  :defer t
+  :init
+  ;; LTeX+ 18.7 overflows Java's default thread stack on long Org list
+  ;; paragraphs (my CVs), then never answers.  A 16 MB stack fixes it.
+  (unless (string-match-p "-Xss" (or (getenv "JAVA_OPTS") ""))
+    (setenv "JAVA_OPTS" (string-trim (concat (getenv "JAVA_OPTS") " -Xss16m"))))
+  (setq lsp-ltex-plus-ltex-ls-path (expand-file-name "~/.local/share/ltex-ls-plus")
+        lsp-ltex-plus-diagnostics-provider 'flycheck
+        lsp-ltex-plus-additional-rules-enable-picky-rules t
+        lsp-ltex-plus-additional-rules-mother-tongue "es"
+        lsp-ltex-plus-max-request-size 60000
+        ;; Spelling is jinx's job; the space rule fires where inline code was cut out.
+        lsp-ltex-plus-disabled-rules
+        '(:en-US ["MORFOLOGIK_RULE_EN_US" "CONSECUTIVE_SPACES"]
+          :es ["MORFOLOGIK_RULE_ES" "CONSECUTIVE_SPACES"]))
+  ;; Doom opens .md in markdown-ts-mode once its tree-sitter grammar is installed.
+  (with-eval-after-load 'lsp-ltex-plus-bootstrap
+    (add-to-list 'lsp-ltex-plus-major-modes '(markdown-ts-mode "markdown" nil))))
+#+end_src
+
+*Vale, my house rules on prose only:* runs right after LTeX+ in the same buffer, on Org, Markdown, reStructuredText, AsciiDoc and =.txt= files. LaTeX and Typst are left to LTeX+, and commit messages are skipped. Files under =/documents/cv/= also get the CV recipe's rules (=cv.ini=).
+#+begin_src emacs-lisp :tangle config.el
+(defconst kyo/vale-formats
+  '((org-mode . ".txt") (markdown-mode . ".md") (gfm-mode . ".md") (markdown-ts-mode . ".md")
+    (rst-mode . ".rst") (adoc-mode . ".adoc") (text-mode . ".txt"))
+  "Prose modes Vale checks, and the format each buffer is sent as.
+Org goes as plain text with its syntax blanked out.  LaTeX and Typst are
+left to LTeX+, because Vale cannot read them.")
+
+(defvar kyo/vale-config-dir (expand-file-name "~/.config/vale/")
+  "Vale configs: .vale.ini for all prose, cv.ini for files under /documents/cv/.")
+
+(defun kyo/vale-config ()
+  "Return the Vale config file for the current buffer."
+  (expand-file-name (if (and buffer-file-name
+                             (string-match-p "/documents/cv/" buffer-file-name))
+                        "cv.ini" ".vale.ini")
+                    kyo/vale-config-dir))
+
+(defun kyo/vale-errors (output checker buffer)
+  "Turn Vale's JSON OUTPUT into Flycheck errors of CHECKER for BUFFER."
+  (let ((files (ignore-errors
+                 (json-parse-string output :object-type 'alist :array-type 'list))))
+    (mapcan (lambda (file)
+              (mapcar (lambda (alert)
+                        (let-alist alert
+                          (flycheck-error-new-at
+                           .Line (car .Span)
+                           (pcase .Severity ("error" 'error) ("warning" 'warning) (_ 'info))
+                           .Message
+                           :id .Check :checker checker :buffer buffer
+                           :end-line .Line :end-column (1+ (cadr .Span)))))
+                      (cdr file)))
+            files)))
+
+(defun kyo/vale-start (checker callback)
+  "Check this buffer's prose with Vale and report to CALLBACK.
+Org buffers go to Vale as plain text with their syntax blanked out, so
+Vale never reads keywords, drawers or blocks and its positions match."
+  (let* ((buffer (current-buffer))
+         (org (derived-mode-p 'org-mode))
+         (text (if org (kyo/org-prose-text) (buffer-string)))
+         (ext (alist-get major-mode kyo/vale-formats))
+         (output (generate-new-buffer " *kyo-vale*"))
+         (process
+          (make-process
+           :name "kyo-vale" :buffer output :noquery t :connection-type 'pipe
+           :command (list "vale" "--output=JSON" "--no-exit"
+                          (concat "--ext=" ext)
+                          (concat "--config=" (kyo/vale-config)))
+           :sentinel
+           (lambda (proc _event)
+             (unless (process-live-p proc)
+               (let ((json (with-current-buffer output (buffer-string))))
+                 (kill-buffer output)
+                 (if (and (eq (process-status proc) 'exit)
+                          (zerop (process-exit-status proc)))
+                     (funcall callback 'finished
+                              (and (buffer-live-p buffer)
+                                   (kyo/vale-errors json checker buffer)))
+                   (funcall callback 'errored json))))))))
+    (process-send-string process text)
+    (process-send-eof process)))
+
+(defvar kyo/ltex-cv-ignored-rules '("TOO_LONG_SENTENCE")
+  "LTeX+ rules that CV files ignore: the CV recipe writes one-sentence beats.")
+
+(defun kyo/flycheck-keep-prose (filter errors checker)
+  "Drop what LTeX+ reports on markup, then run Flycheck's FILTER.
+LTeX+ already skips most markup; this catches Org drawers such as
+:LOGBOOK:, commented subtrees, Git's # help lines in a commit message and
+anything else `kyo/prose-position-p' does not call prose.  In CV files it
+also drops `kyo/ltex-cv-ignored-rules'."
+  (funcall filter
+           (if (eq checker 'lsp-ltex-plus)
+               (let ((cv (and buffer-file-name
+                              (string-match-p "/documents/cv/" buffer-file-name))))
+                 (seq-filter
+                  (lambda (err)
+                    (and (kyo/prose-position-p (flycheck-error-pos err))
+                         (not (and cv (member (format "%s" (flycheck-error-id err))
+                                              kyo/ltex-cv-ignored-rules)))))
+                  errors))
+             errors)
+           checker))
+
+(defun kyo/ltex-chain-vale ()
+  "Run Vale after LTeX+ in the buffers LTeX+ checks."
+  (when (and (featurep 'flycheck)
+             (flycheck-valid-checker-p 'lsp-ltex-plus)
+             (flycheck-valid-checker-p 'kyo-vale)
+             (not (memq 'kyo-vale
+                        (mapcar (lambda (next) (if (consp next) (cdr next) next))
+                                (flycheck-checker-get 'lsp-ltex-plus 'next-checkers)))))
+    (flycheck-add-next-checker 'lsp-ltex-plus '(t . kyo-vale) t)))
+
+(with-eval-after-load 'flycheck
+  (flycheck-define-generic-checker 'kyo-vale
+    "Vale house style for prose; Org syntax is blanked out first."
+    :start #'kyo/vale-start
+    :modes (mapcar #'car kyo/vale-formats)
+    :enabled (lambda () (executable-find "vale"))
+    :predicate (lambda () (and buffer-file-name
+                               (< (buffer-size) kyo/prose-max-buffer-size)
+                               (not (bound-and-true-p git-commit-mode)))))
+  (add-to-list 'flycheck-checkers 'kyo-vale t)
+  (advice-add 'flycheck-filter-errors :around #'kyo/flycheck-keep-prose)
+  (add-hook 'lsp-ltex-plus-mode-hook #'kyo/ltex-chain-vale))
+#+end_src
+
+*Jinx, spelling in English and Spanish:* a word passes if either dictionary knows it. ~z=~ (or =M-$=) on a word shows the corrections and saves new words to the personal dictionary. Org leaves the text of =#+begin_comment= blocks unstyled, so a font-lock rule gives it the comment face: it reads as a comment and jinx skips it. Markdown front matter and a commit message's =#= lines are skipped too.
+#+begin_src emacs-lisp :tangle config.el
+(defun kyo/org-comment-block-matcher (limit)
+  "Font-lock matcher for the text inside the next #+begin_comment block.
+Org leaves that text without a face; this gives it the comment face, so
+it reads as a comment and jinx skips it like any other comment."
+  (let ((case-fold-search t) found)
+    (while (and (not found)
+                (re-search-forward "^[ \t]*#\\+begin_comment\\b.*$" limit t))
+      (let ((beg (min (point-max) (1+ (point)))))
+        (when (re-search-forward "^[ \t]*#\\+end_comment\\b" nil t)
+          (set-match-data (list beg (match-beginning 0)))
+          (setq found t))))
+    found))
+
+(with-eval-after-load 'org
+  (font-lock-add-keywords
+   'org-mode '((kyo/org-comment-block-matcher (0 'font-lock-comment-face prepend))) t))
+
+(defvar kyo/jinx-ready (and (executable-find "enchant-2") t)
+  "Non-nil when enchant is installed, so jinx can load its dictionaries.")
+
+(use-package jinx
+  :if kyo/jinx-ready
+  :defer t
+  :init
+  (setq jinx-languages "en_US es_CO")
+  :config
+  ;; Org comment lines and <<targets>> are syntax too.
+  (add-to-list 'jinx-exclude-faces '(org-mode font-lock-comment-face org-target) t)
+  ;; Markdown front matter (title:, tags:) is metadata, not prose.
+  (add-to-list 'jinx-exclude-faces '(markdown-mode markdown-metadata-key-face markdown-metadata-value-face) t)
+  ;; Git's help lines in a commit message are comments, not prose.
+  (add-to-list 'jinx-exclude-faces '(git-commit-mode font-lock-comment-face) t)
+  ;; ALL-CAPS headings with a plural lowercase s (CONTENTs, LINKs) are my signature.
+  (add-to-list 'jinx-exclude-regexps '(org-mode "[[:upper:]]\\{2,\\}s\\>") t)
+  (keymap-set jinx-mode-map "<remap> <ispell-word>" #'jinx-correct))
+#+end_src
+
+*Where the checks run:* one hook turns them on in every buffer whose major mode is in =kyo/prose-modes=.
+#+begin_src emacs-lisp :tangle config.el
+(defun kyo/prose-setup ()
+  "Turn on the writing checks when this buffer's major mode is for prose.
+jinx starts right away; LTeX+ waits until the file is shown in a window.
+Vale follows through Flycheck."
+  (when (memq major-mode kyo/prose-modes)
+    (when (and kyo/jinx-ready
+               (not (or buffer-read-only (buffer-base-buffer)
+                        (string-prefix-p " " (buffer-name)))))
+      (jinx-mode 1))
+    (kyo/ltex-maybe-enable)))
+
+(add-hook 'after-change-major-mode-hook #'kyo/prose-setup)
+#+end_src
+
+*Proofread a region with gptel:* the rules live in =gptel-directives/proofread.md=. The result arrives as a rewrite I accept or reject, so nothing changes without my OK.
+#+begin_src emacs-lisp :tangle config.el
+(defvar kyo/proofread-directive-file
+  (expand-file-name "gptel-directives/proofread.md" doom-user-dir)
+  "Rules for `kyo/proofread-region'.  Also loaded as the `proofread' directive.")
+
+(defun kyo/proofread-region ()
+  "Proofread the selected text with gptel and review it as a rewrite.
+Accept, diff, ediff, merge or reject the result with the rewrite keys:
+C-c C-a, C-c C-d, C-c C-e, C-c C-m, C-c C-k.  Text in an entry tagged
+:crypt: is refused, so decrypted secrets never reach the model."
+  (interactive)
+  (unless (use-region-p)
+    (user-error "Select the text to proofread first"))
+  (when (and (derived-mode-p 'org-mode)
+             (save-excursion (goto-char (region-beginning))
+                             (member "crypt" (org-get-tags))))
+    (user-error "This entry is tagged :crypt:, so its text stays out of AI requests"))
+  (require 'gptel-rewrite)
+  (let ((gptel--rewrite-directive
+         (with-temp-buffer
+           (insert-file-contents kyo/proofread-directive-file)
+           (buffer-string))))
+    (gptel--suffix-rewrite "Proofread this text. Return only the corrected text.")))
+
+(map! :leader
+      :prefix ("o" . "Open")
+      :desc "GPTel Proofread region" "l p" #'kyo/proofread-region)
+#+end_src
+
 
 **** ESLINTD FIX
 #+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "work-mac") "config.el" "no")
