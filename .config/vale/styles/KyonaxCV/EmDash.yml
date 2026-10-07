@@ -1,0 +1,7 @@
+# Source: cv-summary-writing/rules/anti-patterns.md (em dash as a bridge).
+extends: existence
+message: "Em dash in CV copy. Use a comma or a period."
+level: warning
+nonword: true
+tokens:
+  - '—'

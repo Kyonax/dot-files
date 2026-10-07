@@ -1,0 +1,10 @@
+# Source: cv-summary-writing/rules/six-hard-rules.md, Rule 3.
+# "Experienced in" / "Especializado en" as an opener is filler. Capitalized
+# forms only, so the same words in the middle of a sentence are left alone.
+extends: existence
+message: "'%s' as an opener reads as filler. Lead with the concrete claim."
+level: warning
+ignorecase: false
+tokens:
+  - Experienced in
+  - Especializado en

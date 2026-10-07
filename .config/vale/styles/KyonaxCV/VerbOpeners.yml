@@ -1,0 +1,13 @@
+# Source: cv-summary-writing/rules/six-hard-rules.md, Rule 2 (no subject).
+# Present-tense verbs that open a clause imply an unstated "he"; role bullets
+# use the past tense (Led, Built), which this rule does not touch.
+extends: existence
+message: "'%s' opens a clause with a bare present-tense verb, which reads like a job ad. Use a noun phrase or a participle."
+level: warning
+ignorecase: false
+tokens:
+  - Leads
+  - Drives
+  - Delivers
+  - Owns
+  - Architects

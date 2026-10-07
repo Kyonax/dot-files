@@ -1,0 +1,19 @@
+# Source: cv-summary-writing/rules/six-hard-rules.md, Rule 3 (the buzzword ban).
+# Recruiter cliches that read as filler anywhere in professional writing.
+extends: existence
+message: "'%s' is on your banned-buzzword list. Name the concrete skill or result instead."
+level: error
+ignorecase: true
+tokens:
+  - proven track record
+  - historial comprobado
+  - core expertise
+  - specializing in
+  - performance-first
+  - baked into delivery
+  - production-ready solutions?
+  - production-grade releases?
+  - team player
+  - self-starter
+  - passionate about
+  - strong communicator
