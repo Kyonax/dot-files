@@ -318,8 +318,10 @@ Doom comes with the Default package manager for Doom Emacs, where all the packag
 #+end_src
 
 *** JINX
+jinx 2.8 and newer need compat 31 (it brings Emacs 31's =incf= and =decf=); Doom pins compat 30.1, so it is pinned to the 31.1.0.0 release here. Without it jinx fails with =void-function decf= in every buffer.
 #+begin_src emacs-lisp :tangle packages.el
 (package! jinx)
+(package! compat :pin "90880f81419577e1d3f68424d2a3adf31e6d663e") ; compat 31.1.0.0, for jinx
 #+end_src
 
 *** LANG
@@ -1787,9 +1789,9 @@ Add =flycheck= with eslint for JSX/TSX/VUE/AND SO ON...
 #+end_src
 
 **** WRITING CHECKs
-Grammar, spelling and house-style checks for every file meant for writing: Org, Markdown, plain text and Git commit messages, reStructuredText, AsciiDoc, LaTeX, Typst, Quarto and email, all on this machine. LTeX+ (LanguageTool) underlines grammar and style as I type, jinx checks spelling in English and Spanish at once, Vale enforces my own rules (the CV recipe's banned buzzwords and tech-name casing), and =kyo/proofread-region= (=SPC o l p=) asks gptel for a deeper pass that I review as a diff. Markup is never checked as prose: in Org, keyword lines such as =#+ATTR_LATEX:= or any custom =#+KEY:=, drawers, comments, blocks, tables, commented subtrees, inline code, macros and link targets; in Markdown, front matter and code; in a commit message, Git's =#= help lines.
+Grammar, spelling, paragraph structure and house-style checks for every file meant for writing: Org, Markdown, plain text and Git commit messages, reStructuredText, AsciiDoc, LaTeX, Typst, Quarto and email, all on this machine. LTeX+ (LanguageTool) underlines grammar, style and paragraph structure as I type, jinx checks spelling in English and Spanish at once, Vale enforces my own rules (the CV recipe's banned buzzwords and tech-name casing) plus passive-voice hints, and gptel gives two deeper passes on demand: =SPC o l p= proofreads, =SPC o l f= reviews connectors and continuity. Like Grammarly, correctness shows as a warning and clarity or style as a suggestion, and resting the cursor or the mouse on an underline opens a card with what is wrong and numbered fixes to click (~z=~ picks one with the keyboard). Markup is never checked as prose: in Org, keyword lines such as =#+ATTR_LATEX:= or any custom =#+KEY:=, drawers, comments, blocks, tables, commented subtrees, inline code, macros and link targets; in Markdown, front matter and code; in a commit message, Git's =#= help lines.
 
-Outside Emacs: the LTeX+ server unpacked under =~/.local/share/ltex-ls-plus= (a link to the release folder), =vale=, =hunspell-en_us= and =hunspell-es_co= from pacman, and the Vale styles in =~/.config/vale= (dot-files). Every piece checks that its tool exists, so a machine without them just skips it.
+Outside Emacs: the LTeX+ server unpacked under =~/.local/share/ltex-ls-plus= (a link to the release folder), =vale=, =hunspell-en_us= and =hunspell-es_co= from pacman, and the Vale styles in =~/.config/vale= (dot-files). Every piece checks that its tool exists, so a machine without them just skips it. This file is not lexically bound, so nothing here keeps a local variable alive in a closure: a callback that runs later gets its state from properties or arguments instead.
 
 *Writing modes and what counts as prose:* =kyo/prose-modes= names the major modes for writing, matched exactly: YAML, CSV, XML and snippet modes also derive from =text-mode=, and they are configuration. In Org, Org's own parser marks the syntax regions of a buffer; Vale gets the buffer with those regions blanked out, and whatever LTeX+ reports inside them is dropped.
 #+begin_src emacs-lisp :tangle config.el
@@ -1905,7 +1907,7 @@ Org asks Org's parser; a Git commit message skips Git's # help lines."
         (t t)))
 #+end_src
 
-*LTeX+, grammar and style as I type:* starts only when a file is shown in a window, so org-roam syncs and agenda scans never trigger it. The language follows =#+LANGUAGE:= in Org, then the Brain Paula folder and file names ending in =_es=. =C-c "= on an underline offers the fixes, /add to dictionary/, /hide false positive/ and /disable rule/.
+*LTeX+, grammar, style and paragraph structure as I type:* starts only when a file is shown in a window, so org-roam syncs and agenda scans never trigger it. The language follows =#+LANGUAGE:= in Org, then the Brain Paula folder and file names ending in =_es=. Beyond grammar it checks paragraph structure the way Grammarly does: paragraphs over 220 words, hard-to-read paragraphs, paragraphs and sentences that open the same way, missing commas after linking words, wordy and redundant phrases (with plain-English replacements) and a paragraph with no final punctuation. Those clarity rules, and the false-friend hints for a Spanish speaker, show as suggestions.
 #+begin_src emacs-lisp :tangle config.el
 (defvar kyo/ltex-server (expand-file-name "~/.local/share/ltex-ls-plus/bin/ltex-ls-plus")
   "The LTeX+ server.  ~/.local/share/ltex-ls-plus links to the unpacked release.")
@@ -1952,6 +1954,15 @@ checked, nor files bigger than `kyo/prose-max-buffer-size'."
         lsp-ltex-plus-additional-rules-enable-picky-rules t
         lsp-ltex-plus-additional-rules-mother-tongue "es"
         lsp-ltex-plus-max-request-size 60000
+        ;; Paragraph structure, the way Grammarly checks it: paragraphs over 220
+        ;; words, hard-to-read paragraphs, paragraphs and sentences that open the
+        ;; same way, wordy and redundant phrases, a paragraph with no final mark.
+        lsp-ltex-plus-enabled-rules
+        '(:en-US ["TOO_LONG_PARAGRAPH" "READABILITY_RULE_DIFFICULT" "PARAGRAPH_REPEAT_BEGINNING_RULE"
+                  "ENGLISH_WORD_REPEAT_BEGINNING_RULE" "EN_PLAIN_ENGLISH_REPLACE"
+                  "EN_REDUNDANCY_REPLACE" "PUNCTUATION_PARAGRAPH_END"]
+          :es ["TOO_LONG_PARAGRAPH" "READABILITY_RULE_DIFFICULT" "PARAGRAPH_REPEAT_BEGINNING_RULE"
+               "PUNCTUATION_PARAGRAPH_END"])
         ;; Spelling is jinx's job; the space rule fires where inline code was cut out.
         lsp-ltex-plus-disabled-rules
         '(:en-US ["MORFOLOGIK_RULE_EN_US" "CONSECUTIVE_SPACES"]
@@ -1961,7 +1972,7 @@ checked, nor files bigger than `kyo/prose-max-buffer-size'."
     (add-to-list 'lsp-ltex-plus-major-modes '(markdown-ts-mode "markdown" nil))))
 #+end_src
 
-*Vale, my house rules on prose only:* runs right after LTeX+ in the same buffer, on Org, Markdown, reStructuredText, AsciiDoc and =.txt= files. LaTeX and Typst are left to LTeX+, and commit messages are skipped. Files under =/documents/cv/= also get the CV recipe's rules (=cv.ini=).
+*Vale, my house rules on prose only:* runs right after LTeX+ in the same buffer, on Org, Markdown, reStructuredText, AsciiDoc and =.txt= files. LaTeX and Typst are left to LTeX+, and commit messages are skipped. Files under =/documents/cv/= also get the CV recipe's rules (=cv.ini=), and they skip LTeX+'s long-sentence and readability hints, because the recipe writes dense one-sentence beats. proselint and write-good (passive voice, "So" openers) show as suggestions. The replacement a rule names (JavaScript for Javascript) is kept for the card.
 #+begin_src emacs-lisp :tangle config.el
 (defconst kyo/vale-formats
   '((org-mode . ".txt") (markdown-mode . ".md") (gfm-mode . ".md") (markdown-ts-mode . ".md")
@@ -1980,70 +1991,117 @@ left to LTeX+, because Vale cannot read them.")
                         "cv.ini" ".vale.ini")
                     kyo/vale-config-dir))
 
+(defvar-local kyo/vale--fixes nil
+  "Vale's replacement suggestions in this buffer, keyed by \"LINE:COLUMN\".")
+
 (defun kyo/vale-errors (output checker buffer)
-  "Turn Vale's JSON OUTPUT into Flycheck errors of CHECKER for BUFFER."
+  "Turn Vale's JSON OUTPUT into Flycheck errors of CHECKER for BUFFER.
+proselint and write-good give clarity hints, so they show as suggestions;
+my own rules keep Vale's levels.  Replacements a rule suggests (JavaScript
+for Javascript) are kept for the suggestion card."
   (let ((files (ignore-errors
-                 (json-parse-string output :object-type 'alist :array-type 'list))))
-    (mapcan (lambda (file)
-              (mapcar (lambda (alert)
-                        (let-alist alert
-                          (flycheck-error-new-at
-                           .Line (car .Span)
-                           (pcase .Severity ("error" 'error) ("warning" 'warning) (_ 'info))
-                           .Message
-                           :id .Check :checker checker :buffer buffer
-                           :end-line .Line :end-column (1+ (cadr .Span)))))
-                      (cdr file)))
-            files)))
+                 (json-parse-string output :object-type 'alist :array-type 'list)))
+        (fixes (make-hash-table :test #'equal)))
+    (prog1
+        (mapcan (lambda (file)
+                  (mapcar (lambda (alert)
+                            (let-alist alert
+                              (let ((replacements
+                                     (cond ((and (equal .Action.Name "replace") .Action.Params) .Action.Params)
+                                           ;; Vale.Terms words its fix only in the message.
+                                           ((string-match "\\`Use '\\([^']+\\)' instead of '" .Message)
+                                            (list (match-string 1 .Message))))))
+                                (when replacements
+                                  (puthash (format "%d:%d" .Line (car .Span)) replacements fixes)))
+                              (flycheck-error-new-at
+                               .Line (car .Span)
+                               (cond ((string-match-p "\\`\\(proselint\\|write-good\\)\\." .Check) 'info)
+                                     ((equal .Severity "error") 'error)
+                                     ((equal .Severity "warning") 'warning)
+                                     (t 'info))
+                               .Message
+                               :id .Check :checker checker :buffer buffer
+                               :end-line .Line :end-column (1+ (cadr .Span)))))
+                          (cdr file)))
+                files)
+      (when (buffer-live-p buffer)
+        (with-current-buffer buffer (setq kyo/vale--fixes fixes))))))
+
+(defun kyo/vale-sentinel (proc _event)
+  "Report Vale's findings to Flycheck once PROC has finished.
+The callback, checker and buffer ride on PROC as properties, so this works
+whether or not the file defining it uses lexical binding."
+  (unless (process-live-p proc)
+    (let* ((output (process-buffer proc))
+           (json (with-current-buffer output (buffer-string)))
+           (callback (process-get proc 'kyo-callback))
+           (buffer (process-get proc 'kyo-buffer)))
+      (kill-buffer output)
+      (if (and (eq (process-status proc) 'exit) (zerop (process-exit-status proc)))
+          (funcall callback 'finished
+                   (and (buffer-live-p buffer)
+                        (kyo/vale-errors json (process-get proc 'kyo-checker) buffer)))
+        (funcall callback 'errored json)))))
 
 (defun kyo/vale-start (checker callback)
   "Check this buffer's prose with Vale and report to CALLBACK.
 Org buffers go to Vale as plain text with their syntax blanked out, so
 Vale never reads keywords, drawers or blocks and its positions match."
-  (let* ((buffer (current-buffer))
-         (org (derived-mode-p 'org-mode))
+  (let* ((org (derived-mode-p 'org-mode))
          (text (if org (kyo/org-prose-text) (buffer-string)))
-         (ext (alist-get major-mode kyo/vale-formats))
-         (output (generate-new-buffer " *kyo-vale*"))
          (process
           (make-process
-           :name "kyo-vale" :buffer output :noquery t :connection-type 'pipe
+           :name "kyo-vale" :buffer (generate-new-buffer " *kyo-vale*")
+           :noquery t :connection-type 'pipe
            :command (list "vale" "--output=JSON" "--no-exit"
-                          (concat "--ext=" ext)
+                          (concat "--ext=" (alist-get major-mode kyo/vale-formats))
                           (concat "--config=" (kyo/vale-config)))
-           :sentinel
-           (lambda (proc _event)
-             (unless (process-live-p proc)
-               (let ((json (with-current-buffer output (buffer-string))))
-                 (kill-buffer output)
-                 (if (and (eq (process-status proc) 'exit)
-                          (zerop (process-exit-status proc)))
-                     (funcall callback 'finished
-                              (and (buffer-live-p buffer)
-                                   (kyo/vale-errors json checker buffer)))
-                   (funcall callback 'errored json))))))))
+           :sentinel #'kyo/vale-sentinel)))
+    (process-put process 'kyo-callback callback)
+    (process-put process 'kyo-checker checker)
+    (process-put process 'kyo-buffer (current-buffer))
     (process-send-string process text)
     (process-send-eof process)))
 
-(defvar kyo/ltex-cv-ignored-rules '("TOO_LONG_SENTENCE")
-  "LTeX+ rules that CV files ignore: the CV recipe writes one-sentence beats.")
+(defconst kyo/ltex-style-rules
+  '("TOO_LONG_SENTENCE" "TOO_LONG_PARAGRAPH" "READABILITY_RULE" "PARAGRAPH_REPEAT_BEGINNING_RULE"
+    "ENGLISH_WORD_REPEAT_BEGINNING_RULE" "EN_PLAIN_ENGLISH_REPLACE" "EN_REDUNDANCY_REPLACE"
+    "EN_REPEATEDWORDS_")
+  "LTeX+ rules about clarity and style rather than correctness, as id prefixes.
+Their findings show as suggestions, the way Grammarly sets clarity apart.")
+
+(defun kyo/ltex-style-rule-p (err)
+  "Return non-nil when ERR is about clarity or style, not correctness.
+That is a rule in `kyo/ltex-style-rules', or a false-friend hint, which
+LanguageTool words in Spanish (\"Sugerencia: ...\") for a Spanish speaker."
+  (let ((id (format "%s" (flycheck-error-id err))))
+    (or (seq-some (lambda (prefix) (string-prefix-p prefix id)) kyo/ltex-style-rules)
+        (string-prefix-p "Sugerencia: " (or (flycheck-error-message err) "")))))
+
+(defvar kyo/ltex-cv-ignored-rules '("TOO_LONG_SENTENCE" "READABILITY_RULE_DIFFICULT")
+  "LTeX+ rules that CV files ignore: the CV recipe writes dense one-sentence beats.")
 
 (defun kyo/flycheck-keep-prose (filter errors checker)
   "Drop what LTeX+ reports on markup, then run Flycheck's FILTER.
 LTeX+ already skips most markup; this catches Org drawers such as
 :LOGBOOK:, commented subtrees, Git's # help lines in a commit message and
 anything else `kyo/prose-position-p' does not call prose.  In CV files it
-also drops `kyo/ltex-cv-ignored-rules'."
+also drops `kyo/ltex-cv-ignored-rules', and it shows the clarity and style
+rules in `kyo/ltex-style-rules' as suggestions rather than warnings."
   (funcall filter
            (if (eq checker 'lsp-ltex-plus)
                (let ((cv (and buffer-file-name
                               (string-match-p "/documents/cv/" buffer-file-name))))
-                 (seq-filter
-                  (lambda (err)
-                    (and (kyo/prose-position-p (flycheck-error-pos err))
-                         (not (and cv (member (format "%s" (flycheck-error-id err))
-                                              kyo/ltex-cv-ignored-rules)))))
-                  errors))
+                 (mapcar (lambda (err)
+                           (when (kyo/ltex-style-rule-p err)
+                             (setf (flycheck-error-level err) 'info))
+                           err)
+                         (seq-filter
+                          (lambda (err)
+                            (and (kyo/prose-position-p (flycheck-error-pos err))
+                                 (not (and cv (member (format "%s" (flycheck-error-id err))
+                                                      kyo/ltex-cv-ignored-rules)))))
+                          errors)))
              errors)
            checker))
 
@@ -2071,7 +2129,7 @@ also drops `kyo/ltex-cv-ignored-rules'."
   (add-hook 'lsp-ltex-plus-mode-hook #'kyo/ltex-chain-vale))
 #+end_src
 
-*Jinx, spelling in English and Spanish:* a word passes if either dictionary knows it. ~z=~ (or =M-$=) on a word shows the corrections and saves new words to the personal dictionary. Org leaves the text of =#+begin_comment= blocks unstyled, so a font-lock rule gives it the comment face: it reads as a comment and jinx skips it. Markdown front matter and a commit message's =#= lines are skipped too.
+*Jinx, spelling in English and Spanish:* a word passes if either dictionary knows it. Org leaves the text of =#+begin_comment= blocks unstyled, so a font-lock rule gives it the comment face: it reads as a comment and jinx skips it. Markdown front matter and a commit message's =#= lines are skipped too.
 #+begin_src emacs-lisp :tangle config.el
 (defun kyo/org-comment-block-matcher (limit)
   "Font-lock matcher for the text inside the next #+begin_comment block.
@@ -2110,6 +2168,594 @@ it reads as a comment and jinx skips it like any other comment."
   (keymap-set jinx-mode-map "<remap> <ispell-word>" #'jinx-correct))
 #+end_src
 
+*The suggestion card, the Grammarly way:* resting the cursor on an underline (0.2 s), or the mouse on it (0.3 s, as =lsp-ui-doc= does for code), opens a card in Flycheck's posframe style: the kind of issue (Spelling, Grammar, Clarity, Style, House rule), what is wrong, and numbered fixes. It wears the same theme as the rest of Emacs, and only a 2 px border in the theme's accent (the color Omarchy gives window borders) sets it apart from the text. Selecting three words or more and pausing (0.6 s) opens the selection's card instead, as Grammarly does: =1 Proofread it= and =2 Improve the flow= run the model on exactly that text, and ~z=~ works in visual state too. Clicking a fix applies it, and so does typing ~z=~ and its number fast (~z=1~), or the number first as Vim does (~1z=~). Pausing after ~z=~ (or =M-$=) lists the same numbered fixes in the minibuffer; while a card is on screen, the keys act on the card's underline, even one the mouse opened. Spelling fixes come from jinx (plus /save the word/), grammar and clarity fixes from LTeX+ (replacements, /hide false positive/, /disable rule/), style fixes from Vale. In a prose buffer the card replaces Flycheck's own popup, so there is never two of them. A terminal frame gets the card's text in the echo area.
+#+begin_src emacs-lisp :tangle config.el
+(defvar kyo/prose-card-buffer " *kyo-prose-card*"
+  "Buffer behind the suggestion card.")
+
+(defvar kyo/prose-card-max 5
+  "How many fixes the card lists for one finding.")
+
+(defvar kyo/prose-quick-pick-delay 0.5
+  "Seconds `z=' waits for a fix's number before it lists the fixes.
+Typing z=1 within that time applies fix 1, as the card numbers it.")
+
+(defvar kyo/prose-card-border-width 2
+  "Width in pixels of the card's border, the one thing that sets it apart from the text.")
+
+(defface kyo-prose-card-border '((t))
+  "The suggestion card's border, as its foreground color.  Unset, the border
+takes the theme's accent from `minibuffer-prompt', the color Omarchy also
+gives window borders.")
+
+(defface kyo-prose-correctness '((t :inherit error))
+  "Grammarly's Correctness, for the model's suggestions on spelling, grammar
+and punctuation.  Only its color is used, on the underline and the card.")
+
+(defface kyo-prose-clarity '((t :inherit link))
+  "Grammarly's Clarity, for the model's suggestions on clear, concise wording.
+Only its color is used, on the underline and the card.")
+
+(defface kyo-prose-engagement '((t :inherit success))
+  "Grammarly's Engagement, for the model's suggestions on livelier writing.
+Only its color is used, on the underline and the card.")
+
+(defface kyo-prose-delivery '((t :inherit link-visited))
+  "Grammarly's Delivery, for the model's suggestions on tone and formality.
+Only its color is used, on the underline and the card.")
+
+(defvar kyo/prose-ai-categories
+  '(("correctness" "Correctness" kyo-prose-correctness)
+    ("clarity" "Clarity" kyo-prose-clarity)
+    ("engagement" "Engagement" kyo-prose-engagement)
+    ("delivery" "Delivery" kyo-prose-delivery))
+  "Grammarly's four kinds of suggestion, for the model's: the name it answers
+with, the card's label and the face whose color marks both.")
+
+(defvar kyo/prose--card nil
+  "The card on screen, as (BUFFER POINT TICK TRIGGER POS ISSUES); nil when hidden.
+POS is the underline it describes: point, or where the mouse rests.
+TRIGGER is `cursor', `mouse' or `selection'; ISSUES are what the card lists.")
+
+(defvar kyo/prose--card-timer nil
+  "Idle timer that shows the card for the underline at point.")
+
+(defvar kyo/prose--mouse-timer nil
+  "Timer that shows the card for the underline under the mouse.")
+
+(defvar kyo/prose-selection-min-words 3
+  "Words a selection needs before its card offers the model's checks.")
+
+(defvar kyo/prose-selection-delay 0.6
+  "Seconds a selection rests before its card opens.")
+
+(defvar kyo/prose--selection-timer nil
+  "Idle timer that opens the card for the selection.")
+
+(defun kyo/prose--spelling-fixes (word)
+  "Return corrections for WORD from all dictionaries, one short of the card's
+maximum, so \"Save the word\" always fits."
+  (when (fboundp 'jinx--mod-suggest)
+    (let (fixes)
+      (dolist (dict (bound-and-true-p jinx--dicts))
+        (dolist (fix (ignore-errors (jinx--mod-suggest dict word)))
+          (unless (member fix fixes) (push fix fixes))))
+      (seq-take (nreverse fixes) (1- kyo/prose-card-max)))))
+
+(defun kyo/prose--spelling-issue (pos)
+  "Return the misspelling jinx marks at POS as a card issue, or nil."
+  (when (bound-and-true-p jinx-mode)
+    (seq-some
+     (lambda (ov)
+       (when (eq (overlay-get ov 'category) 'jinx-overlay)
+         (let ((word (buffer-substring-no-properties (overlay-start ov) (overlay-end ov))))
+           (list :level 'error :kind "Spelling" :beg (overlay-start ov) :end (overlay-end ov)
+                 :message (format "\"%s\" is in neither the English nor the Spanish dictionary." word)
+                 :fixes (append (mapcar (lambda (fix) (list (format "Change to \"%s\"" fix) 'replace fix))
+                                        (kyo/prose--spelling-fixes word))
+                                '(("Save the word, or more choices" jinx nil)))))))
+     (overlays-at pos))))
+
+(defun kyo/prose--ltex-fixes (pos)
+  "Return LTeX+'s actions for the finding at POS, replacements first."
+  (when (and (bound-and-true-p lsp-ltex-plus-mode) (fboundp 'lsp-ltex-plus--actions-here))
+    (save-excursion
+      (goto-char pos)
+      (let ((mark-active nil))
+        (mapcar (lambda (action) (list (or (plist-get action :title) "Apply") 'ltex action))
+                (ignore-errors (lsp-ltex-plus--actions-here)))))))
+
+(defun kyo/prose--vale-fixes (err)
+  "Return Vale's replacements for ERR, when its rule suggests any."
+  (when kyo/vale--fixes
+    (mapcar (lambda (fix) (list (format "Change to \"%s\"" fix) 'replace fix))
+            (gethash (format "%d:%d" (flycheck-error-line err) (or (flycheck-error-column err) 0))
+                     kyo/vale--fixes))))
+
+(defun kyo/prose--kind (err)
+  "Return the card heading for ERR: Grammar, Clarity, House rule or Style."
+  (cond ((eq (flycheck-error-checker err) 'kyo-vale)
+         (if (string-prefix-p "Kyonax" (format "%s" (flycheck-error-id err))) "House rule" "Style"))
+        ((eq (flycheck-error-level err) 'info) "Clarity")
+        (t "Grammar")))
+
+(defun kyo/prose--flycheck-issues (pos)
+  "Return the LTeX+ and Vale findings at POS as card issues.
+LTeX+'s actions cover every finding at a spot, so only the first gets them."
+  (when (bound-and-true-p flycheck-mode)
+    (let ((ltex-pending t))
+      (mapcar (lambda (err)
+                (let ((region (flycheck-error-region-for-mode err 'symbols)))
+                  (list :level (flycheck-error-level err) :kind (kyo/prose--kind err)
+                        :message (flycheck-error-message err)
+                        :beg (car region) :end (cdr region)
+                        :fixes (cond ((eq (flycheck-error-checker err) 'kyo-vale)
+                                      (kyo/prose--vale-fixes err))
+                                     ((and ltex-pending (eq (flycheck-error-checker err) 'lsp-ltex-plus))
+                                      (setq ltex-pending nil)
+                                      (kyo/prose--ltex-fixes pos))))))
+              (flycheck-overlay-errors-at pos)))))
+
+(defun kyo/prose--ai-edited (ov after _beg _end &optional _length)
+  "Drop the suggestion OV once its text is edited, as Grammarly does."
+  (when after
+    (delete-overlay ov)))
+
+(defun kyo/prose--ai-overlay (beg end suggestion)
+  "Underline BEG..END as SUGGESTION, a plist from the model, in its category's color."
+  (let ((category (or (assoc (plist-get suggestion :category) kyo/prose-ai-categories)
+                      (assoc "clarity" kyo/prose-ai-categories)))
+        (ov (make-overlay beg end)))
+    (overlay-put ov 'kyo-ai suggestion)
+    (overlay-put ov 'kyo-ai-category category)
+    (overlay-put ov 'face (list :underline (list :style 'wave
+                                                 :color (or (face-foreground (nth 2 category) nil t)
+                                                            'foreground-color))))
+    (overlay-put ov 'priority 20)
+    (overlay-put ov 'evaporate t)
+    (overlay-put ov 'modification-hooks '(kyo/prose--ai-edited))
+    ov))
+
+(defun kyo/prose--ai-issues (pos)
+  "Return the model's suggestions underlined at POS, as card issues."
+  (delq nil
+        (mapcar (lambda (ov)
+                  (let ((suggestion (overlay-get ov 'kyo-ai)))
+                    (when suggestion
+                      (list :level 'info
+                            :kind (nth 1 (overlay-get ov 'kyo-ai-category))
+                            :category (overlay-get ov 'kyo-ai-category)
+                            :title (plist-get suggestion :title)
+                            :message (or (plist-get suggestion :explanation) "")
+                            :change (cons (buffer-substring-no-properties (overlay-start ov) (overlay-end ov))
+                                          (plist-get suggestion :replacement))
+                            :beg (overlay-start ov) :end (overlay-end ov)
+                            :fixes (list (list "Accept" 'replace (plist-get suggestion :replacement))
+                                         (list "Dismiss" 'dismiss ov))))))
+                (overlays-at pos))))
+
+(defun kyo/prose--ai-clear (&optional beg end)
+  "Remove the model's suggestions between BEG and END, or from the whole buffer."
+  (dolist (ov (overlays-in (or beg (point-min)) (or end (point-max))))
+    (when (overlay-get ov 'kyo-ai)
+      (delete-overlay ov))))
+
+(defun kyo/prose-ai-clear ()
+  "Remove every suggestion the model left in this buffer."
+  (interactive)
+  (kyo/prose--ai-clear)
+  (message "AI suggestions cleared"))
+
+(defun kyo/prose--issues-at (pos)
+  "Return everything underlined at POS, as card issues: spelling, then LTeX+
+and Vale, then the model's suggestions."
+  (delq nil (append (list (kyo/prose--spelling-issue pos))
+                    (kyo/prose--flycheck-issues pos)
+                    (kyo/prose--ai-issues pos))))
+
+(defun kyo/prose--underline-p (pos)
+  "Return non-nil when jinx, Flycheck or the model underlines POS."
+  (seq-some (lambda (ov) (or (eq (overlay-get ov 'category) 'jinx-overlay)
+                             (overlay-get ov 'flycheck-overlay)
+                             (overlay-get ov 'kyo-ai)))
+            (overlays-at pos)))
+
+(defun kyo/prose--face (level)
+  "Return the card face for LEVEL, Flycheck's posframe faces when they exist."
+  (if (facep 'flycheck-posframe-error-face)
+      (pcase level ('error 'flycheck-posframe-error-face) ('warning 'flycheck-posframe-warning-face)
+        (_ 'flycheck-posframe-info-face))
+    (pcase level ('error 'error) ('warning 'warning) (_ 'success))))
+
+(defun kyo/prose--prefix (level)
+  "Return the icon in front of a finding of LEVEL, as Flycheck's posframe shows it."
+  (pcase level
+    ('error (or (bound-and-true-p flycheck-posframe-error-prefix) "✖ "))
+    ('warning (or (bound-and-true-p flycheck-posframe-warning-prefix) "⚠ "))
+    (_ (or (bound-and-true-p flycheck-posframe-info-prefix) "➤ "))))
+
+(defun kyo/prose--underline-color (issue)
+  "Return the color of the underline ISSUE explains: its category's for a
+suggestion from the model, jinx's for spelling, Flycheck's for the level of
+anything else."
+  (let* ((level (plist-get issue :level))
+         (category (plist-get issue :category))
+         (face (cond (category (nth 2 category))
+                     ((equal (plist-get issue :kind) "Spelling") 'jinx-misspelled)
+                     ((eq level 'error) 'flycheck-error)
+                     ((eq level 'warning) 'flycheck-warning)
+                     (t 'flycheck-info)))
+         (underline (and (not category) (facep face) (face-attribute face :underline nil t)))
+         (color (if (consp underline) (plist-get underline :color) underline)))
+    (cond ((stringp color) color)
+          (category (face-foreground face nil t))
+          (t (face-foreground (cond ((eq level 'error) 'error) ((eq level 'warning) 'warning) (t 'success))
+                              nil t)))))
+
+(defun kyo/prose--card-background ()
+  "Return the card's background: the buffer's, so the card wears the same theme
+as the rest of Emacs and only its border sets it apart."
+  (face-background 'default nil t))
+
+(defun kyo/prose--card-border-color ()
+  "Return the card's border color: `kyo-prose-card-border' when set, else the
+theme's accent, which Omarchy themes put on `minibuffer-prompt'."
+  (or (face-foreground 'kyo-prose-card-border nil t)
+      (face-foreground 'minibuffer-prompt nil t)
+      (face-foreground 'shadow nil t)))
+
+(defun kyo/prose--words (text)
+  "Split TEXT into its words and the spaces between them, keeping both."
+  (let ((start 0) tokens)
+    (while (string-match "[^ \t\n]+\\|[ \t\n]+" text start)
+      (push (match-string 0 text) tokens)
+      (setq start (match-end 0)))
+    (nreverse tokens)))
+
+(defun kyo/prose--word-diff (old new)
+  "Return how the word list OLD becomes NEW, as (same|del|add . WORD) steps.
+A longest common subsequence keeps the words both share; removals come before
+additions, so a change reads old, then new."
+  (let* ((a (vconcat old))
+         (b (vconcat new))
+         (n (length a))
+         (m (length b))
+         (width (1+ m))
+         (table (make-vector (* (1+ n) width) 0))
+         (i 0)
+         (j 0)
+         steps)
+    (cl-loop for x from (1- n) downto 0 do
+             (cl-loop for y from (1- m) downto 0 do
+                      (aset table (+ (* x width) y)
+                            (if (equal (aref a x) (aref b y))
+                                (1+ (aref table (+ (* (1+ x) width) (1+ y))))
+                              (max (aref table (+ (* (1+ x) width) y))
+                                   (aref table (+ (* x width) (1+ y))))))))
+    (while (or (< i n) (< j m))
+      (cond ((and (< i n) (< j m) (equal (aref a i) (aref b j)))
+             (push (cons 'same (aref a i)) steps)
+             (setq i (1+ i) j (1+ j)))
+            ((and (< i n) (or (= j m) (>= (aref table (+ (* (1+ i) width) j))
+                                          (aref table (+ (* i width) (1+ j))))))
+             (push (cons 'del (aref a i)) steps)
+             (setq i (1+ i)))
+            (t
+             (push (cons 'add (aref b j)) steps)
+             (setq j (1+ j)))))
+    (nreverse steps)))
+
+(defun kyo/prose--change-text (old new color)
+  "Return OLD becoming NEW as Grammarly shows a change: removed words struck
+through in the shadow face, added words in COLOR, shared words as they are.
+A space keeps a removed word apart from the word that replaces it."
+  (let ((a (kyo/prose--words old))
+        (b (kyo/prose--words new))
+        (struck '(:inherit shadow :strike-through t))
+        parts previous)
+    (if (> (* (length a) (length b)) 250000)
+        (setq parts (list new " " (propertize old 'face struck)))
+      (dolist (step (kyo/prose--word-diff a b))
+        (when (and (eq (car previous) 'del) (eq (car step) 'add)
+                   (string-match-p "[^ \t\n]" (cdr previous))
+                   (string-match-p "[^ \t\n]" (cdr step)))
+          (push " " parts))
+        (push (pcase (car step)
+                ('same (cdr step))
+                ('del (propertize (cdr step) 'face struck))
+                ('add (propertize (cdr step) 'face (list :foreground color :weight 'bold))))
+              parts)
+        (setq previous step)))
+    (string-fill (apply #'concat (nreverse parts)) 72)))
+
+(defun kyo/prose--card-text (issues)
+  "Return the card for ISSUES: what is wrong, then numbered fixes to click.
+Each finding opens with its kind in the color of its underline.  A suggestion
+from the model shows its headline, why, and the change word by word."
+  (let ((n 0) lines)
+    (dolist (issue issues)
+      (let ((change (plist-get issue :change)))
+        (push (concat (propertize (concat (kyo/prose--prefix (plist-get issue :level))
+                                          (plist-get issue :kind))
+                                  'face (list :foreground (kyo/prose--underline-color issue) :weight 'bold))
+                      "  "
+                      (if change
+                          (propertize (or (plist-get issue :title) "Suggestion") 'face 'bold)
+                        (propertize (string-fill (plist-get issue :message) 72)
+                                    'face (kyo/prose--face (plist-get issue :level)))))
+              lines)
+        (when change
+          (unless (string-blank-p (plist-get issue :message))
+            (push (string-fill (plist-get issue :message) 72) lines))
+          (push (kyo/prose--change-text (car change) (cdr change) (kyo/prose--underline-color issue))
+                lines)))
+      (dolist (fix (seq-take (plist-get issue :fixes) kyo/prose-card-max))
+        (setq n (1+ n))
+        (push (concat "   " (buttonize (format "%d  %s" n (car fix)) #'kyo/prose--card-click
+                                      (list :op (nth 1 fix) :arg (nth 2 fix)
+                                            :beg (plist-get issue :beg) :end (plist-get issue :end)
+                                            :buffer (current-buffer) :window (selected-window))))
+              lines)))
+    (push (propertize (if (> n 0) "click a fix, or type z= and its number" "no automatic fix here")
+                      'face 'shadow)
+          lines)
+    ;; A space of padding inside the border, both sides of every line.
+    (mapconcat (lambda (line) (concat " " (string-replace "\n" " \n " line) " "))
+               (nreverse lines) "\n")))
+
+(defun kyo/prose--card-hidehandler (_info)
+  "Hide the card once point moves or the text changes; a selection's card
+also goes once the selection does."
+  (or (null kyo/prose--card)
+      (let ((buffer (nth 0 kyo/prose--card)))
+        (or (not (buffer-live-p buffer))
+            (/= (nth 2 kyo/prose--card) (buffer-chars-modified-tick buffer))
+            (/= (nth 1 kyo/prose--card) (with-current-buffer buffer (point)))
+            (and (eq (nth 3 kyo/prose--card) 'selection)
+                 (not (with-current-buffer buffer (use-region-p))))))))
+
+(defun kyo/prose--show-card (issues pos trigger)
+  "Show the card for ISSUES under POS; TRIGGER is `cursor', `mouse' or `selection'.
+A graphic frame gets a child frame in the same theme as the rest of Emacs,
+set apart by a border in the theme's accent, with fixes to click; a terminal
+frame gets the text in the echo area."
+  (let ((text (kyo/prose--card-text issues)))
+    (setq kyo/prose--card (list (current-buffer) (point) (buffer-chars-modified-tick) trigger pos issues))
+    (if (and (display-graphic-p) (require 'posframe nil t) (posframe-workable-p))
+        (progn
+          (require 'flycheck-posframe nil t)
+          (posframe-show kyo/prose-card-buffer
+                         :string text
+                         :position pos
+                         :poshandler #'posframe-poshandler-point-bottom-left-corner
+                         :background-color (kyo/prose--card-background)
+                         :foreground-color (face-foreground 'default nil t)
+                         :border-width kyo/prose-card-border-width
+                         :border-color (kyo/prose--card-border-color)
+                         :hidehandler #'kyo/prose--card-hidehandler))
+      (message "%s" (substring-no-properties text)))))
+
+(defun kyo/prose--hide-card (&optional trigger)
+  "Hide the card; with TRIGGER, only a card that TRIGGER opened."
+  (when (and kyo/prose--card (or (null trigger) (eq trigger (nth 3 kyo/prose--card))))
+    (setq kyo/prose--card nil)
+    (when (fboundp 'posframe-hide) (posframe-hide kyo/prose-card-buffer))))
+
+(defun kyo/prose--selection-p ()
+  "Return non-nil when the selection holds enough words to offer the model's checks."
+  (and (use-region-p)
+       (>= (count-words (region-beginning) (region-end)) kyo/prose-selection-min-words)))
+
+(defun kyo/prose--selection-issue ()
+  "Return the card issue for the selection: the model's checks to run on it."
+  (let ((beg (region-beginning))
+        (end (region-end)))
+    (list :level 'info :kind "Selection"
+          :message (format "%d words selected" (count-words beg end))
+          :beg beg :end end
+          :fixes (list (list "Proofread it" 'ai (cons kyo/proofread-directive-file "AI proofread"))
+                       (list "Improve the flow" 'ai (cons kyo/flow-directive-file "AI flow"))))))
+
+(defun kyo/prose--card-at-point ()
+  "Show the card the moment the cursor rests on an underline.  While a
+selection is up, its own card speaks instead."
+  (when (and (bound-and-true-p kyo-prose-mode) (not (kyo/prose--selection-p)))
+    (unless (and kyo/prose--card
+                 (eq (nth 0 kyo/prose--card) (current-buffer))
+                 (= (nth 1 kyo/prose--card) (point))
+                 (= (nth 2 kyo/prose--card) (buffer-chars-modified-tick)))
+      (let ((issues (kyo/prose--issues-at (point))))
+        (if issues
+            (kyo/prose--show-card issues (point) 'cursor)
+          (kyo/prose--hide-card 'cursor)
+          (kyo/prose--hide-card 'selection))))))
+
+(defun kyo/prose--card-at-selection ()
+  "Open the selection's card once a selection of enough words rests: the
+model's checks, numbered, to run on exactly that text."
+  (when (and (bound-and-true-p kyo-prose-mode) (kyo/prose--selection-p))
+    (unless (and kyo/prose--card
+                 (eq (nth 3 kyo/prose--card) 'selection)
+                 (eq (nth 0 kyo/prose--card) (current-buffer))
+                 (= (nth 1 kyo/prose--card) (point))
+                 (= (nth 2 kyo/prose--card) (buffer-chars-modified-tick)))
+      (kyo/prose--show-card (list (kyo/prose--selection-issue)) (point) 'selection))))
+
+(defun kyo/prose--card-at-mouse (window pos)
+  "Show the card for the underline at POS in WINDOW."
+  (when (window-live-p window)
+    (with-selected-window window
+      (let ((issues (kyo/prose--issues-at pos)))
+        (when issues (kyo/prose--show-card issues pos 'mouse))))))
+
+(defun kyo/prose-mouse-moved (event)
+  "Show the card when the mouse rests on an underline, as lsp-ui-doc does for code."
+  (interactive "e")
+  (when (timerp kyo/prose--mouse-timer) (cancel-timer kyo/prose--mouse-timer))
+  (let* ((posn (event-start event))
+         (window (posn-window posn))
+         (pos (posn-point posn)))
+    (if (and (windowp window) (integer-or-marker-p pos)
+             (with-current-buffer (window-buffer window)
+               (and (bound-and-true-p kyo-prose-mode) (kyo/prose--underline-p pos))))
+        (setq kyo/prose--mouse-timer (run-with-timer 0.3 nil #'kyo/prose--card-at-mouse window pos))
+      (kyo/prose--hide-card 'mouse))))
+
+(defun kyo/prose--apply (fix)
+  "Apply FIX, a plist of :op :arg :beg :end."
+  (pcase (plist-get fix :op)
+    ('replace (save-excursion
+                (delete-region (plist-get fix :beg) (plist-get fix :end))
+                (goto-char (plist-get fix :beg))
+                (insert (plist-get fix :arg))))
+    ('ltex (lsp-ltex-plus--run-action (plist-get fix :arg)))
+    ('jinx (goto-char (plist-get fix :beg))
+           (call-interactively #'jinx-correct))
+    ('dismiss (delete-overlay (plist-get fix :arg)))
+    ('ai (kyo/prose--ai-check (car (plist-get fix :arg)) (cdr (plist-get fix :arg))
+                              (plist-get fix :beg) (plist-get fix :end)))))
+
+(defun kyo/prose--card-click (data)
+  "Apply the fix clicked on the card; DATA names it and where it goes."
+  (kyo/prose--hide-card)
+  (when (window-live-p (plist-get data :window))
+    (select-window (plist-get data :window)))
+  (with-current-buffer (plist-get data :buffer)
+    (kyo/prose--apply data)))
+
+(defun kyo/prose--card-pos ()
+  "Return the underline the card on screen describes, or nil when none shows here."
+  (and kyo/prose--card
+       (eq (nth 0 kyo/prose--card) (current-buffer))
+       (not (kyo/prose--card-hidehandler nil))
+       (nth 4 kyo/prose--card)))
+
+(defun kyo/prose--card-issues ()
+  "Return what the card on screen lists, or nil when none shows here."
+  (and (kyo/prose--card-pos) (nth 5 kyo/prose--card)))
+
+(defun kyo/prose--fix-list (pos &optional issues)
+  "Return the fixes of ISSUES, else of what is underlined at POS, as (NUMBERED MORE).
+Both are lists of (LABEL . FIX).  NUMBERED holds the card's fixes, numbered
+as the card numbers them; MORE holds the rest, past `kyo/prose-card-max'."
+  (let ((n 0) numbered more)
+    (dolist (issue (or issues (kyo/prose--issues-at pos)))
+      (let ((shown 0))
+        (dolist (fix (plist-get issue :fixes))
+          (let ((label (format "%s: %s" (plist-get issue :kind) (car fix)))
+                (data (list :op (nth 1 fix) :arg (nth 2 fix)
+                            :beg (plist-get issue :beg) :end (plist-get issue :end))))
+            (if (< shown kyo/prose-card-max)
+                (push (cons (format "%d  %s" (setq n (1+ n)) label) data) numbered)
+              (push (cons (concat "   " label) data) more))
+            (setq shown (1+ shown))))))
+    (list (nreverse numbered) (nreverse more))))
+
+(defun kyo/prose--quick-number ()
+  "Return the fix number typed within `kyo/prose-quick-pick-delay' seconds, or nil.
+Mouse motion does not count.  Any other key goes back on the input, so it
+reaches the list of fixes as typed text."
+  (let ((deadline (+ (float-time) kyo/prose-quick-pick-delay))
+        event)
+    (while (and (setq event (read-event nil nil (max 0.01 (- deadline (float-time)))))
+                (consp event)
+                (memq (car event) '(mouse-movement help-echo))
+                (< (float-time) deadline)))
+    (cond ((or (null event)
+               (and (consp event) (memq (car event) '(mouse-movement help-echo))))
+           nil)
+          ((and (characterp event) (<= ?1 event ?9))
+           (- event ?0))
+          ((memq event '(kp-1 kp-2 kp-3 kp-4 kp-5 kp-6 kp-7 kp-8 kp-9))
+           (string-to-number (substring (symbol-name event) 3)))
+          (t (push event unread-command-events)
+             nil))))
+
+(defun kyo/prose-fix-at-point (&optional number)
+  "Apply a fix by the number the card shows.
+Typed fast after z= (z=1), or given first (1z=), the number applies that
+fix at once.  Pause after z= instead and the fixes open in a list, in the
+card's order.  The fixes are those of the card on screen; else, with a
+selection up, the model's checks for it; else those of the underline at
+point.  With nothing underlined, jinx corrects the nearest misspelling."
+  (interactive "P")
+  (pcase-let ((`(,numbered ,more)
+               (kyo/prose--fix-list (or (kyo/prose--card-pos) (point))
+                                    (or (kyo/prose--card-issues)
+                                        (and (kyo/prose--selection-p)
+                                             (list (kyo/prose--selection-issue)))))))
+    (if (not (or numbered more))
+        (progn
+          (kyo/prose--hide-card)
+          (if (fboundp 'jinx-correct)
+              (call-interactively #'jinx-correct)
+            (call-interactively #'ispell-word)))
+      (let* ((n (if (integerp number) number (kyo/prose--quick-number)))
+             (fix (and n (> n 0) (nth (1- n) numbered))))
+        (kyo/prose--hide-card)
+        (if fix
+            (kyo/prose--apply (cdr fix))
+          (let* ((fixes (append numbered more))
+                 (labels (mapcar #'car fixes)))
+            (kyo/prose--apply
+             (cdr (assoc (completing-read
+                          "Fix: "
+                          (lambda (string pred action)
+                            (if (eq action 'metadata)
+                                '(metadata (display-sort-function . identity)
+                                           (cycle-sort-function . identity))
+                              (complete-with-action action labels string pred)))
+                          nil t)
+                         fixes)))))))))
+
+(defun kyo/prose-fix-at-mouse (event)
+  "Right-click: the card for the underline under the mouse; elsewhere a normal right-click."
+  (interactive "e")
+  (let* ((posn (event-start event))
+         (pos (posn-point posn)))
+    (if (and (integer-or-marker-p pos)
+             (with-current-buffer (window-buffer (posn-window posn)) (kyo/prose--underline-p pos)))
+        (kyo/prose--card-at-mouse (posn-window posn) pos)
+      (mouse-save-then-kill event))))
+
+(defun kyo/prose--quiet-flycheck-popups ()
+  "In a prose buffer the card replaces Flycheck's own popups."
+  (when (bound-and-true-p kyo-prose-mode)
+    (when (bound-and-true-p flycheck-posframe-mode) (flycheck-posframe-mode -1))
+    (when (bound-and-true-p flycheck-popup-tip-mode) (flycheck-popup-tip-mode -1))
+    (setq-local flycheck-display-errors-function #'ignore)))
+
+(defvar kyo-prose-mode-map
+  (let ((map (make-sparse-keymap)))
+    (keymap-set map "M-$" #'kyo/prose-fix-at-point)
+    (keymap-set map "<mouse-movement>" #'kyo/prose-mouse-moved)
+    (keymap-set map "<mouse-3>" #'kyo/prose-fix-at-mouse)
+    map)
+  "Keys of `kyo-prose-mode'.  jinx's own right-click menu still wins on a misspelling.")
+
+(define-minor-mode kyo-prose-mode
+  "Writing checks in this buffer: a suggestion card on underlines and on the
+selection, and one fix key."
+  :keymap kyo-prose-mode-map
+  (if kyo-prose-mode
+      (progn
+        (setq-local track-mouse t)
+        (kyo/prose--quiet-flycheck-popups)
+        (unless kyo/prose--card-timer
+          (setq kyo/prose--card-timer (run-with-idle-timer 0.2 t #'kyo/prose--card-at-point)))
+        (unless kyo/prose--selection-timer
+          (setq kyo/prose--selection-timer
+                (run-with-idle-timer kyo/prose-selection-delay t #'kyo/prose--card-at-selection))))
+    (kill-local-variable 'track-mouse)
+    (kill-local-variable 'flycheck-display-errors-function)
+    (kyo/prose--hide-card)))
+
+(add-hook 'flycheck-mode-hook #'kyo/prose--quiet-flycheck-popups 90)
+
+(with-eval-after-load 'evil
+  (evil-define-key* '(normal visual) kyo-prose-mode-map (kbd "z=") #'kyo/prose-fix-at-point))
+#+end_src
+
 *Where the checks run:* one hook turns them on in every buffer whose major mode is in =kyo/prose-modes=.
 #+begin_src emacs-lisp :tangle config.el
 (defun kyo/prose-setup ()
@@ -2121,39 +2767,365 @@ Vale follows through Flycheck."
                (not (or buffer-read-only (buffer-base-buffer)
                         (string-prefix-p " " (buffer-name)))))
       (jinx-mode 1))
+    (kyo-prose-mode 1)
     (kyo/ltex-maybe-enable)))
 
 (add-hook 'after-change-major-mode-hook #'kyo/prose-setup)
 #+end_src
 
-*Proofread a region with gptel:* the rules live in =gptel-directives/proofread.md=. The result arrives as a rewrite I accept or reject, so nothing changes without my OK.
+*Proofread and flow, as suggestions:* the rules live in =gptel-directives/proofread.md= and =gptel-directives/flow.md=. Those files are chat directives too, so a check drops their "return only the text" line and asks for JSON instead. Flow is Grammarly's paragraph continuity: whether each sentence follows from the last and the connectors name the right relation, a judgment no rule can make. Each check takes the region, or the paragraph at point, and the answer comes back as suggestions underlined like the other checks, in Grammarly's colors from the theme: Correctness red, Clarity blue, Engagement green, Delivery purple. Resting on one opens the same card, with the change word by word and =1 Accept= / =2 Dismiss=; editing its text drops it, and ~SPC o l c~ clears them all, so nothing changes without my OK. Claude answers them, through the Claude Code CLI on my personal Max account: Sonnet at medium effort (=kyo/prose-claude-model=, =kyo/prose-claude-effort=). The answer is used the moment it is complete, since the CLI lingers about two seconds before it exits. The CLI runs from the temp directory with no tools, settings, hooks, MCP servers or saved session, and without =CLAUDE_CONFIG_DIR=, so the work account never answers; =--json-schema= holds Claude to the suggestion format, and an error shows in the CLI's own words. With =kyo/prose-ai-engine= set to =gptel=, gptel's model answers instead (=kyo/prose-gptel-backend=, =kyo/prose-gptel-model=): a server on this machine that is down is named instead of gptel's bare /Curl failure/, and a refused request shows the provider's own reason.
 #+begin_src emacs-lisp :tangle config.el
 (defvar kyo/proofread-directive-file
   (expand-file-name "gptel-directives/proofread.md" doom-user-dir)
   "Rules for `kyo/proofread-region'.  Also loaded as the `proofread' directive.")
 
+(defvar kyo/flow-directive-file
+  (expand-file-name "gptel-directives/flow.md" doom-user-dir)
+  "Rules for `kyo/prose-flow'.  Also loaded as the `flow' directive.")
+
+(defvar kyo/prose-gptel-backend nil
+  "Name of the gptel backend Proofread and Flow use; nil means gptel's current one.")
+
+(defvar kyo/prose-gptel-model nil
+  "Model Proofread and Flow use, a symbol; nil means gptel's current model.")
+
+(defvar kyo/prose-ai-engine 'claude
+  "Who answers Proofread and Flow: `claude', Claude through the Claude Code CLI
+on the personal account, or `gptel', gptel's current model.")
+
+(defvar kyo/prose-claude-program "claude"
+  "The Claude Code CLI that answers Proofread and Flow.")
+
+(defvar kyo/prose-claude-model "sonnet"
+  "Claude model for Proofread and Flow: an alias such as sonnet, or a full name.")
+
+(defvar kyo/prose-claude-effort "medium"
+  "Claude's effort for Proofread and Flow: low, medium, high, xhigh or max.
+Medium answers a paragraph in about four seconds.")
+
+(defvar kyo/prose-claude-timeout 120
+  "Seconds to wait for Claude before a check gives up.")
+
+(defvar kyo/prose-ai-schema
+  "{\"type\":\"object\",\"properties\":{\"suggestions\":{\"type\":\"array\",\"items\":{\"type\":\"object\",\"properties\":{\"original\":{\"type\":\"string\"},\"replacement\":{\"type\":\"string\"},\"category\":{\"type\":\"string\",\"enum\":[\"correctness\",\"clarity\",\"engagement\",\"delivery\"]},\"title\":{\"type\":\"string\"},\"explanation\":{\"type\":\"string\"}},\"required\":[\"original\",\"replacement\",\"category\",\"title\",\"explanation\"]}}},\"required\":[\"suggestions\"]}"
+  "JSON Schema of a check's answer, which the Claude Code CLI enforces.")
+
+(defun kyo/prose--gptel-down-p (backend)
+  "Return non-nil when BACKEND is a server on this machine that is not running.
+gptel itself would only report \"Curl failure\".  Remote servers are left to gptel."
+  (let ((host (gptel-backend-host backend)))
+    (when (string-match "\\`\\(localhost\\|127\\.0\\.0\\.1\\)\\(?::\\([0-9]+\\)\\)?\\'" host)
+      (let ((name (match-string 1 host))
+            (port (if (match-string 2 host)
+                      (string-to-number (match-string 2 host))
+                    (if (equal (gptel-backend-protocol backend) "http") 80 443))))
+        (condition-case nil
+            (progn (delete-process (open-network-stream "kyo-gptel-probe" nil name port))
+                   nil)
+          (error t))))))
+
+(defvar kyo/prose-ai-answer-format
+  "## Answer format
+This replaces any other instruction about the form of your answer: do not return the text itself. Return one JSON object and nothing else, with no code fences:
+{\"suggestions\": [{\"original\": \"...\", \"replacement\": \"...\", \"category\": \"clarity\", \"title\": \"...\", \"explanation\": \"...\"}]}
+- One suggestion per change: two mistakes in one sentence are two suggestions.
+- original: a span copied character for character from the text, as short as the change allows, usually one to five words, never more than one sentence.
+- replacement: what that span becomes.
+- category: correctness (spelling, grammar, punctuation), clarity (clear, concise wording), engagement (livelier, more varied writing) or delivery (tone, formality, politeness).
+- title: a headline of three to six words, such as \"Add a comma after the linking word\".
+- explanation: one sentence on why, in English.
+Give at most 12 suggestions, the most important first. Never suggest a change inside Org syntax. When the text needs no change, return {\"suggestions\": []}."
+  "Appended to the rules of a check, so the model answers with suggestions to
+underline instead of a rewritten text.")
+
+(defun kyo/prose--ai-bounds ()
+  "Return (BEG . END): the region when active, else the paragraph at point
+without the blank lines around it."
+  (if (use-region-p)
+      (cons (region-beginning) (region-end))
+    (save-excursion
+      (let ((end (progn (forward-paragraph) (skip-chars-backward " \t\n") (point))))
+        (cons (progn (backward-paragraph) (skip-chars-forward " \t\n") (point)) end)))))
+
+(defun kyo/prose--ai-parse (text)
+  "Return the suggestions in TEXT, the model's JSON answer, as plists, or
+`unreadable' when TEXT holds no JSON."
+  (condition-case nil
+      (let* ((start (string-match "[[{]" text))
+             (end (and (string-match "[]}][^]}]*\\'" text) (1+ (match-beginning 0))))
+             (data (json-parse-string (substring text start end)
+                                      :object-type 'plist :array-type 'list
+                                      :null-object nil :false-object nil)))
+        (cond ((and (consp data) (keywordp (car data))) (plist-get data :suggestions))
+              ((listp data) data)
+              (t 'unreadable)))
+    (error 'unreadable)))
+
+(defun kyo/prose--ai-find (original beg end taken)
+  "Return (START . END) where ORIGINAL sits between BEG and END, clear of the
+spans in TAKEN and of markup.  Spaces and line breaks may differ from the
+model's copy."
+  (let ((regexp (mapconcat #'regexp-quote (split-string original "[ \t\n]+" t) "[ \t\n]+"))
+        (case-fold-search nil)
+        found)
+    (save-excursion
+      (goto-char beg)
+      (while (and (not found) (re-search-forward regexp end t))
+        (let ((start (match-beginning 0))
+              (stop (match-end 0)))
+          (unless (or (seq-some (lambda (span) (and (< start (cdr span)) (> stop (car span)))) taken)
+                      (not (kyo/prose-position-p start))
+                      (not (kyo/prose-position-p (1- stop))))
+            (setq found (cons start stop))))))
+    found))
+
+(defun kyo/prose--ai-place (suggestions beg end)
+  "Underline each of SUGGESTIONS where its original text sits between BEG and
+END; return how many were placed.  One whose text is no longer there, or sits
+in markup, is skipped."
+  (let ((placed 0) taken)
+    (dolist (suggestion suggestions)
+      (let ((original (plist-get suggestion :original))
+            (replacement (plist-get suggestion :replacement)))
+        (when (and (stringp original) (stringp replacement)
+                   (not (string-blank-p original))
+                   (not (equal original replacement)))
+          (let ((span (kyo/prose--ai-find original beg end taken)))
+            (when span
+              (push span taken)
+              (kyo/prose--ai-overlay (car span) (cdr span) suggestion)
+              (setq placed (1+ placed)))))))
+    placed))
+
+(defun kyo/prose--ai-error (info backend)
+  "Return why the request in INFO to BACKEND failed, in the provider's own words."
+  (let ((status (plist-get info :status))
+        (detail (plist-get info :error)))
+    (concat backend
+            (if status (format " (%s)" status) "")
+            (cond ((stringp detail) (concat ": " detail))
+                  ((and (consp detail) (stringp (plist-get detail :message)))
+                   (concat ": " (plist-get detail :message)))
+                  (detail (format ": %S" detail))
+                  (t "")))))
+
+(defun kyo/prose--last-line (text)
+  "Return the last line of TEXT that is not blank, or nil."
+  (car (last (split-string (or text "") "\n" t "[ \t]+"))))
+
+(defun kyo/prose--ai-show (suggestions context)
+  "Underline SUGGESTIONS, plists from the model, in the text CONTEXT points at,
+and say how many landed.  SUGGESTIONS is `unreadable' when the answer held no
+JSON.  The newest answer wins: older suggestions on that text go first."
+  (let ((beg (plist-get context :beg))
+        (end (plist-get context :end))
+        (label (plist-get context :label)))
+    (when (buffer-live-p (marker-buffer beg))
+      (with-current-buffer (marker-buffer beg)
+        (if (eq suggestions 'unreadable)
+            (message "%s: the answer was not the JSON asked for" label)
+          (kyo/prose--ai-clear beg end)
+          (let ((placed (kyo/prose--ai-place suggestions beg end))
+                (total (length suggestions)))
+            (message "%s: %s" label
+                     (cond ((= total 0) "no suggestions")
+                           ((= placed total)
+                            (format "%d suggestion%s underlined" total (if (= total 1) "" "s")))
+                           (t (format "%d of %d suggestions underlined; the rest no longer match the text"
+                                      placed total))))))))
+    (set-marker beg nil)
+    (set-marker end nil)))
+
+(defun kyo/prose--ai-fail (context reason)
+  "Say why the check CONTEXT describes got no answer: REASON."
+  (message "%s failed: %s" (plist-get context :label) reason)
+  (set-marker (plist-get context :beg) nil)
+  (set-marker (plist-get context :end) nil))
+
+(defun kyo/prose--ai-response (response info)
+  "Underline the suggestions in RESPONSE, gptel's answer, or say why there are
+none.  INFO carries the request's context: where the text sits and the
+check's name."
+  (let ((context (plist-get info :context)))
+    (cond ((consp response) nil)          ; reasoning text; the answer follows
+          ((eq response 'abort) (kyo/prose--ai-fail context "canceled"))
+          ((stringp response) (kyo/prose--ai-show (kyo/prose--ai-parse response) context))
+          (t (kyo/prose--ai-fail context (kyo/prose--ai-error info (plist-get context :backend)))))))
+
+(defun kyo/prose--claude-request (text system context)
+  "Send TEXT to Claude under the SYSTEM prompt through the Claude Code CLI, and
+underline the answer as soon as it is complete.  The CLI runs on the personal
+account (no CLAUDE_CONFIG_DIR), from the temp directory so no project
+CLAUDE.md loads, with no tools, settings, hooks or MCP servers, and keeps no
+session.  CONTEXT says where the text sits and names the check.  Return the
+process."
+  (let* ((program (or (executable-find kyo/prose-claude-program)
+                      (user-error "The Claude Code CLI (%s) is not on the path" kyo/prose-claude-program)))
+         (default-directory temporary-file-directory)
+         (process-environment (seq-remove (lambda (entry) (string-prefix-p "CLAUDE_CONFIG_DIR=" entry))
+                                          process-environment))
+         (proc (make-process
+                :name "kyo-claude"
+                :buffer (generate-new-buffer " *kyo-claude*")
+                :command (list program "-p"
+                               "--model" kyo/prose-claude-model
+                               "--effort" kyo/prose-claude-effort
+                               "--output-format" "json"
+                               "--json-schema" kyo/prose-ai-schema
+                               "--system-prompt" system
+                               "--tools" ""
+                               "--setting-sources" ""
+                               "--strict-mcp-config"
+                               "--no-session-persistence")
+                :connection-type 'pipe
+                :stderr (get-buffer-create " *kyo-claude-stderr*")
+                :noquery t
+                :filter #'kyo/prose--claude-filter
+                :sentinel #'kyo/prose--claude-sentinel)))
+    (process-put proc 'kyo-context context)
+    (process-put proc 'kyo-timer
+                 (run-with-timer kyo/prose-claude-timeout nil #'kyo/prose--claude-timeout proc))
+    (process-send-string proc text)
+    (process-send-eof proc)
+    proc))
+
+(defun kyo/prose--claude-timeout (proc)
+  "Stop PROC when Claude has not answered within `kyo/prose-claude-timeout'."
+  (when (process-live-p proc)
+    (process-put proc 'kyo-timed-out t)
+    (delete-process proc)))
+
+(defun kyo/prose--claude-answer (output)
+  "Return OUTPUT, the CLI's printout, parsed as its JSON answer, or nil while
+the answer is not complete yet."
+  (and (string-match-p "}[ \t\n]*\\'" output)
+       (ignore-errors
+         (json-parse-string output :object-type 'plist :array-type 'list
+                            :null-object nil :false-object nil))))
+
+(defun kyo/prose--claude-finish (proc answer output)
+  "Underline what ANSWER, the CLI's parsed JSON, holds, or say why it holds
+nothing.  OUTPUT is what PROC printed, for the error message."
+  (let ((context (process-get proc 'kyo-context))
+        (result (and (consp answer) (plist-get answer :result)))
+        (stderr (get-buffer " *kyo-claude-stderr*")))
+    (cond
+     ((and (consp answer) (not (plist-get answer :is_error)) (plist-get answer :structured_output))
+      (kyo/prose--ai-show (plist-get (plist-get answer :structured_output) :suggestions) context))
+     ((and (consp answer) (not (plist-get answer :is_error)) (stringp result))
+      (kyo/prose--ai-show (kyo/prose--ai-parse result) context))
+     (t
+      (kyo/prose--ai-fail context
+                          (format "Claude (exit %s): %s"
+                                  (if (process-live-p proc) "pending" (process-exit-status proc))
+                                  (or (and (stringp result) result)
+                                      (kyo/prose--last-line output)
+                                      (and stderr (kyo/prose--last-line
+                                                   (with-current-buffer stderr (buffer-string))))
+                                      "no answer")))))))
+
+(defun kyo/prose--claude-filter (proc chunk)
+  "Collect what PROC prints, and use the answer the moment it is complete:
+the CLI lingers about two seconds after answering before it exits."
+  (when (buffer-live-p (process-buffer proc))
+    (with-current-buffer (process-buffer proc)
+      (goto-char (point-max))
+      (insert chunk)
+      (unless (process-get proc 'kyo-done)
+        (let ((answer (kyo/prose--claude-answer (buffer-string))))
+          (when (and answer (not (plist-get answer :is_error)))
+            (process-put proc 'kyo-done t)
+            (kyo/prose--claude-finish proc answer (buffer-string))))))))
+
+(defun kyo/prose--claude-sentinel (proc _event)
+  "Clean up once the CLI exits, and use its answer if the filter has not."
+  (unless (process-live-p proc)
+    (let ((output (if (buffer-live-p (process-buffer proc))
+                      (with-current-buffer (process-buffer proc) (buffer-string))
+                    "")))
+      (when (timerp (process-get proc 'kyo-timer))
+        (cancel-timer (process-get proc 'kyo-timer)))
+      (when (buffer-live-p (process-buffer proc))
+        (kill-buffer (process-buffer proc)))
+      (cond
+       ((process-get proc 'kyo-done) nil)
+       ((process-get proc 'kyo-timed-out)
+        (kyo/prose--ai-fail (process-get proc 'kyo-context)
+                            (format "Claude did not answer within %d s" kyo/prose-claude-timeout)))
+       (t
+        (kyo/prose--claude-finish proc (kyo/prose--claude-answer output) output))))))
+
+(defun kyo/prose--ai-check (file label &optional beg end)
+  "Ask the model for suggestions on BEG..END, else the region, else the
+paragraph at point, under the rules in FILE, and underline each where it
+applies, in its Grammarly color.  Resting on one opens the card to accept or
+dismiss it, as with the other checks.  LABEL names the check in messages.
+Text in an entry tagged :crypt: is refused, so decrypted secrets never reach
+the model.  `kyo/prose-ai-engine' picks who answers: Claude through the
+Claude Code CLI (`kyo/prose-claude-model' at `kyo/prose-claude-effort'), or
+gptel's model (`kyo/prose-gptel-backend' and `kyo/prose-gptel-model')."
+  (let* ((bounds (if beg (cons beg end) (kyo/prose--ai-bounds)))
+         (beg (car bounds))
+         (end (cdr bounds))
+         (text (buffer-substring-no-properties beg end))
+         (system (concat (replace-regexp-in-string "^Return only .*\n+" ""
+                                                   (with-temp-buffer
+                                                     (insert-file-contents file)
+                                                     (buffer-string)))
+                         "\n" kyo/prose-ai-answer-format)))
+    (when (string-blank-p text)
+      (user-error "No text here to check"))
+    (when (and (derived-mode-p 'org-mode)
+               (save-excursion (goto-char beg) (member "crypt" (org-get-tags))))
+      (user-error "This entry is tagged :crypt:, so its text stays out of AI requests"))
+    (if (eq kyo/prose-ai-engine 'claude)
+        (progn
+          (deactivate-mark)
+          (kyo/prose--ai-clear beg end)
+          (message "%s: asking Claude %s at %s effort..." label kyo/prose-claude-model kyo/prose-claude-effort)
+          (kyo/prose--claude-request text system
+                                     (list :beg (copy-marker beg) :end (copy-marker end t)
+                                           :label label :backend "Claude")))
+      (require 'gptel)
+      (let ((gptel-backend (if kyo/prose-gptel-backend
+                               (gptel-get-backend kyo/prose-gptel-backend)
+                             gptel-backend))
+            (gptel-model (or kyo/prose-gptel-model gptel-model))
+            (gptel-use-tools nil)
+            (gptel-use-context nil))
+        (when (kyo/prose--gptel-down-p gptel-backend)
+          (user-error "The gptel backend %s is not running: nothing answers at %s"
+                      (gptel-backend-name gptel-backend) (gptel-backend-host gptel-backend)))
+        (deactivate-mark)
+        (kyo/prose--ai-clear beg end)
+        (message "%s: asking %s..." label gptel-model)
+        (gptel-request text
+          :system system
+          :stream nil
+          :transforms nil
+          :context (list :beg (copy-marker beg) :end (copy-marker end t)
+                         :label label :backend (gptel-backend-name gptel-backend))
+          :callback #'kyo/prose--ai-response)))))
+
 (defun kyo/proofread-region ()
-  "Proofread the selected text with gptel and review it as a rewrite.
-Accept, diff, ediff, merge or reject the result with the rewrite keys:
-C-c C-a, C-c C-d, C-c C-e, C-c C-m, C-c C-k.  Text in an entry tagged
-:crypt: is refused, so decrypted secrets never reach the model."
+  "Proofread the region, or the paragraph at point, with the model.
+Each suggestion is underlined in its Grammarly color, and its card offers
+1 Accept and 2 Dismiss, like the other checks."
   (interactive)
-  (unless (use-region-p)
-    (user-error "Select the text to proofread first"))
-  (when (and (derived-mode-p 'org-mode)
-             (save-excursion (goto-char (region-beginning))
-                             (member "crypt" (org-get-tags))))
-    (user-error "This entry is tagged :crypt:, so its text stays out of AI requests"))
-  (require 'gptel-rewrite)
-  (let ((gptel--rewrite-directive
-         (with-temp-buffer
-           (insert-file-contents kyo/proofread-directive-file)
-           (buffer-string))))
-    (gptel--suffix-rewrite "Proofread this text. Return only the corrected text.")))
+  (kyo/prose--ai-check kyo/proofread-directive-file "AI proofread"))
+
+(defun kyo/prose-flow ()
+  "Review connectors and continuity in the region, or the paragraph at point.
+Grammarly's paragraph flow, from the model: each suggestion is underlined
+with a card to accept or dismiss it, like the proofread."
+  (interactive)
+  (kyo/prose--ai-check kyo/flow-directive-file "AI flow"))
 
 (map! :leader
       :prefix ("o" . "Open")
-      :desc "GPTel Proofread region" "l p" #'kyo/proofread-region)
+      :desc "AI Proofread paragraph" "l p" #'kyo/proofread-region
+      :desc "AI Flow of paragraph" "l f" #'kyo/prose-flow
+      :desc "AI Clear suggestions" "l c" #'kyo/prose-ai-clear)
 #+end_src
 
 
@@ -2499,46 +3471,6 @@ Setup the ~gptel~ package to use LLMs on Emacs.
 (add-hook 'gptel-post-stream-hook 'gptel-auto-scroll)
 #+end_src
 
-#+begin_src emacs-lisp :tangle no
-(setq gptel-backend
-      (gptel-make-openai
-       "Github Copilot Models"
-       :host "models.inference.ai.azure.com"
-       :key (string-trim (shell-command-to-string
-                          "pass show private_key/github-gpetel-editor"))
-       :endpoint "/chat/completions?api-version=2024-05-01-preview"
-       :stream t
-       :models '(codestral-2501
-                 grok-3
-                 phi-4-reasoning
-                 phi-4
-                 phi-4-mini-instruct
-                 mai-ds-r1
-                 gpt-4.1)))
-
-(setq gptel-model 'gpt-4.1)
-
-(defun my-gptel-switch-model (model-name)
-  "Switch GPTel model dynamically based on `model-name`."
-  (interactive
-   (list
-    (completing-read "Select model: " '(codestral-2501
-                                        grok-3
-                                        phi-4-reasoning
-                                        phi-4
-                                        phi-4-mini-instruct
-                                        mai-ds-r1
-                                        gpt-4.1))))
-  (setq gptel-model (intern model-name))
-  (message "Switched to model: %s" model-name))
-
-;; Optional key binding for quick model switching
-(global-set-key (kbd "C-c m") #'my-gptel-switch-model)
-
-;; Auto-scroll responses
-(add-hook 'gptel-post-stream-hook #'gptel-auto-scroll)
-#+end_src
-
 #+begin_src emacs-lisp :tangle config.el
 (use-package! gptel
   :config
@@ -2546,22 +3478,7 @@ Setup the ~gptel~ package to use LLMs on Emacs.
   ;; 1. DEFINE THE BACKENDS
   ;; -------------------------------------------------------------------------
 
-  ;; Backend A: Azure / Github Copilot (Existing)
-  (setq gptel-backend-azure
-        (gptel-make-openai "Github Copilot"
-          :host "models.inference.ai.azure.com"
-          :key (string-trim (shell-command-to-string "pass show private_key/github-gpetel-editor"))
-          :endpoint "/chat/completions?api-version=2024-05-01-preview"
-          :stream t
-          :models '(codestral-2501
-                    grok-3
-                    phi-4-reasoning
-                    phi-4
-                    phi-4-mini-instruct
-                    mai-ds-r1
-                    gpt-4.1)))
-
-  ;; Backend B: Local Gemini Switcher (Points to LiteLLM)
+  ;; Backend A: Local Gemini Switcher (Points to LiteLLM)
   (setq gptel-backend-local
         (gptel-make-openai "Gemini Local"
           :host "localhost:4100"
@@ -2572,23 +3489,28 @@ Setup the ~gptel~ package to use LLMs on Emacs.
                     gemini-pro-paid)   ;; The "Force Pro" option
           :key "sk-1234"))             ;; Dummy key (LiteLLM handles the real ones)
 
+  ;; Backend B: xAI (Grok), the default.  The key is read from pass when a
+  ;; request is sent, so starting Emacs never waits on a passphrase.
+  (setq gptel-backend-xai
+        (gptel-make-xai "xAI"
+          :key (lambda () (car (process-lines "pass" "show" "private_key/xai")))
+          :stream t
+          :models '(grok-4.3   ;; The default
+                    grok-4)))  ;; Alias of the latest Grok 4 flagship
+
   ;; -------------------------------------------------------------------------
   ;; 2. INTELLIGENT MODEL SWITCHING
   ;; -------------------------------------------------------------------------
 
   ;; Create a map: Model Name -> Backend to use
   (defvar my-gptel-model-map
-    `((codestral-2501      . ,gptel-backend-azure)
-      (grok-3              . ,gptel-backend-azure)
-      (phi-4-reasoning     . ,gptel-backend-azure)
-      (phi-4               . ,gptel-backend-azure)
-      (phi-4-mini-instruct . ,gptel-backend-azure)
-      (mai-ds-r1           . ,gptel-backend-azure)
-      (gpt-4.1             . ,gptel-backend-azure)
-      ;; Gemini models map to the Local backend
+    `(;; Gemini models map to the Local backend
       (gemini-gemma-free    . ,gptel-backend-local)
       (gemini-backup-flash    . ,gptel-backend-local)
-      (gemini-pro-paid     . ,gptel-backend-local)))
+      (gemini-pro-paid     . ,gptel-backend-local)
+      ;; Grok models map to xAI
+      (grok-4.3            . ,gptel-backend-xai)
+      (grok-4              . ,gptel-backend-xai)))
 
   (defun my-gptel-switch-model (model-name)
     "Switch the gptel backend and model in one go."
@@ -2613,9 +3535,10 @@ Setup the ~gptel~ package to use LLMs on Emacs.
   ;; Bind the switcher to C-c m
   (global-set-key (kbd "C-c m") #'my-gptel-switch-model)
 
-  ;; Optional: Set default startup model
-  (setq gptel-backend gptel-backend-local
-        gptel-model 'gemini-gemma-free)
+  ;; Default startup model: Grok 4.3 through xAI.  Gemini Local needs the
+  ;; LiteLLM proxy on localhost:4100, which this machine does not run.
+  (setq gptel-backend gptel-backend-xai
+        gptel-model 'grok-4.3)
 
   (add-hook 'gptel-post-stream-hook #'gptel-auto-scroll))
 #+end_src
@@ -2624,7 +3547,7 @@ Setup the ~gptel~ package to use LLMs on Emacs.
 
 *Analyzer Model:*
 #+begin_src emacs-lisp :tangle config.el
-(defvar kyo/gptel-analyzer-model "gemini-backup-flash"
+(defvar kyo/gptel-analyzer-model "grok-4.3"
   "The model to use for the fast, pre-flight skill analysis.")
 #+end_src
 
