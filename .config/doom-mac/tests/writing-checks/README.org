@@ -1,0 +1,31 @@
+#+TITLE: Writing Checks Tests
+
+Tests for the WRITING CHECKs section of =config.org=: the suggestion card, the =z== keys, the selection's card, the model's suggestions, and Proofread and Flow through Claude or gptel.
+
+* HOW TO RUN
+After =doom sync=:
+
+#+begin_src sh
+"/run/media/kyonax/Da_ Disk/dev/github-kyonax/dot-files/.config/doom-mac/tests/writing-checks/run.sh"
+#+end_src
+
+=run.sh= cuts WRITING CHECKs out of the tangled =~/.config/doom/config.el= (or the =config.el= given as its argument) and runs the tests twice: with dynamic binding, the way =config.el= loads, and with lexical binding. It exits 0 when every check passes. A batch Emacs with Doom's straight packages runs them; Doom itself is not loaded, so =doom-user-dir= and =map!= get stand-ins. No test calls a real model, and nothing leaves the machine.
+
+* WHAT IT COVERs
+- The card: numbering past the card's maximum, padding, the theme's colors, the border and the background.
+- The keys: =z==N typed fast, the count first (=Nz==), a pause that opens the list, mouse motion, a card the mouse opened, a stale card.
+- The model's suggestions: parsing (code fences included), placement (Org syntax and text that moved are skipped, line breaks may differ), the card with the change word by word, Accept, Dismiss, and edits that drop a suggestion.
+- Proofread and Flow through gptel: the request, a local server that is down, a refused request, an answer with no JSON, reasoning text.
+- Proofread and Flow through Claude: a fake =claude= records the call (Sonnet at medium effort, the schema, no tools or settings, the temp directory, no =CLAUDE_CONFIG_DIR=), answers before it exits, fails and hangs on cue.
+- The selection's card: the word threshold, the cursor card staying quiet, =z=1= and =z=2= on exactly the selection, the card going with the selection.
+- Ask: my instruction as the point of the check under the proofread rules, its suggestions underlined, an empty instruction refused, =z=3= asking about exactly the selection.
+- All at once and one by one: =Accept all N= / =Dismiss all N= on the card of a check that left several, =SPC o l A= for the paragraph or (with a prefix) the buffer, and =]s= / =[s= walking every kind of underline with a count.
+
+* FILEs
+| File                     | What                                                                                   |
+|--------------------------+----------------------------------------------------------------------------------------|
+| =run.sh=                 | cuts the section out of =config.el= and runs the tests in both bindings                |
+| =writing-checks-test.el= | the tests                                                                              |
+| =fake-claude.sh=         | a stand-in Claude Code CLI; what it records goes to a temp folder                      |
+| =fake-claude.answer=     | its canned answer                                                                      |
+| =replace-forms.el=       | replaces, inserts or deletes top-level forms by name in an =.el= or =.org= file; how the section is patched |
