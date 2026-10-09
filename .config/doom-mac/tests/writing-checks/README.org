@@ -28,4 +28,5 @@ After =doom sync=:
 | =writing-checks-test.el= | the tests                                                                              |
 | =fake-claude.sh=         | a stand-in Claude Code CLI; what it records goes to a temp folder                      |
 | =fake-claude.answer=     | its canned answer                                                                      |
+| =hotload.sh=             | loads named forms from the tangled =config.el= into the running daemon (=--force= re-sets defvars); run =doom sync= first |
 | =replace-forms.el=       | replaces, inserts or deletes top-level forms by name in an =.el= or =.org= file; how the section is patched |
