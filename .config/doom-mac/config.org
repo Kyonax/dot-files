@@ -1329,6 +1329,183 @@ Setup the ~org-fancy-priorities~ package to stylize the priorities of the Org Fi
      (?C :foreground "#c678dd" :weight regular))))
 #+end_src
 
+***** RECKIT CONTEXT PASTE
+Paste images straight into a RECKIT context file (=kyo-recording-automation/@*/data/contexts/*.org=, the files the context screen renders). When the clipboard holds an image (Copy Image, a screenshot) or image files copied in a file manager, ~p~, ~P~, ~yank~ and ~C-v~ in insert state (SUPER+V) save it beside the file in =images/= and insert =[[file:images/NAME]]= as its own paragraph; with anything else they paste as always. The clipboard is read with =wl-paste=, which works whatever window has focus and keeps the image's bytes intact.
+#+begin_src emacs-lisp :tangle (if (string= (org-babel-ref-resolve "get-profile") "personal-linux") "config.el" "no")
+(require 'url-util)
+
+(defconst kyo/reckit-context-file-regexp
+  "/kyo-recording-automation/@[^/]+/data/contexts/[^/]+\\.org\\'"
+  "A RECKIT context file, the .org the context screen renders.")
+
+(defconst kyo/reckit-image-types
+  '((image/png . "png") (image/jpeg . "jpg") (image/webp . "webp")
+    (image/gif . "gif") (image/avif . "avif"))
+  "Clipboard image types a context paste takes, with their file extension.")
+
+(defconst kyo/reckit-image-file-regexp
+  "\\.\\(png\\|jpe?g\\|webp\\|gif\\|avif\\|svg\\)\\'"
+  "Copied files a context paste embeds.")
+
+(defun kyo/reckit-clipboard (&optional type)
+  "Return the clipboard's TYPE data as raw bytes, its text when TYPE is
+`text', or the list of offered types when TYPE is nil.
+Reads with wl-paste, which works whatever window has focus (a Wayland
+client only hears of the selection while focused); falls back to the
+GUI selection without it."
+  (if (executable-find "wl-paste")
+      (with-temp-buffer
+        (set-buffer-multibyte nil)
+        (let ((coding-system-for-read 'no-conversion))
+          (when (zerop (apply #'call-process "wl-paste" nil t nil
+                              (cond ((null type) '("--list-types"))
+                                    ((eq type 'text) '("--no-newline"))
+                                    (t (list "--no-newline" "--type" (symbol-name type))))))
+            (cond ((null type) (mapcar #'intern (split-string (buffer-string) "\n" t)))
+                  ((eq type 'text) (decode-coding-string (buffer-string) 'utf-8))
+                  (t (buffer-string))))))
+    (cond ((null type)
+           (let ((targets (ignore-errors (gui-get-selection 'CLIPBOARD 'TARGETS))))
+             (and (vectorp targets) (append targets nil))))
+          ((eq type 'text) (ignore-errors (gui-get-selection 'CLIPBOARD 'UTF8_STRING)))
+          ;; The backend call returns the raw bytes; `gui-get-selection' would
+          ;; decode them as text and corrupt the image.
+          (t (gui-backend-get-selection 'CLIPBOARD type)))))
+
+(defun kyo/reckit-new-image-path (base extension)
+  "Return a free path images/BASE.EXTENSION beside the context (BASE-2 if taken)."
+  (let* ((dir (expand-file-name "images" (file-name-directory buffer-file-name)))
+         (path (expand-file-name (concat base "." extension) dir))
+         (n 1))
+    (make-directory dir t)
+    (while (file-exists-p path)
+      (setq n (1+ n)
+            path (expand-file-name (format "%s-%d.%s" base n extension) dir)))
+    path))
+
+(defun kyo/reckit-copied-image-files (types)
+  "Image files the clipboard names, given its offered TYPES.
+Files copied in a file manager come as text/uri-list; a path copied as
+text counts when it is one line naming an image file."
+  (let ((names
+         (if (memq 'text/uri-list types)
+             (mapcar (lambda (uri)
+                       (decode-coding-string
+                        (url-unhex-string (string-remove-prefix "file://" uri))
+                        'utf-8))
+                     (seq-filter (lambda (line) (string-prefix-p "file://" line))
+                                 (split-string
+                                  (decode-coding-string
+                                   (or (kyo/reckit-clipboard 'text/uri-list) "") 'utf-8)
+                                  "[\r\n]+" t)))
+           (let ((text (string-trim (or (kyo/reckit-clipboard 'text) ""))))
+             (unless (string-match-p "\n" text)
+               (list (expand-file-name (string-remove-prefix "file://" text))))))))
+    (seq-filter (lambda (file)
+                  (and (string-match-p kyo/reckit-image-file-regexp (downcase file))
+                       (file-readable-p file)
+                       (not (file-directory-p file))))
+                names)))
+
+(defun kyo/reckit-clipboard-images ()
+  "Put what the clipboard holds beside the context file, as image files.
+An image (Copy Image, a screenshot) is written to images/. Copied image
+files are copied there, or used in place when already beside the context.
+Return the files, or nil when the clipboard holds no image."
+  (let* ((types (kyo/reckit-clipboard))
+         (image (seq-find (lambda (type) (memq (car type) types))
+                          kyo/reckit-image-types))
+         (context-dir (file-name-directory buffer-file-name)))
+    (if image
+        (let ((data (kyo/reckit-clipboard (car image))))
+          (when (and (stringp data) (> (length data) 0))
+            (let ((path (kyo/reckit-new-image-path
+                         (format "%s-%s" (file-name-base buffer-file-name)
+                                 (format-time-string "%Y%m%d-%H%M%S"))
+                         (cdr image)))
+                  (coding-system-for-write 'no-conversion))
+              (write-region data nil path nil 'silent)
+              (list path))))
+      (mapcar (lambda (file)
+                (if (file-in-directory-p file context-dir)
+                    file
+                  (let ((path (kyo/reckit-new-image-path
+                               (file-name-base file)
+                               (downcase (file-name-extension file)))))
+                    (copy-file file path)
+                    path)))
+              (kyo/reckit-copied-image-files types)))))
+
+(defun kyo/reckit-insert-image-links (files)
+  "Insert an org link for each of FILES as its own paragraph at point."
+  (let ((links (mapconcat (lambda (file) (format "[[file:%s]]" (file-relative-name file)))
+                          files "\n\n")))
+    (if (string-blank-p (buffer-substring (line-beginning-position) (line-end-position)))
+        (progn (delete-region (line-beginning-position) (line-end-position))
+               (when (save-excursion (and (zerop (forward-line -1))
+                                          (not (looking-at-p "[ \t]*$"))))
+                 (insert "\n"))
+               (insert links))
+      (end-of-line)
+      (insert "\n\n" links))
+    (unless (or (eobp)
+                (save-excursion (forward-line 1) (looking-at-p "[ \t]*$")))
+      (insert "\n"))))
+
+(defun kyo/reckit-paste-image ()
+  "Embed the clipboard's image, or copied image files, at point.
+Return the files, or nil when the clipboard holds no image."
+  (when-let ((files (kyo/reckit-clipboard-images)))
+    (kyo/reckit-insert-image-links files)
+    (message "Pasted %s" (mapconcat #'file-name-nondirectory files ", "))
+    files))
+
+(defun kyo/reckit-paste-after ()
+  "Paste the clipboard's image below point, else `evil-paste-after'."
+  (interactive "*")
+  (unless (and (null evil-this-register) (kyo/reckit-paste-image))
+    (call-interactively #'evil-paste-after)))
+
+(defun kyo/reckit-paste-before ()
+  "Paste the clipboard's image at point, else `evil-paste-before'."
+  (interactive "*")
+  (unless (and (null evil-this-register) (kyo/reckit-paste-image))
+    (call-interactively #'evil-paste-before)))
+
+(defun kyo/reckit-yank ()
+  "Paste the clipboard's image at point, else `yank'."
+  (interactive "*")
+  (unless (kyo/reckit-paste-image)
+    (call-interactively #'yank)))
+
+(defvar kyo/reckit-context-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map [remap evil-paste-after] #'kyo/reckit-paste-after)
+    (define-key map [remap evil-paste-before] #'kyo/reckit-paste-before)
+    (define-key map [remap yank] #'kyo/reckit-yank)
+    map)
+  "Paste keys of a RECKIT context file: an image first, else text.")
+
+(define-minor-mode kyo/reckit-context-mode
+  "Paste clipboard images into a RECKIT context file as org links.
+The image is saved beside the file (images/), where the context screen
+reads it. Text pastes work as always."
+  :lighter " ctx"
+  :keymap kyo/reckit-context-mode-map)
+
+(after! evil
+  ;; SUPER+V, Omarchy's universal paste, sends C-v.
+  (evil-define-key 'insert kyo/reckit-context-mode-map (kbd "C-v") #'kyo/reckit-yank))
+
+(defun kyo/reckit-context-maybe-enable-h ()
+  "Turn on `kyo/reckit-context-mode' in RECKIT context files."
+  (when (and buffer-file-name
+             (string-match-p kyo/reckit-context-file-regexp buffer-file-name))
+    (kyo/reckit-context-mode 1)))
+
+(add-hook 'org-mode-hook #'kyo/reckit-context-maybe-enable-h)
+#+end_src
+
 ***** ROAM
 Setup the ~org-roam~ package to use the ~brain~ notes.
 #+begin_src emacs-lisp :tangle config.el
